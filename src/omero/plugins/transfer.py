@@ -31,17 +31,42 @@ DIR_PERM = 0o755
 
 HELP = ("""Transfer objects and annotations between servers.
 
-Transfers happen based on the ID of the top-node.
+Both subcommands (pack and unpack) will use an existing OMERO session
+created via CLI or prompt the user for parameters to create one.
 """)
 
-PACK_HELP = ("""This is the help text for the pack command.
+PACK_HELP = ("""Create a transfer packet for moving objects between
+OMERO server instances.
 
-This is the second line for the help text.
+The syntax for specifying objects is: <object>:<id>
+<object> can be Image, Project or Dataset.
+Project is assumed if <object>: is omitted.
+A file path needs to be provided; a zip file with the contents of
+the packet will be created at the specified path.
+
+Currently, only MapAnnotations and Tags are packaged into the transfer
+pack, and only Point, Line, Ellipse, Rectangle and Polygon-type ROIs are
+packaged.
+
+Examples:
+omero transfer pack Image:123 transfer_pack.zip
+omero transfer pack Dataset:1111 /home/user/new_folder/new_pack.zip
+omero transfer pack 999 zipfile.zip  # equivalent to Project:999
 """)
 
-UNPACK_HELP = ("""This is the help text for the unpack command.
+UNPACK_HELP = ("""Unpacks an existing transfer packet, imports images
+as orphans and uses the XML contained in the transfer packet to re-create
+links, annotations and ROIs.
 
-This is the second line for the help text.
+--ln_s forces imports to use the transfer=ln_s option, in-place importing
+files. Same restrictions of regular in-place imports apply.
+
+--output allows for specifying an optional output folder where the packet
+will be unzipped. 
+
+Examples:
+omero transfer unpack transfer_pack.zip
+omero transfer unpack --output /home/user/optional_folder --ln_s
 """)
 
 def gateway_required(func):
