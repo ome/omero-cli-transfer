@@ -14,6 +14,7 @@ import argparse
 import os
 from uuid import uuid4
 
+
 def create_proj_and_ref(**kwargs):
     proj = Project(**kwargs)
     proj_ref = ProjectRef(id=proj.id)
@@ -223,11 +224,11 @@ def create_filepath_annotations(repo, id, conn):
     fpaths = ezomero.get_original_filepaths(conn, id)
     for f in fpaths:
         f = str(os.path.join(repo,  '.', f))
-        id = (-1)*uuid4().int
-        an = CommentAnnotation(id = id,
-                               namespace = ns,
-                               value = f
-                              )
+        id = (-1) * uuid4().int
+        an = CommentAnnotation(id=id,
+                               namespace=ns,
+                               value=f
+                               )
         anns.append(an)
         anref = ROIRef(id=an.id)
         refs.append(anref)
@@ -254,8 +255,8 @@ def populate_roi(obj, roi_obj, ome, conn):
             roi.annotation_ref.append(ref)
         if ann.OMERO_TYPE == MapAnnotationI:
             mmap = [M(k=_key, value=str(_value))
-                      for _key, _value in
-                      ann.getMapValueAsMap().items()]
+                    for _key, _value in
+                    ann.getMapValueAsMap().items()]
             for m in mmap:
                 if m.value == '':
                     m.value = ' '
@@ -287,8 +288,8 @@ def populate_image(obj, ome, conn, repo):
             img.annotation_ref.append(ref)
         if ann.OMERO_TYPE == MapAnnotationI:
             mmap = [M(k=_key, value=str(_value))
-                      for _key, _value in
-                      ann.getMapValueAsMap().items()]
+                    for _key, _value in
+                    ann.getMapValueAsMap().items()]
             for m in mmap:
                 if m.value == '':
                     m.value = ' '
@@ -329,8 +330,8 @@ def populate_dataset(obj, ome, conn, repo):
             ds.annotation_ref.append(ref)
         if ann.OMERO_TYPE == MapAnnotationI:
             mmap = [M(k=_key, value=str(_value))
-                      for _key, _value in
-                      ann.getMapValueAsMap().items()]
+                    for _key, _value in
+                    ann.getMapValueAsMap().items()]
             for m in mmap:
                 if m.value == '':
                     m.value = ' '
@@ -364,8 +365,8 @@ def populate_project(obj, ome, conn, repo):
             test_proj.annotation_ref.append(ref)
         if ann.OMERO_TYPE == MapAnnotationI:
             mmap = [M(k=_key, value=str(_value))
-                      for _key, _value in
-                      ann.getMapValueAsMap().items()]
+                    for _key, _value in
+                    ann.getMapValueAsMap().items()]
             for m in mmap:
                 if m.value == '':
                     m.value = ' '
@@ -389,6 +390,7 @@ def list_image_ids(ome):
         if isinstance(ann, CommentAnnotation):
             id_list[ann.namespace] = ann.value
     return id_list
+
 
 def populate_xml(datatype, id, filepath, conn, repo):
     ome = OME()

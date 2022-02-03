@@ -62,12 +62,13 @@ links, annotations and ROIs.
 files. Same restrictions of regular in-place imports apply.
 
 --output allows for specifying an optional output folder where the packet
-will be unzipped. 
+will be unzipped.
 
 Examples:
 omero transfer unpack transfer_pack.zip
 omero transfer unpack --output /home/user/optional_folder --ln_s
 """)
+
 
 def gateway_required(func):
     """
@@ -89,6 +90,7 @@ def gateway_required(func):
                 self.client = None
     return _wrapper
 
+
 class TransferControl(GraphControl):
 
     def _configure(self, parser):
@@ -107,18 +109,18 @@ class TransferControl(GraphControl):
         unpack.add_argument("filepath", type=str, help=file_help)
         unpack.add_argument(
                 "--ln_s_import", help="Use in-place import",
-                                     action="store_true")
+                action="store_true")
         unpack.add_argument(
             "--output", type=str, help="Output directory where zip "
                                        "file will be extracted"
         )
-        
-    @gateway_required   
+
+    @gateway_required
     def pack(self, args):
         """ Implements the 'pack' command """
         self.__pack(args)
 
-    @gateway_required   
+    @gateway_required
     def unpack(self, args):
         """ Implements the 'pack' command """
         self.__unpack(args)
@@ -147,7 +149,6 @@ class TransferControl(GraphControl):
             os.makedirs(subfolder, mode=DIR_PERM, exist_ok=True)
             cli.invoke(['download', id, subfolder])
 
-
     def __pack(self, args):
         if isinstance(args.object, Image):
             src_datatype, src_dataid = "Image", args.object.id
@@ -164,8 +165,9 @@ class TransferControl(GraphControl):
         os.makedirs(folder, mode=DIR_PERM, exist_ok=True)
         xml_fp = str(Path(folder) / "transfer.xml")
         repo = self._get_path_to_repo()[0]
-        path_id_dict = populate_xml(src_datatype, src_dataid, xml_fp, self.gateway, repo)
-        print(f"XML saved at {xml_fp}.")        
+        path_id_dict = populate_xml(src_datatype, src_dataid,
+                                    xml_fp, self.gateway, repo)
+        print(f"XML saved at {xml_fp}.")
 
         print("Starting file copy...")
         self._copy_files(path_id_dict, folder, repo)
@@ -174,7 +176,6 @@ class TransferControl(GraphControl):
         print("Cleaning up...")
         shutil.rmtree(folder)
         return
-
 
     def __unpack(self, args):
         print(f"Unzipping {args.filepath}...")
@@ -200,7 +201,6 @@ class TransferControl(GraphControl):
         populate_omero(ome, img_map, self.gateway)
         return
 
-
     def _create_image_map(self, ome):
         img_map = defaultdict(list)
         filelist = []
@@ -208,9 +208,11 @@ class TransferControl(GraphControl):
             if int(ann.id.split(":")[-1]) < 0:
                 img_map[ann.value].append(int(ann.namespace.split(":")[-1]))
                 filelist.append(ann.value.split('/./')[-1])
-        ome.structured_annotations = [x for x in ome.structured_annotations if int(x.id.split(":")[-1])>0]
+        ome.structured_annotations = [x for x in ome.structured_annotations
+                                      if int(x.id.split(":")[-1]) > 0]
         for i in ome.images:
-            i.annotation_ref = [x for x in i.annotation_ref if int(x.id.split(":")[-1])>0]
+            i.annotation_ref = [x for x in i.annotation_ref
+                                if int(x.id.split(":")[-1]) > 0]
         filelist = list(set(filelist))
         img_map = {x: sorted(img_map[x]) for x in img_map.keys()}
         return img_map, filelist
@@ -257,10 +259,9 @@ class TransferControl(GraphControl):
         image_ids = sorted([r[0].val for r in results])
         return image_ids
 
-
     def _make_image_map(self, source_map, dest_map):
         # using both source and destination file-to-image-id maps,
-    # map image IDs between source and destination
+        # map image IDs between source and destination
         print(source_map)
         print(dest_map)
         src_dict = defaultdict(list)
