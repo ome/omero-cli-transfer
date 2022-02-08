@@ -191,7 +191,8 @@ class TransferControl(GraphControl):
             ln_s = True
         else:
             ln_s = False
-        dest_img_map = self._import_files(folder, filelist, ln_s)
+        dest_img_map = self._import_files(folder, filelist,
+                                          ln_s, self.gateway)
         print("Matching source and destination images...")
         img_map = self._make_image_map(src_img_map, dest_img_map)
         print("Creating and linking OMERO objects...")
@@ -232,7 +233,7 @@ class TransferControl(GraphControl):
         img_map = {x: sorted(img_map[x]) for x in img_map.keys()}
         return img_map, filelist
 
-    def _import_files(self, folder, filelist, ln_s):
+    def _import_files(self, folder, filelist, ln_s, gateway):
         cli = CLI()
         cli.loadplugins()
         dest_map = {}
@@ -245,11 +246,11 @@ class TransferControl(GraphControl):
             else:
                 cli.invoke(['import',
                             dest_path])
-            img_ids = self._get_image_ids(dest_path)
+            img_ids = self._get_image_ids(dest_path, gateway)
             dest_map[dest_path] = img_ids
         return dest_map
 
-    def _get_image_ids(self, file_path):
+    def _get_image_ids(self, file_path, gateway):
         """Get the Ids of imported images.
         Note that this will not find images if they have not been imported.
 
@@ -259,7 +260,7 @@ class TransferControl(GraphControl):
             Ids of images imported from the specified client path, which
             itself is derived from ``file_path``.
         """
-        q = self.gateway.getQueryService()
+        q = gateway.getQueryService()
         params = Parameters()
         path_query = str(file_path).strip('/')
         params.map = {"cpath": rstring(path_query)}
@@ -269,7 +270,7 @@ class TransferControl(GraphControl):
             " JOIN fs.usedFiles u"
             " WHERE u.clientPath=:cpath",
             params,
-            self.gateway.SERVICE_OPTS
+            gateway.SERVICE_OPTS
             )
         image_ids = sorted([r[0].val for r in results])
         return image_ids
@@ -277,8 +278,6 @@ class TransferControl(GraphControl):
     def _make_image_map(self, source_map, dest_map):
         # using both source and destination file-to-image-id maps,
         # map image IDs between source and destination
-        print(source_map)
-        print(dest_map)
         src_dict = defaultdict(list)
         imgmap = {}
         for k, v in source_map.items():
@@ -288,14 +287,13 @@ class TransferControl(GraphControl):
         for k, v in dest_map.items():
             newkey = k.split("/./")[-1]
             dest_dict[newkey].extend(v)
-        print(src_dict)
-        print(dest_dict)
         for src_k in src_dict.keys():
             src_v = src_dict[src_k]
             dest_v = dest_dict[src_k]
-            for count in range(len(src_v)):
-                map_key = f"Image:{src_v[count]}"
-                imgmap[map_key] = dest_v[count]
+            if len(src_v) == len(dest_v):
+                for count in range(len(src_v)):
+                    map_key = f"Image:{src_v[count]}"
+                    imgmap[map_key] = dest_v[count]
         return imgmap
 
 

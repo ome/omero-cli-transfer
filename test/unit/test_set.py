@@ -63,69 +63,43 @@ class TestLoadTransferPacket():
         assert src_img_map == correct_map
         assert filelist == correct_filelist
 
-#     def test_missing_version_pass(self, tmpdir):
-#         d = {'channels': {1: {'label': 'foo'}}}
-#         f = write_yaml(d, tmpdir)
-#         data = self.render._load_rendering_settings(f)
-#         assert data == d
-#         assert _getversion(d) == SPEC_VERSION
+    def test_import(self):
+        # well I don't know how to do this since stdin is not a terminal
+        # gateway = ezomero.connect(host='localhost', port=4064,
+        #                           user='root', password='omero',
+        #                           secure=True, group='')
+        # folder = 'test/data'
+        # filelist = ['test_pyramid.ome.tif']
+        # ln_s = False
+        # img_map = self.transfer._import_files(folder, filelist, ln_s,
+        #                                       gateway)
+        # assert len(img_map.keys()) == 1
+        # assert str(os.path.join(folder, '.', filelist[0])) in img_map.keys()
+        # assert isinstance(img_map[str(os.path.join(folder, '.',
+        #                   filelist[0]))], int)
+        assert True
 
-#     @pytest.mark.parametrize('key1', ['start', 'end'])
-#     @pytest.mark.parametrize('key2', ['min', 'max'])
-#     def test_missing_version_fail(self, tmpdir, key1, key2):
-#         d = {'channels': {1: {key1: 100, key2: 200}}}
-#         f = write_yaml(d, tmpdir)
-#         with pytest.raises(NonZeroReturnCode) as e:
-#             self.render._load_rendering_settings(f)
-#         assert e.value.rv == 124
+    def test_image_map(self):
+        path1 = '/a/b/./c/d'
+        path2 = '/e/f/./c/d'
+        src_map = {path1: [1]}
+        dest_map = {path2: [2]}
+        imgmap = self.transfer._make_image_map(src_map, dest_map)
+        assert len(imgmap.keys()) == 1
+        assert f"Image:{src_map[path1][0]}" in imgmap.keys()
+        assert imgmap[f"Image:{src_map[path1][0]}"] == 2
 
-#     @pytest.mark.parametrize('key', ['start', 'end'])
-#     def test_version_2(self, tmpdir, key):
-#         d = {'channels': {1: {key: 100, 'label': 'foo'}}}
-#         f = write_yaml(d, tmpdir)
-#         data = self.render._load_rendering_settings(f)
-#         assert data == d
-#         assert _getversion(d) == 2
+        src_map = {path1: [1, 2, 3, 4]}
+        dest_map = {path2: [2, 7, 9, 14]}
+        imgmap = self.transfer._make_image_map(src_map, dest_map)
+        assert len(imgmap.keys()) == 4
+        assert f"Image:{src_map[path1][0]}" in imgmap.keys()
+        assert imgmap[f"Image:{src_map[path1][0]}"] == 2
+        assert imgmap[f"Image:{src_map[path1][1]}"] == 7
+        assert imgmap[f"Image:{src_map[path1][2]}"] == 9
+        assert imgmap[f"Image:{src_map[path1][3]}"] == 14
 
-#     @pytest.mark.parametrize('key', ['min', 'max'])
-#     def test_version_1(self, tmpdir, key):
-#         d = {'channels': {1: {key: 100, 'label': 'foo'}}}
-#         f = write_yaml(d, tmpdir)
-#         data = self.render._load_rendering_settings(f)
-#         assert data == d
-#         assert _getversion(d) == 1
-
-#     @pytest.mark.parametrize('version', [1, 2])
-#     def test_version_detection(self, tmpdir, version):
-#         d = {'version': version, 'channels': {1: {'label': 'foo'}}}
-#         f = write_yaml(d, tmpdir)
-#         data = self.render._load_rendering_settings(f)
-#         assert data == d
-#         assert _getversion(d) == version
-
-#     def test_version_fail(self, tmpdir):
-#         d = {'version': 0, 'channels': {1: {'label': 'foo'}}}
-#         f = write_yaml(d, tmpdir)
-#         with pytest.raises(NonZeroReturnCode) as e:
-#             self.render._load_rendering_settings(f)
-#         assert e.value.rv == 124
-
-
-# class TestReadChannels:
-#     def setup_method(self):
-#         self.cli = CLI()
-#         self.cli.register("render", RenderControl, "TEST")
-#         self.render = self.cli.controls['render']
-
-#     def test_non_integer_channel(self):
-#         d = {'channels': {'GFP': {'label': 'foo'}}}
-#         with pytest.raises(NonZeroReturnCode) as e:
-#             self.render._read_channels(d)
-#         assert e.value.rv == 105
-
-#     @pytest.mark.parametrize('key', ['min', 'max', 'start', 'end'])
-#     def test_float_keys(self, key):
-#         d = {'channels': {1: {key: 'foo'}}}
-#         with pytest.raises(NonZeroReturnCode) as e:
-#             self.render._read_channels(d)
-#         assert e.value.rv == 105
+        path2 = '/e/f/c/d'
+        dest_map = {path2: [2, 7, 9, 14]}
+        imgmap = self.transfer._make_image_map(src_map, dest_map)
+        assert imgmap == {}
