@@ -183,14 +183,7 @@ class TransferControl(GraphControl):
 
     def __unpack(self, args):
         print(f"Unzipping {args.filepath}...")
-        parent_folder = Path(args.filepath).parent
-        filename = os.path.splitext(args.filepath)[0]
-        if args.output:
-            folder = Path(args.output)
-        else:
-            folder = parent_folder / filename
-        shutil.unpack_archive(args.filepath, str(folder), 'zip')
-        ome = from_xml(folder / "transfer.xml")
+        ome, folder = self._load_from_zip(args.filepath, args.output)
         print("Generating Image mapping and import filelist...")
         src_img_map, filelist = self._create_image_map(ome)
         print("Importing data as orphans...")
@@ -204,6 +197,24 @@ class TransferControl(GraphControl):
         print("Creating and linking OMERO objects...")
         populate_omero(ome, img_map, self.gateway)
         return
+
+    def _load_from_zip(self, filepath, output):
+        if (not filepath) or (not isinstance(filepath, str)):
+            raise TypeError("filepath must be a string")
+        if (not output) or (not isinstance(output, str)):
+            raise TypeError("output folder must be a string")
+        parent_folder = Path(filepath).parent
+        filename = os.path.splitext(filepath)[0]
+        if output:
+            folder = Path(output)
+        else:
+            folder = parent_folder / filename
+        if Path(filepath).exists():
+            shutil.unpack_archive(filepath, str(folder), 'zip')
+        else:
+            raise FileNotFoundError("filepath is not a zip file")
+        ome = from_xml(folder / "transfer.xml")
+        return ome, folder
 
     def _create_image_map(self, ome):
         img_map = defaultdict(list)
