@@ -19,7 +19,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-
+from ome_types import from_xml
 from omero.cli import CLI
 from omero_cli_transfer import TransferControl
 
@@ -37,28 +37,31 @@ class TestLoadTransferPacket():
             self.transfer._load_from_zip(None, None)
         with pytest.raises(TypeError):
             self.transfer._load_from_zip(
-                'data/valid_single_image.zip', None)
+                'test/data/valid_single_image.zip', None)
         with pytest.raises(TypeError):
             self.transfer._load_from_zip(
-                None, 'data/output_folder')
+                None, 'test/data/output_folder')
         with pytest.raises(TypeError):
             self.transfer._load_from_zip(
-                'data/valid_single_image.zip', 111)
+                'test/data/valid_single_image.zip', 111)
         with pytest.raises(TypeError):
             self.transfer._load_from_zip(
-                111, 'data/output_folder')
+                111, 'test/data/output_folder')
 
     def test_non_existing_file(self):
         with pytest.raises(FileNotFoundError):
             self.transfer._load_from_zip('data/fake_file.zip',
                                          'data/output_folder')
 
-#     def test_no_channels(self, tmpdir):
-#         d = {'version': 1}
-#         f = write_yaml(d, tmpdir)
-#         with pytest.raises(NonZeroReturnCode) as e:
-#             self.render._load_rendering_settings(f)
-#         assert e.value.rv == 104
+    def test_src_img_map(self):
+        ome = from_xml('test/data/transfer.xml')
+        src_img_map, filelist = self.transfer._create_image_map(ome)
+        correct_map = {"/OMERO/ManagedRepository/./root_0/2022-01/14/"
+                       "18-30-55.264/combined_result.tiff": [1678, 1679]}
+        correct_filelist = ["root_0/2022-01/14/18-30-55.264/"
+                            "combined_result.tiff"]
+        assert src_img_map == correct_map
+        assert filelist == correct_filelist
 
 #     def test_missing_version_pass(self, tmpdir):
 #         d = {'channels': {1: {'label': 'foo'}}}
