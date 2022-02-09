@@ -163,6 +163,10 @@ class TransferControl(GraphControl):
         else:
             print("Object is not a project, dataset or image")
             return
+        obj = self.gateway.getObject(src_datatype, src_dataid)
+        if obj is None:
+            raise ValueError("Object not found or outside current"
+                             " permissions for current user.")
         print("Populating xml...")
         zip_path = Path(args.filepath)
         folder = str(zip_path) + "_folder"
