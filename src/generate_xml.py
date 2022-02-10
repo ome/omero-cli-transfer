@@ -10,7 +10,6 @@ from ome_types.model.map import M
 from omero.model import TagAnnotationI, MapAnnotationI
 from omero.model import PointI, LineI, RectangleI, EllipseI, PolygonI
 import ezomero
-import argparse
 import os
 from uuid import uuid4
 
@@ -256,10 +255,10 @@ def populate_roi(obj, roi_obj, ome, conn):
         if ann.OMERO_TYPE == MapAnnotationI:
             mmap = []
             for _key, _value in ann.getMapValueAsMap().items():
-                    if _value:
-                        mmap.append(M(k=_key, value=str(_value)))
-                    else:
-                        mmap.append(M(k=_key, value=''))
+                if _value:
+                    mmap.append(M(k=_key, value=str(_value)))
+                else:
+                    mmap.append(M(k=_key, value=''))
             kv, ref = create_kv_and_ref(id=ann.getId(),
                                         namespace=ann.getNs(),
                                         value=Map(
@@ -289,10 +288,10 @@ def populate_image(obj, ome, conn, repo):
         if ann.OMERO_TYPE == MapAnnotationI:
             mmap = []
             for _key, _value in ann.getMapValueAsMap().items():
-                    if _value:
-                        mmap.append(M(k=_key, value=str(_value)))
-                    else:
-                        mmap.append(M(k=_key, value=''))
+                if _value:
+                    mmap.append(M(k=_key, value=str(_value)))
+                else:
+                    mmap.append(M(k=_key, value=''))
             kv, ref = create_kv_and_ref(id=ann.getId(),
                                         namespace=ann.getNs(),
                                         value=Map(
@@ -331,10 +330,10 @@ def populate_dataset(obj, ome, conn, repo):
         if ann.OMERO_TYPE == MapAnnotationI:
             mmap = []
             for _key, _value in ann.getMapValueAsMap().items():
-                    if _value:
-                        mmap.append(M(k=_key, value=str(_value)))
-                    else:
-                        mmap.append(M(k=_key, value=''))
+                if _value:
+                    mmap.append(M(k=_key, value=str(_value)))
+                else:
+                    mmap.append(M(k=_key, value=''))
             kv, ref = create_kv_and_ref(id=ann.getId(),
                                         namespace=ann.getNs(),
                                         value=Map(
@@ -366,10 +365,10 @@ def populate_project(obj, ome, conn, repo):
         if ann.OMERO_TYPE == MapAnnotationI:
             mmap = []
             for _key, _value in ann.getMapValueAsMap().items():
-                    if _value:
-                        mmap.append(M(k=_key, value=str(_value)))
-                    else:
-                        mmap.append(M(k=_key, value=''))
+                if _value:
+                    mmap.append(M(k=_key, value=str(_value)))
+                else:
+                    mmap.append(M(k=_key, value=''))
 
             kv, ref = create_kv_and_ref(id=ann.getId(),
                                         namespace=ann.getNs(),
@@ -407,21 +406,3 @@ def populate_xml(datatype, id, filepath, conn, repo):
         fp.close()
     path_id_dict = list_image_ids(ome)
     return path_id_dict
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('datatype',
-                        type=str,
-                        help='Type of data (project, dataset, image)'
-                             ' to be moved')
-    parser.add_argument('id',
-                        type=int,
-                        help='ID of the data to be moved')
-    parser.add_argument('filepath',
-                        type=str,
-                        help='filepath to save xml')
-    args = parser.parse_args()
-    conn = ezomero.connect()
-    populate_xml(args.datatype, args.id, args.filepath, conn)
-    conn.close()

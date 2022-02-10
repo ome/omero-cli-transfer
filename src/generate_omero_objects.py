@@ -1,5 +1,4 @@
 import ezomero
-import argparse
 from omero.model import DatasetI
 from omero.gateway import DatasetWrapper
 from ome_types.model import TagAnnotation, MapAnnotation
@@ -191,15 +190,3 @@ def populate_omero(ome, img_map, conn):
     link_images(ome, ds_map, img_map, conn)
     link_annotations(ome, proj_map, ds_map, img_map, ann_map, conn)
     return
-
-
-if __name__ == "__main__":
-    conn = ezomero.connect('root', 'omero', host='localhost',
-                           port=6064, group='system', secure=True)
-    parser = argparse.ArgumentParser()
-    parser.add_argument('filepath',
-                        type=str,
-                        help='filepath to load xml')
-    args = parser.parse_args()
-    image_map = {"Image:51": 1405, "Image:52": 1406, "Image:27423": 1404}
-    populate_omero(args.filepath, image_map, conn)
