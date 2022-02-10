@@ -1,0 +1,32 @@
+version: '3'
+
+services:
+  db:
+    image: ${POSTGRES_IMAGE}:${POSTGRES_VERSION}
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+  omero:
+    build:
+      context: ./omeroserver
+      args:
+        - OMEROSERVER_BASE_IMAGE=${OMERO_SERVER_IMAGE}:${OMERO_SERVER_VERSION}
+    environment:
+      - ROOTPASS=${ROOTPASS}
+      - CONFIG_omero_db_user=postgres
+      - CONFIG_omero_db_name=postgres
+      - CONFIG_omero_db_pass=${POSTGRES_PASSWORD}
+      - CONFIG_omero_upgrades_url=
+      - CONFIG_Ice_IPv6=0
+    ports:
+      - "${OMERO_SERVER_TCP}4063"
+      - "${OMERO_SERVER_SSL}4064"
+  web:
+    build:
+      context: ./omeroweb
+      args:
+        - OMEROWEB_BASE_IMAGE=${OMERO_WEB_IMAGE}:${OMERO_WEB_VERSION}
+    environment:
+      - CONFIG_omero_upgrades_url=
+      - CONFIG_Ice_IPv6=0
+    ports:
+      - "${OMERO_WEB_PORT}4080"

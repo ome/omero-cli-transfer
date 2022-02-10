@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# assumes:
+# git clone --recurse-submodules https://github.com/openmicroscopy/omero-test-infra .omero
+
+. "$(dirname "$0")"/docker scripts

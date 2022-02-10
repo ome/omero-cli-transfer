@@ -1,0 +1,11 @@
+#!/bin/bash
+source /infra/utils
+
+set -e
+set -u
+set -x
+
+
+cd $TARGET
+
+python setup.py test -t test -i ${OMERO_DIST}/etc/ice.config -v

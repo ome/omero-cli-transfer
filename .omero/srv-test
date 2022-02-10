@@ -1,0 +1,4 @@
+#!/bin/bash
+source /infra/utils
+cd /src
+components/tools/travis-build integration

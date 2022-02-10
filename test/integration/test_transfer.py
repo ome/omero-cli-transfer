@@ -10,6 +10,12 @@ import os
 SUPPORTED = [
     "idonly", "imageid", "datasetid", "projectid"]
 
+TEST_FILES = [
+        "test/data/valid_single_image.zip",
+        "test/data/valid_single_dataset.zip",
+        "test/data/valid_single_project.zip",
+]
+
 
 class TestTransfer(CLITest):
 
@@ -62,5 +68,7 @@ class TestTransfer(CLITest):
         assert os.path.exists(str(tmpdir / 'test.zip'))
         assert os.path.getsize(str(tmpdir / 'test.zip')) > 0
 
-    def test_extremely_naive(self):
-        assert True
+    @pytest.mark.parametrize('package_name', sorted(TEST_FILES))
+    def test_unpack(self, package_name):
+        self.args += ["unpack", package_name]
+        self.cli.invoke(self.args, strict=True)
