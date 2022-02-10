@@ -27,8 +27,9 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# testing infra
-.omero/
+# testing infra - uncomment when omero-test-infra reaches python=3.7
+# .omero/
+
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

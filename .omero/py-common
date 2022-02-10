@@ -1,0 +1,13 @@
+#!/bin/bash
+source /infra/utils
+
+set -u
+set -x
+
+TARGET=${TARGET:-..}
+
+dir=$(cd -P -- "$(dirname -- "$0")" && pwd -P)
+cd $TARGET
+
+pip install --upgrade setuptools wheel
+pip install -r $dir/requirements.txt

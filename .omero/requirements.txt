@@ -1,0 +1,12 @@
+flake8<3.6.0
+pep8-naming
+pre-commit
+pycodestyle<2.4.0
+restructuredtext_lint
+pytest==3.3.2
+attrs==19.1.0
+restview
+mox
+# TODO: Apps only
+pytest-django==3.1.2
+pytest-runner==3.0.1

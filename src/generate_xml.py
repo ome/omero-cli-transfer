@@ -10,9 +10,9 @@ from ome_types.model.map import M
 from omero.model import TagAnnotationI, MapAnnotationI
 from omero.model import PointI, LineI, RectangleI, EllipseI, PolygonI
 import ezomero
-import argparse
 import os
 from uuid import uuid4
+
 
 def create_proj_and_ref(**kwargs):
     proj = Project(**kwargs)
@@ -223,11 +223,11 @@ def create_filepath_annotations(repo, id, conn):
     fpaths = ezomero.get_original_filepaths(conn, id)
     for f in fpaths:
         f = str(os.path.join(repo,  '.', f))
-        id = (-1)*uuid4().int
-        an = CommentAnnotation(id = id,
-                               namespace = ns,
-                               value = f
-                              )
+        id = (-1) * uuid4().int
+        an = CommentAnnotation(id=id,
+                               namespace=ns,
+                               value=f
+                               )
         anns.append(an)
         anref = ROIRef(id=an.id)
         refs.append(anref)
@@ -253,12 +253,12 @@ def populate_roi(obj, roi_obj, ome, conn):
                 ome.structured_annotations.append(tag)
             roi.annotation_ref.append(ref)
         if ann.OMERO_TYPE == MapAnnotationI:
-            mmap = [M(k=_key, value=str(_value))
-                      for _key, _value in
-                      ann.getMapValueAsMap().items()]
-            for m in mmap:
-                if m.value == '':
-                    m.value = ' '
+            mmap = []
+            for _key, _value in ann.getMapValueAsMap().items():
+                if _value:
+                    mmap.append(M(k=_key, value=str(_value)))
+                else:
+                    mmap.append(M(k=_key, value=''))
             kv, ref = create_kv_and_ref(id=ann.getId(),
                                         namespace=ann.getNs(),
                                         value=Map(
@@ -286,12 +286,12 @@ def populate_image(obj, ome, conn, repo):
                 ome.structured_annotations.append(tag)
             img.annotation_ref.append(ref)
         if ann.OMERO_TYPE == MapAnnotationI:
-            mmap = [M(k=_key, value=str(_value))
-                      for _key, _value in
-                      ann.getMapValueAsMap().items()]
-            for m in mmap:
-                if m.value == '':
-                    m.value = ' '
+            mmap = []
+            for _key, _value in ann.getMapValueAsMap().items():
+                if _value:
+                    mmap.append(M(k=_key, value=str(_value)))
+                else:
+                    mmap.append(M(k=_key, value=''))
             kv, ref = create_kv_and_ref(id=ann.getId(),
                                         namespace=ann.getNs(),
                                         value=Map(
@@ -328,12 +328,12 @@ def populate_dataset(obj, ome, conn, repo):
                 ome.structured_annotations.append(tag)
             ds.annotation_ref.append(ref)
         if ann.OMERO_TYPE == MapAnnotationI:
-            mmap = [M(k=_key, value=str(_value))
-                      for _key, _value in
-                      ann.getMapValueAsMap().items()]
-            for m in mmap:
-                if m.value == '':
-                    m.value = ' '
+            mmap = []
+            for _key, _value in ann.getMapValueAsMap().items():
+                if _value:
+                    mmap.append(M(k=_key, value=str(_value)))
+                else:
+                    mmap.append(M(k=_key, value=''))
             kv, ref = create_kv_and_ref(id=ann.getId(),
                                         namespace=ann.getNs(),
                                         value=Map(
@@ -363,12 +363,13 @@ def populate_project(obj, ome, conn, repo):
                 ome.structured_annotations.append(tag)
             test_proj.annotation_ref.append(ref)
         if ann.OMERO_TYPE == MapAnnotationI:
-            mmap = [M(k=_key, value=str(_value))
-                      for _key, _value in
-                      ann.getMapValueAsMap().items()]
-            for m in mmap:
-                if m.value == '':
-                    m.value = ' '
+            mmap = []
+            for _key, _value in ann.getMapValueAsMap().items():
+                if _value:
+                    mmap.append(M(k=_key, value=str(_value)))
+                else:
+                    mmap.append(M(k=_key, value=''))
+
             kv, ref = create_kv_and_ref(id=ann.getId(),
                                         namespace=ann.getNs(),
                                         value=Map(
@@ -390,6 +391,7 @@ def list_image_ids(ome):
             id_list[ann.namespace] = ann.value
     return id_list
 
+
 def populate_xml(datatype, id, filepath, conn, repo):
     ome = OME()
     obj = conn.getObject(datatype, id)
@@ -404,21 +406,3 @@ def populate_xml(datatype, id, filepath, conn, repo):
         fp.close()
     path_id_dict = list_image_ids(ome)
     return path_id_dict
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('datatype',
-                        type=str,
-                        help='Type of data (project, dataset, image)'
-                             ' to be moved')
-    parser.add_argument('id',
-                        type=int,
-                        help='ID of the data to be moved')
-    parser.add_argument('filepath',
-                        type=str,
-                        help='filepath to save xml')
-    args = parser.parse_args()
-    conn = ezomero.connect()
-    populate_xml(args.datatype, args.id, args.filepath, conn)
-    conn.close()

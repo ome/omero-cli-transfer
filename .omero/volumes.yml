@@ -1,0 +1,18 @@
+version: '3'
+
+# Run with COMPOSE_FILE=docker-compose.yml:volumes.yml
+# to have persistent volumes created for the internal
+# docker mountpoints. Use `docker-compose down -v` to
+# drop the volumes.
+
+services:
+  db:
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+  omero:
+    volumes:
+      - omerodata:/OMERO
+
+volumes:
+  dbdata:
+  omerodata:

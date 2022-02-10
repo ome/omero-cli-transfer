@@ -1,0 +1,24 @@
+#!/bin/bash
+source /infra/utils
+
+set -e
+set -u
+set -x
+
+TARGET=${TARGET:-..}
+PLUGIN=${PLUGIN:-}
+
+wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+sh Miniconda3-latest-Linux-x86_64.sh -b -p /tmp/miniconda
+source /tmp/miniconda/bin/activate
+conda init
+conda create -n omero python=3.7
+conda activate omero
+conda install -c ome zeroc-ice36-python
+
+cd $TARGET
+cd $(setup_dir)
+python setup.py sdist
+pip install -U dist/*.tar.gz
+python setup.py clean
+rm -rf dist *egg-info src/*egg-info

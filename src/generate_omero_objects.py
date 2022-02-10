@@ -1,8 +1,6 @@
 import ezomero
-import argparse
 from omero.model import DatasetI
 from omero.gateway import DatasetWrapper
-from ome_types import from_xml
 from ome_types.model import TagAnnotation, MapAnnotation
 from ome_types.model import Line, Point, Rectangle, Ellipse, Polygon, Polyline
 from omero.gateway import TagAnnotationWrapper, MapAnnotationWrapper
@@ -19,7 +17,7 @@ def create_projects(pjs, conn):
 
 def create_datasets(dss, conn):
     """
-    Currently doing it the non-ezomero way because ezomero always 
+    Currently doing it the non-ezomero way because ezomero always
     puts "orphan" Datasets in the user's default group
     """
     ds_map = {}
@@ -185,15 +183,10 @@ def link_annotations(ome, proj_map, ds_map, img_map, ann_map, conn):
 
 def populate_omero(ome, img_map, conn):
     proj_map = create_projects(ome.projects, conn)
-    print(proj_map)
     ds_map = create_datasets(ome.datasets, conn)
-    print(ds_map)
     ann_map = create_annotations(ome.structured_annotations, conn)
-    print(ann_map)
     create_rois(ome.rois, ome.images, img_map, conn)
     link_datasets(ome, proj_map, ds_map, conn)
     link_images(ome, ds_map, img_map, conn)
     link_annotations(ome, proj_map, ds_map, img_map, ann_map, conn)
-    conn.close()
     return
-

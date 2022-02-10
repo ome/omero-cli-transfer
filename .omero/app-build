@@ -1,0 +1,20 @@
+#!/bin/bash
+
+source /infra/utils
+
+set -e
+set -u
+set -x
+
+cd $TARGET
+DIR=$(setup_dir)
+
+# TBD: unify on test or tests
+# TBD: needs setup.py infra
+# python setup.py test -t test* -i ${OMERO_DIST}/etc/ice.config -v
+
+set +u
+export DJANGO_SETTINGS_MODULE=omeroweb.settings
+export OMERODIR=/opt/omero/web/OMERO.web
+export ICE_CONFIG=${OMERO_DIST}/etc/ice.config
+python $DIR/setup.py test
