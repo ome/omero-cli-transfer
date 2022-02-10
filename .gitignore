@@ -30,6 +30,7 @@ MANIFEST
 # testing infra - uncomment when omero-test-infra reaches python=3.7
 # .omero/
 
+
 # PyInstaller
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
