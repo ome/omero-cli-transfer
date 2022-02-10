@@ -73,4 +73,3 @@ class TestTransfer(CLITest):
         self.args += ["unpack", package_name]
         self.cli.invoke(self.args, strict=True)
         self.gw = BlitzGateway(client_obj=self.client)
-        
