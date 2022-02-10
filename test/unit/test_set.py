@@ -37,9 +37,6 @@ class TestLoadTransferPacket():
             self.transfer._load_from_zip(None, None)
         with pytest.raises(TypeError):
             self.transfer._load_from_zip(
-                'test/data/valid_single_image.zip', None)
-        with pytest.raises(TypeError):
-            self.transfer._load_from_zip(
                 None, 'test/data/output_folder')
         with pytest.raises(TypeError):
             self.transfer._load_from_zip(

@@ -4,6 +4,7 @@ from omero_cli_transfer import TransferControl
 from cli import CLITest
 from omero.gateway import BlitzGateway
 
+import ezomero
 import pytest
 import os
 
@@ -27,9 +28,9 @@ class TestTransfer(CLITest):
         self.imageid = "Image:-1"
         self.datasetid = "Dataset:-1"
         self.projectid = "Project:-1"
+        self.gw = BlitzGateway(client_obj=self.client)
 
     def create_image(self, sizec=4, sizez=1, sizet=1, target_name=None):
-        self.gw = BlitzGateway(client_obj=self.client)
         images = self.import_fake_file(
                 images_count=2, sizeZ=sizez, sizeT=sizet, sizeC=sizec,
                 client=self.client)
@@ -53,7 +54,7 @@ class TestTransfer(CLITest):
                 self.link(obj1=dataset, obj2=i)
 
     @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
-    def test_non_existing_image(self, target_name, tmpdir):
+    def test_non_existing_object(self, target_name, tmpdir):
         self.args += ["pack", getattr(self, target_name),
                       str(tmpdir / 'test.zip')]
         with pytest.raises(ValueError):
@@ -68,8 +69,53 @@ class TestTransfer(CLITest):
         assert os.path.exists(str(tmpdir / 'test.zip'))
         assert os.path.getsize(str(tmpdir / 'test.zip')) > 0
 
-    @pytest.mark.parametrize('package_name', sorted(TEST_FILES))
+    @pytest.mark.parametrize('package_name', TEST_FILES)
     def test_unpack(self, package_name):
         self.args += ["unpack", package_name]
         self.cli.invoke(self.args, strict=True)
-        self.gw = BlitzGateway(client_obj=self.client)
+
+        if package_name == "test/data/valid_single_image.zip":
+            im_ids = ezomero.get_image_ids(self.gw)
+            assert len(im_ids) == 3
+            img, _ = ezomero.get_image(self.gw, im_ids[-1])
+            assert img.getName() == 'combined_result.tiff'
+            assert len(ezomero.get_roi_ids(self.gw, im_ids[-1])) == 3
+            assert len(ezomero.get_map_annotation_ids(
+                            self.gw, "Image", im_ids[-1])) == 2
+            assert len(ezomero.get_tag_ids(
+                            self.gw, "Image", im_ids[-1])) == 1
+
+        if package_name == "test/data/valid_single_dataset.zip":
+            ds = self.gw.getObjects("Dataset", opts={'orphaned': True})
+            count = 0
+            for d in ds:
+                ds_id = d.getId()
+                count += 1
+            assert count == 1
+            im_ids = ezomero.get_image_ids(self.gw, dataset=ds_id)
+            assert len(im_ids) == 2
+            assert len(ezomero.get_map_annotation_ids(
+                            self.gw, "Dataset", ds_id)) == 1
+            assert len(ezomero.get_tag_ids(
+                            self.gw, "Dataset", ds_id)) == 2
+
+        if package_name == "test/data/valid_single_project.zip":
+            ezomero.print_projects(self.gw)
+            pjs = self.gw.getObjects("Project")
+            count = 0
+            for p in pjs:
+                pj_id = p.getId()
+                count += 1
+            assert count == 4
+            count = 0
+            proj = self.gw.getObject("Project", pj_id)
+            for d in proj.listChildren():
+                ds_id = d.getId()
+                count += 1
+            assert count == 2
+            im_ids = ezomero.get_image_ids(self.gw, dataset=ds_id)
+            assert len(im_ids) == 1
+            assert len(ezomero.get_map_annotation_ids(
+                            self.gw, "Project", pj_id)) == 1
+            assert len(ezomero.get_tag_ids(
+                            self.gw, "Project", pj_id)) == 0

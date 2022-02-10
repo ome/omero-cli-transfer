@@ -206,7 +206,7 @@ class TransferControl(GraphControl):
     def _load_from_zip(self, filepath, output):
         if (not filepath) or (not isinstance(filepath, str)):
             raise TypeError("filepath must be a string")
-        if (not output) or (not isinstance(output, str)):
+        if output and not isinstance(output, str):
             raise TypeError("output folder must be a string")
         parent_folder = Path(filepath).parent
         filename = os.path.splitext(filepath)[0]
@@ -241,8 +241,9 @@ class TransferControl(GraphControl):
         cli = CLI()
         cli.loadplugins()
         dest_map = {}
+        curr_folder = str(Path('.').resolve())
         for filepath in filelist:
-            dest_path = str(os.path.join(folder,  '.', filepath))
+            dest_path = str(os.path.join(curr_folder, folder,  '.', filepath))
             if ln_s:
                 cli.invoke(['import',
                             dest_path,
