@@ -31,4 +31,4 @@ jobs:
       #    path: .omero
       #    ref: ${{ secrets.OMERO_TEST_INFRA_REF }}
       - name: Build and run OMERO tests
-        run: sudo chmod +x .omero/docker && .omero/docker $STAGE
+        run: sudo chmod +x .omero/* && .omero/docker $STAGE
