@@ -10,6 +10,7 @@
 from pathlib import Path
 import sys
 import os
+import copy
 from ome_types.model import CommentAnnotation
 from functools import wraps
 import shutil
@@ -191,7 +192,7 @@ class TransferControl(GraphControl):
         print(f"Unzipping {args.filepath}...")
         ome, folder = self._load_from_zip(args.filepath, args.output)
         print("Generating Image mapping and import filelist...")
-        src_img_map, filelist = self._create_image_map(ome)
+        ome, src_img_map, filelist = self._create_image_map(ome)
         print("Importing data as orphans...")
         if args.ln_s_import:
             ln_s = True
@@ -227,6 +228,7 @@ class TransferControl(GraphControl):
         print("starting ome: ", ome)
         img_map = defaultdict(list)
         filelist = []
+        newome = copy.deepcopy(ome)
         for ann in ome.structured_annotations:
             if int(ann.id.split(":")[-1]) < 0 \
                and type(ann) == CommentAnnotation:
@@ -234,8 +236,8 @@ class TransferControl(GraphControl):
                 img_map[ann.value].append(int(ann.namespace.split(":")[-1]))
                 filelist.append(ann.value.split('/./')[-1])
                 print("updated filelist: ", filelist)
-                ome.structured_annotations.remove(ann)
-        for i in ome.images:
+                newome.structured_annotations.remove(ann)
+        for i in newome.images:
             print("checking image for ann refs: ", i.id)
             for ref in i.annotation_ref:
                 if ref.id == ann.id:
@@ -243,7 +245,7 @@ class TransferControl(GraphControl):
                     print("new image: ", i)
         filelist = list(set(filelist))
         img_map = {x: sorted(img_map[x]) for x in img_map.keys()}
-        return img_map, filelist
+        return newome, img_map, filelist
 
     def _import_files(self, folder, filelist, ln_s, gateway):
         cli = CLI()
