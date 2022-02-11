@@ -240,7 +240,7 @@ def create_provenance_metadata(id, hostname):
     software = "omero-cli-transfer"
     version = pkg_resources.get_distribution(software).version
     date_time = datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
-    md_dict = {'image_id': id, 'origin_hostname': hostname,
+    md_dict = {'origin_image_id': id, 'origin_hostname': hostname,
                'packing_timestamp': date_time,
                'software': software, 'version': version}
     ns = 'openmicroscopy.org/cli/transfer'

@@ -182,8 +182,6 @@ def link_annotations(ome, proj_map, ds_map, img_map, ann_map, conn):
 
 
 def populate_omero(ome, img_map, conn):
-    print(img_map)
-    print(ome)
     proj_map = create_projects(ome.projects, conn)
     ds_map = create_datasets(ome.datasets, conn)
     ann_map = create_annotations(ome.structured_annotations, conn)
