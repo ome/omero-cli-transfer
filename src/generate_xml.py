@@ -239,7 +239,7 @@ def create_filepath_annotations(repo, id, conn):
 def create_provenance_metadata(id, hostname):
     software = "omero-cli-transfer"
     version = pkg_resources.get_distribution(software).version
-    date_time = datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
+    date_time = datetime.now().strftime("%d/%m/%Y, %H:%M:%S")
     md_dict = {'origin_image_id': id, 'origin_hostname': hostname,
                'packing_timestamp': date_time,
                'software': software, 'version': version}
