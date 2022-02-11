@@ -10,7 +10,7 @@
 from pathlib import Path
 import sys
 import os
-from ome_types import CommentAnnotation
+from ome_types.model import CommentAnnotation
 from functools import wraps
 import shutil
 from collections import defaultdict
