@@ -240,10 +240,22 @@ def create_provenance_metadata(id, hostname):
     software = "omero-cli-transfer"
     version = pkg_resources.get_distribution(software).version
     date_time = datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
-    md_dict = {'image_id': id, 'origin_hostaname': hostname,
+    md_dict = {'image_id': id, 'origin_hostname': hostname,
                'packing_timestamp': date_time,
                'software': software, 'version': version}
-    print(md_dict)
+    ns = 'openmicroscopy.org/cli/transfer'
+    id = (-1) * uuid4().int
+    mmap = []
+    for _key, _value in md_dict:
+        if _value:
+            mmap.append(M(k=_key, value=str(_value)))
+        else:
+            mmap.append(M(k=_key, value=''))
+    kv, ref = create_kv_and_ref(id=id,
+                                namespace=ns,
+                                value=Map(m=mmap))
+    print(kv, ref)
+    return kv, ref
 
 
 def populate_roi(obj, roi_obj, ome, conn):
@@ -311,7 +323,10 @@ def populate_image(obj, ome, conn, repo, hostname):
             if kv not in ome.structured_annotations:
                 ome.structured_annotations.append(kv)
             img.annotation_ref.append(ref)
-    create_provenance_metadata(id, hostname)
+    kv, ref = create_provenance_metadata(id, hostname)
+    if kv not in ome.structured_annotations:
+        ome.structured_annotations.append(kv)
+    img.annotation_ref.append(ref)
     filepath_anns, refs = create_filepath_annotations(repo, id, conn)
     for i in range(len(filepath_anns)):
         ome.structured_annotations.append(filepath_anns[i])
