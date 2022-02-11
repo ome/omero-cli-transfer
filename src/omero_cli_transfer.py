@@ -224,18 +224,23 @@ class TransferControl(GraphControl):
         return ome, folder
 
     def _create_image_map(self, ome):
+        print("starting ome: ", ome)
         img_map = defaultdict(list)
         filelist = []
         for ann in ome.structured_annotations:
             if int(ann.id.split(":")[-1]) < 0 \
                and type(ann) == CommentAnnotation:
+                print("comment with negative ID", ann)
                 img_map[ann.value].append(int(ann.namespace.split(":")[-1]))
                 filelist.append(ann.value.split('/./')[-1])
+                print("updated filelist: ", filelist)
                 ome.structured_annotations.remove(ann)
         for i in ome.images:
+            print("checking image for ann refs: ", i.id)
             for ref in i.annotation_ref:
                 if ref.id == ann.id:
                     i.annotation_ref.remove(ref)
+                    print("new image: ", i)
         filelist = list(set(filelist))
         img_map = {x: sorted(img_map[x]) for x in img_map.keys()}
         return img_map, filelist
