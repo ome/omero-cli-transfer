@@ -13,6 +13,7 @@ import pkg_resources
 import ezomero
 import os
 from uuid import uuid4
+from datetime import datetime
 
 
 def create_proj_and_ref(**kwargs):
@@ -238,7 +239,11 @@ def create_filepath_annotations(repo, id, conn):
 def create_provenance_metadata(id, hostname):
     software = "omero-cli-transfer"
     version = pkg_resources.get_distribution(software).version
-    print(hostname)
+    date_time = datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
+    md_dict = {'image_id': id, 'origin_hostaname': hostname,
+               'packing_timestamp': date_time,
+               'software': software, 'version': version}
+    print(md_dict)
 
 
 def populate_roi(obj, roi_obj, ome, conn):
