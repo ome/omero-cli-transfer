@@ -235,11 +235,12 @@ class TransferControl(GraphControl):
                 print("comment with negative ID", ann)
                 img_map[ann.value].append(int(ann.namespace.split(":")[-1]))
                 filelist.append(ann.value.split('/./')[-1])
-                print("updated filelist: ", filelist)
+                print("updated img_map: ", img_map)
                 newome.structured_annotations.remove(ann)
         for i in newome.images:
             print("checking image for ann refs: ", i.id)
             for ref in i.annotation_ref:
+                print(ref.id, ann.id)
                 if ref.id == ann.id:
                     i.annotation_ref.remove(ref)
                     print("new image: ", i)
