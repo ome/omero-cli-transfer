@@ -32,7 +32,7 @@ def create_datasets(dss, conn):
     return ds_map
 
 
-def create_annotations(ans, conn):
+def create_annotations(ans, conn, hash):
     ann_map = {}
     for an in ans:
         if isinstance(an, TagAnnotation):
@@ -48,6 +48,8 @@ def create_annotations(ans, conn):
             key_value_data = []
             for v in an.value.m:
                 key_value_data.append([v.k, v.value])
+            if int(an.id.split(":")[-1]) < 0:
+                key_value_data.append(['zip_file_md5', hash])
             map_ann.setValue(key_value_data)
             map_ann.save()
             ann_map[an.id] = map_ann.getId()
@@ -181,10 +183,10 @@ def link_annotations(ome, proj_map, ds_map, img_map, ann_map, conn):
     return
 
 
-def populate_omero(ome, img_map, conn):
+def populate_omero(ome, img_map, conn, hash):
     proj_map = create_projects(ome.projects, conn)
     ds_map = create_datasets(ome.datasets, conn)
-    ann_map = create_annotations(ome.structured_annotations, conn)
+    ann_map = create_annotations(ome.structured_annotations, conn, hash)
     create_rois(ome.rois, ome.images, img_map, conn)
     link_datasets(ome, proj_map, ds_map, conn)
     link_images(ome, ds_map, img_map, conn)

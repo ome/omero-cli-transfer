@@ -15,6 +15,7 @@ from ome_types.model import CommentAnnotation
 from functools import wraps
 import shutil
 from collections import defaultdict
+from hashlib import md5
 
 from generate_xml import populate_xml
 from generate_omero_objects import populate_omero
@@ -190,7 +191,7 @@ class TransferControl(GraphControl):
 
     def __unpack(self, args):
         print(f"Unzipping {args.filepath}...")
-        ome, folder = self._load_from_zip(args.filepath, args.output)
+        hash, ome, folder = self._load_from_zip(args.filepath, args.output)
         print("Generating Image mapping and import filelist...")
         ome, src_img_map, filelist = self._create_image_map(ome)
         print("Importing data as orphans...")
@@ -203,7 +204,7 @@ class TransferControl(GraphControl):
         print("Matching source and destination images...")
         img_map = self._make_image_map(src_img_map, dest_img_map)
         print("Creating and linking OMERO objects...")
-        populate_omero(ome, img_map, self.gateway)
+        populate_omero(ome, img_map, self.gateway, hash)
         return
 
     def _load_from_zip(self, filepath, output):
@@ -218,11 +219,13 @@ class TransferControl(GraphControl):
         else:
             folder = parent_folder / filename
         if Path(filepath).exists():
+            with open(filepath, 'rb') as file:
+                hash = md5(file.read()).hexdigest()
             shutil.unpack_archive(filepath, str(folder), 'zip')
         else:
             raise FileNotFoundError("filepath is not a zip file")
         ome = from_xml(folder / "transfer.xml")
-        return ome, folder
+        return hash, ome, folder
 
     def _create_image_map(self, ome):
         print("starting ome: ", ome)
