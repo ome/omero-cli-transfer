@@ -228,7 +228,6 @@ class TransferControl(GraphControl):
         return hash, ome, folder
 
     def _create_image_map(self, ome):
-        print("starting ome: ", ome)
         img_map = defaultdict(list)
         filelist = []
         newome = copy.deepcopy(ome)
