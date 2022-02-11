@@ -84,7 +84,7 @@ def gateway_required(func):
     def _wrapper(self, *args, **kwargs):
         self.client = self.ctx.conn(*args)
         self.gateway = BlitzGateway(client_obj=self.client)
-
+        self.hostname = self.client.getRouter(self.client.getCommunicator())
         try:
             return func(self, *args, **kwargs)
         finally:
@@ -174,7 +174,7 @@ class TransferControl(GraphControl):
         xml_fp = str(Path(folder) / "transfer.xml")
         repo = self._get_path_to_repo()[0]
         path_id_dict = populate_xml(src_datatype, src_dataid,
-                                    xml_fp, self.gateway, repo)
+                                    xml_fp, self.gateway, repo, self.hostname)
         print(f"XML saved at {xml_fp}.")
 
         print("Starting file copy...")
