@@ -229,10 +229,12 @@ class TransferControl(GraphControl):
         img_map = defaultdict(list)
         filelist = []
         newome = copy.deepcopy(ome)
+        map_ref_ids = []
         for ann in ome.structured_annotations:
             if int(ann.id.split(":")[-1]) < 0 \
                and type(ann) == CommentAnnotation:
                 print("comment with negative ID", ann)
+                map_ref_ids.append(ann.id)
                 img_map[ann.value].append(int(ann.namespace.split(":")[-1]))
                 filelist.append(ann.value.split('/./')[-1])
                 print("updated img_map: ", img_map)
@@ -240,8 +242,8 @@ class TransferControl(GraphControl):
         for i in newome.images:
             print("checking image for ann refs: ", i.id)
             for ref in i.annotation_ref:
-                print(ref.id, ann.id)
-                if ref.id == ann.id:
+                print(ref.id, map_ref_ids)
+                if ref.id in map_ref_ids:
                     i.annotation_ref.remove(ref)
                     print("new image: ", i)
         filelist = list(set(filelist))
