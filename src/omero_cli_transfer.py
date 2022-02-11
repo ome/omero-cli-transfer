@@ -10,6 +10,7 @@
 from pathlib import Path
 import sys
 import os
+from ome_types import CommentAnnotation
 from functools import wraps
 import shutil
 from collections import defaultdict
@@ -226,14 +227,15 @@ class TransferControl(GraphControl):
         img_map = defaultdict(list)
         filelist = []
         for ann in ome.structured_annotations:
-            if int(ann.id.split(":")[-1]) < 0:
+            if int(ann.id.split(":")[-1]) < 0 \
+               and type(ann) == CommentAnnotation:
                 img_map[ann.value].append(int(ann.namespace.split(":")[-1]))
                 filelist.append(ann.value.split('/./')[-1])
-        ome.structured_annotations = [x for x in ome.structured_annotations
-                                      if int(x.id.split(":")[-1]) > 0]
+                ome.structured_annotations.remove(ann)
         for i in ome.images:
-            i.annotation_ref = [x for x in i.annotation_ref
-                                if int(x.id.split(":")[-1]) > 0]
+            for ref in i.annotation_ref:
+                if ref.id == ann.id:
+                    i.annotation_ref.remove(ref)
         filelist = list(set(filelist))
         img_map = {x: sorted(img_map[x]) for x in img_map.keys()}
         return img_map, filelist
