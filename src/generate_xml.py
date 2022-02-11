@@ -254,7 +254,6 @@ def create_provenance_metadata(id, hostname):
     kv, ref = create_kv_and_ref(id=id,
                                 namespace=ns,
                                 value=Map(m=mmap))
-    print(kv, ref)
     return kv, ref
 
 
