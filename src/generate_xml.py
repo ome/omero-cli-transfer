@@ -9,9 +9,11 @@ from ome_types.model import Point, Line, Rectangle, Ellipse, Polygon
 from ome_types.model.map import M
 from omero.model import TagAnnotationI, MapAnnotationI
 from omero.model import PointI, LineI, RectangleI, EllipseI, PolygonI
+import pkg_resources
 import ezomero
 import os
 from uuid import uuid4
+from datetime import datetime
 
 
 def create_proj_and_ref(**kwargs):
@@ -234,6 +236,27 @@ def create_filepath_annotations(repo, id, conn):
     return anns, refs
 
 
+def create_provenance_metadata(id, hostname):
+    software = "omero-cli-transfer"
+    version = pkg_resources.get_distribution(software).version
+    date_time = datetime.now().strftime("%d/%m/%Y, %H:%M:%S")
+    md_dict = {'origin_image_id': id, 'origin_hostname': hostname,
+               'packing_timestamp': date_time,
+               'software': software, 'version': version}
+    ns = 'openmicroscopy.org/cli/transfer'
+    id = (-1) * uuid4().int
+    mmap = []
+    for _key, _value in md_dict.items():
+        if _value:
+            mmap.append(M(k=_key, value=str(_value)))
+        else:
+            mmap.append(M(k=_key, value=''))
+    kv, ref = create_kv_and_ref(id=id,
+                                namespace=ns,
+                                value=Map(m=mmap))
+    return kv, ref
+
+
 def populate_roi(obj, roi_obj, ome, conn):
     id = obj.getId().getValue()
     name = obj.getName()
@@ -271,7 +294,7 @@ def populate_roi(obj, roi_obj, ome, conn):
     return roi_ref
 
 
-def populate_image(obj, ome, conn, repo):
+def populate_image(obj, ome, conn, repo, hostname):
     id = obj.getId()
     name = obj.getName()
     desc = obj.getDescription()
@@ -299,6 +322,10 @@ def populate_image(obj, ome, conn, repo):
             if kv not in ome.structured_annotations:
                 ome.structured_annotations.append(kv)
             img.annotation_ref.append(ref)
+    kv, ref = create_provenance_metadata(id, hostname)
+    if kv not in ome.structured_annotations:
+        ome.structured_annotations.append(kv)
+    img.annotation_ref.append(ref)
     filepath_anns, refs = create_filepath_annotations(repo, id, conn)
     for i in range(len(filepath_anns)):
         ome.structured_annotations.append(filepath_anns[i])
@@ -314,7 +341,7 @@ def populate_image(obj, ome, conn, repo):
     return img_ref
 
 
-def populate_dataset(obj, ome, conn, repo):
+def populate_dataset(obj, ome, conn, repo, hostname):
     id = obj.getId()
     name = obj.getName()
     desc = obj.getDescription()
@@ -343,14 +370,14 @@ def populate_dataset(obj, ome, conn, repo):
             ds.annotation_ref.append(ref)
     for img in obj.listChildren():
         img_obj = conn.getObject('Image', img.getId())
-        img_ref = populate_image(img_obj, ome, conn, repo)
+        img_ref = populate_image(img_obj, ome, conn, repo, hostname)
         ds.image_ref.append(img_ref)
     if ds not in ome.datasets:
         ome.datasets.append(ds)
     return ds_ref
 
 
-def populate_project(obj, ome, conn, repo):
+def populate_project(obj, ome, conn, repo, hostname):
     id = obj.getId()
     name = obj.getName()
     desc = obj.getDescription()
@@ -379,7 +406,7 @@ def populate_project(obj, ome, conn, repo):
             test_proj.annotation_ref.append(ref)
     for ds in obj.listChildren():
         ds_obj = conn.getObject('Dataset', ds.getId())
-        ds_ref = populate_dataset(ds_obj, ome, conn, repo)
+        ds_ref = populate_dataset(ds_obj, ome, conn, repo, hostname)
         test_proj.dataset_ref.append(ds_ref)
     ome.projects.append(test_proj)
 
@@ -392,15 +419,15 @@ def list_image_ids(ome):
     return id_list
 
 
-def populate_xml(datatype, id, filepath, conn, repo):
+def populate_xml(datatype, id, filepath, conn, repo, hostname):
     ome = OME()
     obj = conn.getObject(datatype, id)
     if datatype == 'Project':
-        populate_project(obj, ome, conn, repo)
+        populate_project(obj, ome, conn, repo, hostname)
     if datatype == 'Dataset':
-        populate_dataset(obj, ome, conn, repo)
+        populate_dataset(obj, ome, conn, repo, hostname)
     if datatype == 'Image':
-        populate_image(obj, ome, conn, repo)
+        populate_image(obj, ome, conn, repo, hostname)
     with open(filepath, 'w') as fp:
         print(to_xml(ome), file=fp)
         fp.close()

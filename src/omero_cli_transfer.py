@@ -10,9 +10,12 @@
 from pathlib import Path
 import sys
 import os
+import copy
+from ome_types.model import CommentAnnotation
 from functools import wraps
 import shutil
 from collections import defaultdict
+from hashlib import md5
 
 from generate_xml import populate_xml
 from generate_omero_objects import populate_omero
@@ -84,7 +87,8 @@ def gateway_required(func):
     def _wrapper(self, *args, **kwargs):
         self.client = self.ctx.conn(*args)
         self.gateway = BlitzGateway(client_obj=self.client)
-
+        router = self.client.getRouter(self.client.getCommunicator())
+        self.hostname = str(router).split('-h ')[-1].split()[0]
         try:
             return func(self, *args, **kwargs)
         finally:
@@ -174,7 +178,7 @@ class TransferControl(GraphControl):
         xml_fp = str(Path(folder) / "transfer.xml")
         repo = self._get_path_to_repo()[0]
         path_id_dict = populate_xml(src_datatype, src_dataid,
-                                    xml_fp, self.gateway, repo)
+                                    xml_fp, self.gateway, repo, self.hostname)
         print(f"XML saved at {xml_fp}.")
 
         print("Starting file copy...")
@@ -187,9 +191,9 @@ class TransferControl(GraphControl):
 
     def __unpack(self, args):
         print(f"Unzipping {args.filepath}...")
-        ome, folder = self._load_from_zip(args.filepath, args.output)
+        hash, ome, folder = self._load_from_zip(args.filepath, args.output)
         print("Generating Image mapping and import filelist...")
-        src_img_map, filelist = self._create_image_map(ome)
+        ome, src_img_map, filelist = self._create_image_map(ome)
         print("Importing data as orphans...")
         if args.ln_s_import:
             ln_s = True
@@ -200,7 +204,7 @@ class TransferControl(GraphControl):
         print("Matching source and destination images...")
         img_map = self._make_image_map(src_img_map, dest_img_map)
         print("Creating and linking OMERO objects...")
-        populate_omero(ome, img_map, self.gateway)
+        populate_omero(ome, img_map, self.gateway, hash)
         return
 
     def _load_from_zip(self, filepath, output):
@@ -215,27 +219,33 @@ class TransferControl(GraphControl):
         else:
             folder = parent_folder / filename
         if Path(filepath).exists():
+            with open(filepath, 'rb') as file:
+                hash = md5(file.read()).hexdigest()
             shutil.unpack_archive(filepath, str(folder), 'zip')
         else:
             raise FileNotFoundError("filepath is not a zip file")
         ome = from_xml(folder / "transfer.xml")
-        return ome, folder
+        return hash, ome, folder
 
     def _create_image_map(self, ome):
         img_map = defaultdict(list)
         filelist = []
+        newome = copy.deepcopy(ome)
+        map_ref_ids = []
         for ann in ome.structured_annotations:
-            if int(ann.id.split(":")[-1]) < 0:
+            if int(ann.id.split(":")[-1]) < 0 \
+               and type(ann) == CommentAnnotation:
+                map_ref_ids.append(ann.id)
                 img_map[ann.value].append(int(ann.namespace.split(":")[-1]))
                 filelist.append(ann.value.split('/./')[-1])
-        ome.structured_annotations = [x for x in ome.structured_annotations
-                                      if int(x.id.split(":")[-1]) > 0]
-        for i in ome.images:
-            i.annotation_ref = [x for x in i.annotation_ref
-                                if int(x.id.split(":")[-1]) > 0]
+                newome.structured_annotations.remove(ann)
+        for i in newome.images:
+            for ref in i.annotation_ref:
+                if ref.id in map_ref_ids:
+                    i.annotation_ref.remove(ref)
         filelist = list(set(filelist))
         img_map = {x: sorted(img_map[x]) for x in img_map.keys()}
-        return img_map, filelist
+        return newome, img_map, filelist
 
     def _import_files(self, folder, filelist, ln_s, gateway):
         cli = CLI()
