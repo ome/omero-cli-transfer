@@ -84,7 +84,8 @@ def gateway_required(func):
     def _wrapper(self, *args, **kwargs):
         self.client = self.ctx.conn(*args)
         self.gateway = BlitzGateway(client_obj=self.client)
-        self.hostname = self.client.getRouter(self.client.getCommunicator())
+        router = self.client.getRouter(self.client.getCommunicator())
+        self.hostname = router.split('-h ')[-1].split()[0]
         try:
             return func(self, *args, **kwargs)
         finally:
