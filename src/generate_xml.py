@@ -246,7 +246,7 @@ def create_provenance_metadata(id, hostname):
     ns = 'openmicroscopy.org/cli/transfer'
     id = (-1) * uuid4().int
     mmap = []
-    for _key, _value in md_dict:
+    for _key, _value in md_dict.items():
         if _value:
             mmap.append(M(k=_key, value=str(_value)))
         else:
