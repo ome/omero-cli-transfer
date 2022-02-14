@@ -149,7 +149,6 @@ class TransferControl(GraphControl):
     def _copy_files(self, id_list, folder, repo):
         cli = CLI()
         cli.loadplugins()
-        print(id_list)
         for id in id_list:
             path = id_list[id]
             rel_path = path.split(repo)[-1][1:]
@@ -284,16 +283,16 @@ class TransferControl(GraphControl):
         q = gateway.getQueryService()
         params = Parameters()
         path_query = str(file_path).strip('/')
-        params.map = {"cpath": rstring(path_query)}
+        params.map = {"cpath": rstring('%s%%' % path_query)}
         results = q.projection(
             "SELECT i.id FROM Image i"
             " JOIN i.fileset fs"
             " JOIN fs.usedFiles u"
-            " WHERE u.clientPath=:cpath",
+            " WHERE u.clientPath LIKE :cpath",
             params,
             gateway.SERVICE_OPTS
             )
-        image_ids = sorted([r[0].val for r in results])
+        image_ids = list(set(sorted([r[0].val for r in results])))
         return image_ids
 
     def _make_image_map(self, source_map, dest_map):

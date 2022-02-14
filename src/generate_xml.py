@@ -14,6 +14,7 @@ import ezomero
 import os
 from uuid import uuid4
 from datetime import datetime
+from pathlib import Path
 
 
 def create_proj_and_ref(**kwargs):
@@ -223,19 +224,26 @@ def create_filepath_annotations(repo, id, conn):
     anns = []
     refs = []
     fpaths = ezomero.get_original_filepaths(conn, id)
-    if fpaths:
+    if len(fpaths) > 1:
+        allpaths = []
         for f in fpaths:
-            f = str(os.path.join(repo,  '.', f))
-            id = (-1) * uuid4().int
-            an = CommentAnnotation(id=id,
-                                   namespace=ns,
-                                   value=f
-                                   )
-            anns.append(an)
-            anref = ROIRef(id=an.id)
-            refs.append(anref)
+            f = Path(f)
+            allpaths.append(f.parts)
+        common_root = Path(*os.path.commonprefix(allpaths))
+        folder = str(os.path.join(repo,  '.', common_root))
+        id = (-1) * uuid4().int
+        an = CommentAnnotation(id=id,
+                               namespace=ns,
+                               value=folder
+                               )
+        anns.append(an)
+        anref = ROIRef(id=an.id)
+        refs.append(anref)
     else:
-        f = f'pixel_images/{id}.tiff'
+        if fpaths:
+            f = str(os.path.join(repo,  '.', fpaths[0]))
+        else:
+            f = f'pixel_images/{id}.tiff'
         f = str(os.path.join(repo,  '.', f))
         id = (-1) * uuid4().int
         an = CommentAnnotation(id=id,
