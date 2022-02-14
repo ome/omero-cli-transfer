@@ -183,7 +183,17 @@ def link_annotations(ome, proj_map, ds_map, img_map, ann_map, conn):
     return
 
 
+def rename_images(imgs, img_map, conn):
+    for img in imgs:
+        img_id = img_map[img.id]
+        im_obj = conn.getObject("Image", img_id)
+        im_obj.setName(img.name)
+        im_obj.save()
+    return
+
+
 def populate_omero(ome, img_map, conn, hash):
+    rename_images(ome.images, img_map, conn)
     proj_map = create_projects(ome.projects, conn)
     ds_map = create_datasets(ome.datasets, conn)
     ann_map = create_annotations(ome.structured_annotations, conn, hash)

@@ -11,7 +11,6 @@ from pathlib import Path
 import sys
 import os
 import copy
-from ome_types.model import CommentAnnotation
 from functools import wraps
 import shutil
 from collections import defaultdict
@@ -20,6 +19,7 @@ from hashlib import md5
 from generate_xml import populate_xml
 from generate_omero_objects import populate_omero
 
+from ome_types.model import CommentAnnotation
 from ome_types import from_xml
 from omero.sys import Parameters
 from omero.rtypes import rstring
@@ -149,13 +149,19 @@ class TransferControl(GraphControl):
     def _copy_files(self, id_list, folder, repo):
         cli = CLI()
         cli.loadplugins()
+        print(id_list)
         for id in id_list:
             path = id_list[id]
             rel_path = path.split(repo)[-1][1:]
             rel_path = str(Path(rel_path).parent)
             subfolder = str(Path(folder) / rel_path)
             os.makedirs(subfolder, mode=DIR_PERM, exist_ok=True)
-            cli.invoke(['download', id, subfolder])
+            if rel_path == "pixel_images":
+                clean_id = id.split(":")[-1]
+                filepath = str(Path(subfolder) / (clean_id + ".tiff"))
+                cli.invoke(['export', '--file', filepath, id])
+            else:
+                cli.invoke(['download', id, subfolder])
 
     def __pack(self, args):
         if isinstance(args.object, Image):

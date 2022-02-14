@@ -223,7 +223,19 @@ def create_filepath_annotations(repo, id, conn):
     anns = []
     refs = []
     fpaths = ezomero.get_original_filepaths(conn, id)
-    for f in fpaths:
+    if fpaths:
+        for f in fpaths:
+            f = str(os.path.join(repo,  '.', f))
+            id = (-1) * uuid4().int
+            an = CommentAnnotation(id=id,
+                                   namespace=ns,
+                                   value=f
+                                   )
+            anns.append(an)
+            anref = ROIRef(id=an.id)
+            refs.append(anref)
+    else:
+        f = f'pixel_images/{id}.tiff'
         f = str(os.path.join(repo,  '.', f))
         id = (-1) * uuid4().int
         an = CommentAnnotation(id=id,
