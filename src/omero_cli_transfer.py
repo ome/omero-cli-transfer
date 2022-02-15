@@ -149,6 +149,7 @@ class TransferControl(GraphControl):
     def _copy_files(self, id_list, folder, repo):
         cli = CLI()
         cli.loadplugins()
+        print(id_list)
         for id in id_list:
             path = id_list[id]
             rel_path = path.split(repo)[-1][1:]
