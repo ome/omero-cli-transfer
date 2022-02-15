@@ -6,9 +6,11 @@ from ome_types.model import TagAnnotation, MapAnnotation, ROI
 from ome_types.model import AnnotationRef, ROIRef, Map
 from ome_types.model import CommentAnnotation
 from ome_types.model import Point, Line, Rectangle, Ellipse, Polygon
+from ome_types.model import Polyline, Label
 from ome_types.model.map import M
 from omero.model import TagAnnotationI, MapAnnotationI
 from omero.model import PointI, LineI, RectangleI, EllipseI, PolygonI
+from omero.model import PolylineI, LabelI
 import pkg_resources
 import ezomero
 import os
@@ -116,6 +118,10 @@ def create_line(shape):
         args['locked'] = shape.getLocked().val
     if shape.getStrokeColor() is not None:
         args['stroke_color'] = shape.getStrokeColor().val
+    if shape.getMarkerStart() is not None:
+        args['marker_start'] = shape.getMarkerStart().val
+    if shape.getMarkerEnd() is not None:
+        args['marker_end'] = shape.getMarkerEnd().val
     ln = Line(**args)
     return ln
 
@@ -196,25 +202,80 @@ def create_polygon(shape):
     return pol
 
 
+def create_polyline(shape):
+    args = {'id': shape.getId().val, 'points': shape.getPoints().val}
+    args['text'] = ''
+    args['the_c'] = 0
+    args['the_z'] = 0
+    args['the_t'] = 0
+    if shape.getTextValue() is not None:
+        args['text'] = shape.getTextValue().val
+    if shape.getTheC() is not None:
+        args['the_c'] = max(shape.getTheC().val, 0)
+    if shape.getTheZ() is not None:
+        args['the_z'] = shape.getTheZ().val
+    if shape.getTheT() is not None:
+        args['the_t'] = shape.getTheT().val
+    if shape.getFillColor() is not None:
+        args['fill_color'] = shape.getFillColor().val
+    if shape.getLocked() is not None:
+        args['locked'] = shape.getLocked().val
+    if shape.getStrokeColor() is not None:
+        args['stroke_color'] = shape.getStrokeColor().val
+    pol = Polyline(**args)
+    return pol
+
+
+def create_label(shape):
+    args = {'id': shape.getId().val, 'x': shape.getX().val,
+            'y': shape.getY().val}
+    args['text'] = shape.getTextValue().val
+    args['font_size'] = shape.getFontSize().getValue()
+    args['the_c'] = 0
+    args['the_z'] = 0
+    args['the_t'] = 0
+    if shape.getTheC() is not None:
+        args['the_c'] = max(shape.getTheC().val, 0)
+    if shape.getTheZ() is not None:
+        args['the_z'] = shape.getTheZ().val
+    if shape.getTheT() is not None:
+        args['the_t'] = shape.getTheT().val
+    if shape.getFillColor() is not None:
+        args['fill_color'] = shape.getFillColor().val
+    if shape.getLocked() is not None:
+        args['locked'] = shape.getLocked().val
+    if shape.getStrokeColor() is not None:
+        args['stroke_color'] = shape.getStrokeColor().val
+    pt = Label(**args)
+    return pt
+
+
 def create_shapes(roi):
     shapes = []
     for s in roi.iterateShapes():
         if isinstance(s, PointI):
             p = create_point(s)
             shapes.append(p)
-        if isinstance(s, LineI):
+        elif isinstance(s, LineI):
             line = create_line(s)
             shapes.append(line)
-        if isinstance(s, RectangleI):
+        elif isinstance(s, RectangleI):
             r = create_rectangle(s)
             shapes.append(r)
-        if isinstance(s, EllipseI):
+        elif isinstance(s, EllipseI):
             e = create_ellipse(s)
             shapes.append(e)
-        if isinstance(s, PolygonI):
+        elif isinstance(s, PolygonI):
             pol = create_polygon(s)
             shapes.append(pol)
+        elif isinstance(s, PolylineI):
+            pol = create_polyline(s)
+            shapes.append(pol)
+        elif isinstance(s, LabelI):
+            pol = create_label(s)
+            shapes.append(pol)
         else:
+            print("not a real thing")
             continue
     return shapes
 
@@ -286,6 +347,8 @@ def populate_roi(obj, roi_obj, ome, conn):
     if desc is not None:
         desc = desc.getValue()
     shapes = create_shapes(obj)
+    if not shapes:
+        return None
     roi, roi_ref = create_roi_and_ref(id=id, name=name, description=desc,
                                       union=shapes)
     for ann in roi_obj.listAnnotations():
@@ -355,6 +418,8 @@ def populate_image(obj, ome, conn, repo, hostname):
     for roi in rois:
         roi_obj = conn.getObject('Roi', roi.getId().getValue())
         roi_ref = populate_roi(roi, roi_obj, ome, conn)
+        if not roi_ref:
+            continue
         img.roi_ref.append(roi_ref)
     if img not in ome.images:
         ome.images.append(img)
