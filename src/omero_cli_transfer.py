@@ -149,12 +149,16 @@ class TransferControl(GraphControl):
     def _copy_files(self, id_list, folder, repo):
         cli = CLI()
         cli.loadplugins()
+        print(repo)
         print(id_list)
         for id in id_list:
             path = id_list[id]
             rel_path = path.split(repo)[-1][1:]
+            print(rel_path)
             rel_path = str(Path(rel_path).parent)
+            print(rel_path)
             subfolder = str(Path(folder) / rel_path)
+            print(subfolder)
             os.makedirs(subfolder, mode=DIR_PERM, exist_ok=True)
             if rel_path == "pixel_images":
                 clean_id = id.split(":")[-1]
