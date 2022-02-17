@@ -230,10 +230,11 @@ def create_filepath_annotations(id, conn):
             f = Path(f)
             allpaths.append(f.parts)
         common_root = Path(*os.path.commonprefix(allpaths))
+        path = os.path.join(common_root, 'mock_folder')
         id = (-1) * uuid4().int
         an = CommentAnnotation(id=id,
                                namespace=ns,
-                               value=str(common_root)
+                               value=str(path)
                                )
         anns.append(an)
         anref = ROIRef(id=an.id)

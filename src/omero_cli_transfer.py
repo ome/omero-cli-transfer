@@ -154,12 +154,12 @@ class TransferControl(GraphControl):
             path = id_list[id]
             rel_path = path
             print(rel_path)
-            if Path(rel_path).is_file():
-                rel_path = str(Path(rel_path).parent)
+            rel_path = str(Path(rel_path).parent)
             print(rel_path)
             subfolder = str(Path(folder) / rel_path)
             print(subfolder)
             os.makedirs(subfolder, mode=DIR_PERM, exist_ok=True)
+            print("rel_path before pixel image decision: ", rel_path)
             if rel_path == "pixel_images":
                 clean_id = id.split(":")[-1]
                 filepath = str(Path(subfolder) / (clean_id + ".tiff"))
@@ -247,7 +247,10 @@ class TransferControl(GraphControl):
                and type(ann) == CommentAnnotation:
                 map_ref_ids.append(ann.id)
                 img_map[ann.value].append(int(ann.namespace.split(":")[-1]))
-                filelist.append(ann.value.split('/./')[-1])
+                if ann.value.endswith('mock_folder'):
+                    filelist.append(ann.value.rstrip("mock_folder"))
+                else:
+                    filelist.append(ann.value)
                 newome.structured_annotations.remove(ann)
         for i in newome.images:
             for ref in i.annotation_ref:
@@ -305,9 +308,13 @@ class TransferControl(GraphControl):
         # map image IDs between source and destination
         src_dict = defaultdict(list)
         imgmap = {}
+        print(source_map, dest_map)
         for k, v in source_map.items():
-            newkey = k.split("/./")[-1]
-            src_dict[newkey].extend(v)
+            if k.endswith("mock_folder"):
+                newkey = k.rstrip("mock_folder")
+                src_dict[newkey].extend(v)
+            else:
+                src_dict[k].extend(v)
         dest_dict = defaultdict(list)
         for k, v in dest_map.items():
             newkey = k.split("/./")[-1]
