@@ -146,13 +146,12 @@ class TransferControl(GraphControl):
                 mrepos.append(path)
         return mrepos
 
-    def _copy_files(self, id_list, folder, repo):
+    def _copy_files(self, id_list, folder):
         cli = CLI()
         cli.loadplugins()
-        print(id_list)
         for id in id_list:
             path = id_list[id]
-            rel_path = path.split(repo)[-1][1:]
+            rel_path = path
             rel_path = str(Path(rel_path).parent)
             subfolder = str(Path(folder) / rel_path)
             os.makedirs(subfolder, mode=DIR_PERM, exist_ok=True)
@@ -182,13 +181,13 @@ class TransferControl(GraphControl):
         folder = str(zip_path) + "_folder"
         os.makedirs(folder, mode=DIR_PERM, exist_ok=True)
         xml_fp = str(Path(folder) / "transfer.xml")
-        repo = self._get_path_to_repo()[0]
+        # repo = self._get_path_to_repo()[0]
         path_id_dict = populate_xml(src_datatype, src_dataid,
-                                    xml_fp, self.gateway, repo, self.hostname)
+                                    xml_fp, self.gateway, self.hostname)
         print(f"XML saved at {xml_fp}.")
 
         print("Starting file copy...")
-        self._copy_files(path_id_dict, folder, repo)
+        self._copy_files(path_id_dict, folder)
         print("Creating zip file...")
         shutil.make_archive(os.path.splitext(zip_path)[0], 'zip', folder)
         print("Cleaning up...")
@@ -243,7 +242,10 @@ class TransferControl(GraphControl):
                and type(ann) == CommentAnnotation:
                 map_ref_ids.append(ann.id)
                 img_map[ann.value].append(int(ann.namespace.split(":")[-1]))
-                filelist.append(ann.value.split('/./')[-1])
+                if ann.value.endswith('mock_folder'):
+                    filelist.append(ann.value.rstrip("mock_folder"))
+                else:
+                    filelist.append(ann.value)
                 newome.structured_annotations.remove(ann)
         for i in newome.images:
             for ref in i.annotation_ref:
@@ -284,16 +286,16 @@ class TransferControl(GraphControl):
         q = gateway.getQueryService()
         params = Parameters()
         path_query = str(file_path).strip('/')
-        params.map = {"cpath": rstring(path_query)}
+        params.map = {"cpath": rstring('%s%%' % path_query)}
         results = q.projection(
             "SELECT i.id FROM Image i"
             " JOIN i.fileset fs"
             " JOIN fs.usedFiles u"
-            " WHERE u.clientPath=:cpath",
+            " WHERE u.clientPath LIKE :cpath",
             params,
             gateway.SERVICE_OPTS
             )
-        image_ids = sorted([r[0].val for r in results])
+        image_ids = list(set(sorted([r[0].val for r in results])))
         return image_ids
 
     def _make_image_map(self, source_map, dest_map):
@@ -302,8 +304,11 @@ class TransferControl(GraphControl):
         src_dict = defaultdict(list)
         imgmap = {}
         for k, v in source_map.items():
-            newkey = k.split("/./")[-1]
-            src_dict[newkey].extend(v)
+            if k.endswith("mock_folder"):
+                newkey = k.rstrip("mock_folder")
+                src_dict[newkey].extend(v)
+            else:
+                src_dict[k].extend(v)
         dest_dict = defaultdict(list)
         for k, v in dest_map.items():
             newkey = k.split("/./")[-1]

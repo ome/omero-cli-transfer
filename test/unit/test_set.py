@@ -53,7 +53,7 @@ class TestLoadTransferPacket():
     def test_src_img_map(self):
         ome = from_xml('test/data/transfer.xml')
         _, src_img_map, filelist = self.transfer._create_image_map(ome)
-        correct_map = {"/OMERO/ManagedRepository/./root_0/2022-01/14/"
+        correct_map = {"root_0/2022-01/14/"
                        "18-30-55.264/combined_result.tiff": [1678, 1679]}
         correct_filelist = ["root_0/2022-01/14/18-30-55.264/"
                             "combined_result.tiff"]
@@ -77,8 +77,8 @@ class TestLoadTransferPacket():
         assert True
 
     def test_image_map(self):
-        path1 = '/a/b/./c/d'
-        path2 = '/e/f/./c/d'
+        path1 = 'c/d'
+        path2 = 'c/d'
         src_map = {path1: [1]}
         dest_map = {path2: [2]}
         imgmap = self.transfer._make_image_map(src_map, dest_map)
