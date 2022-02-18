@@ -149,17 +149,12 @@ class TransferControl(GraphControl):
     def _copy_files(self, id_list, folder):
         cli = CLI()
         cli.loadplugins()
-        print(id_list)
         for id in id_list:
             path = id_list[id]
             rel_path = path
-            print(rel_path)
             rel_path = str(Path(rel_path).parent)
-            print(rel_path)
             subfolder = str(Path(folder) / rel_path)
-            print(subfolder)
             os.makedirs(subfolder, mode=DIR_PERM, exist_ok=True)
-            print("rel_path before pixel image decision: ", rel_path)
             if rel_path == "pixel_images":
                 clean_id = id.split(":")[-1]
                 filepath = str(Path(subfolder) / (clean_id + ".tiff"))
@@ -308,7 +303,6 @@ class TransferControl(GraphControl):
         # map image IDs between source and destination
         src_dict = defaultdict(list)
         imgmap = {}
-        print(source_map, dest_map)
         for k, v in source_map.items():
             if k.endswith("mock_folder"):
                 newkey = k.rstrip("mock_folder")
