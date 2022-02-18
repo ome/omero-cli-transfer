@@ -81,7 +81,7 @@ class TestTransfer(CLITest):
             assert img.getName() == 'combined_result.tiff'
             assert len(ezomero.get_roi_ids(self.gw, im_ids[-1])) == 3
             assert len(ezomero.get_map_annotation_ids(
-                            self.gw, "Image", im_ids[-1])) == 2
+                            self.gw, "Image", im_ids[-1])) == 3
             assert len(ezomero.get_tag_ids(
                             self.gw, "Image", im_ids[-1])) == 1
 
@@ -93,7 +93,7 @@ class TestTransfer(CLITest):
                 count += 1
             assert count == 1
             im_ids = ezomero.get_image_ids(self.gw, dataset=ds_id)
-            assert len(im_ids) == 2
+            assert len(im_ids) == 1
             assert len(ezomero.get_map_annotation_ids(
                             self.gw, "Dataset", ds_id)) == 1
             assert len(ezomero.get_tag_ids(

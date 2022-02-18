@@ -38,10 +38,10 @@
             <Value>simple_tag</Value>
         </TagAnnotation>
         <CommentAnnotation ID="Annotation:-242965625845933864455559976333404928513" Namespace="Image:1678">
-            <Value>/OMERO/ManagedRepository/./root_0/2022-01/14/18-30-55.264/combined_result.tiff</Value>
+            <Value>root_0/2022-01/14/18-30-55.264/combined_result.tiff</Value>
         </CommentAnnotation>
         <CommentAnnotation ID="Annotation:-242965625845933864455559976333404928514" Namespace="Image:1679">
-            <Value>/OMERO/ManagedRepository/./root_0/2022-01/14/18-30-55.264/combined_result.tiff</Value>
+            <Value>root_0/2022-01/14/18-30-55.264/combined_result.tiff</Value>
         </CommentAnnotation>
         <MapAnnotation ID="Annotation:2210" Namespace="jax.org/jax/example/namespace">
             <Value>
@@ -68,4 +68,3 @@
         </Union>
     </ROI>
 </OME>
-
