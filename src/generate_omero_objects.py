@@ -2,7 +2,9 @@ import ezomero
 from omero.model import DatasetI
 from omero.gateway import DatasetWrapper
 from ome_types.model import TagAnnotation, MapAnnotation
-from ome_types.model import Line, Point, Rectangle, Ellipse, Polygon, Polyline
+from ome_types.model import Line, Point, Rectangle, Ellipse, Polygon
+from ome_types.model import Polyline, Label
+from ome_types.model.simple_types import Marker
 from omero.gateway import TagAnnotationWrapper, MapAnnotationWrapper
 from ezomero import rois
 
@@ -63,9 +65,18 @@ def create_shapes(roi):
             sh = rois.Point(shape.x, shape.y, z=shape.the_z, c=shape.the_c,
                             t=shape.the_t, label=shape.text)
         elif isinstance(shape, Line):
+            if shape.marker_start == Marker.ARROW:
+                mk_start = "Arrow"
+            else:
+                mk_start = shape.marker_start
+            if shape.marker_end == Marker.ARROW:
+                mk_end = "Arrow"
+            else:
+                mk_end = shape.marker_end
             sh = rois.Line(shape.x1, shape.y1, shape.x2, shape.y2,
                            z=shape.the_z, c=shape.the_c, t=shape.the_t,
-                           label=shape.text)
+                           label=shape.text, markerStart=mk_start,
+                           markerEnd=mk_end)
         elif isinstance(shape, Rectangle):
             sh = rois.Rectangle(shape.x, shape.y, shape.width, shape.height,
                                 z=shape.the_z, c=shape.the_c, t=shape.the_t,
@@ -74,7 +85,7 @@ def create_shapes(roi):
             sh = rois.Ellipse(shape.x, shape.y, shape.radius_x, shape.radius_y,
                               z=shape.the_z, c=shape.the_c, t=shape.the_t,
                               label=shape.text)
-        elif isinstance(shape, Polygon) or isinstance(shape, Polyline):
+        elif isinstance(shape, Polygon):
             points = []
             for pt in shape.points.split(" "):
                 # points sometimes come with a comma at the end...
@@ -82,6 +93,18 @@ def create_shapes(roi):
                 points.append(tuple(float(x) for x in pt.split(",")))
             sh = rois.Polygon(points, z=shape.the_z, c=shape.the_c,
                               t=shape.the_t, label=shape.text)
+        elif isinstance(shape, Polyline):
+            points = []
+            for pt in shape.points.split(" "):
+                # points sometimes come with a comma at the end...
+                pt = pt.rstrip(",")
+                points.append(tuple(float(x) for x in pt.split(",")))
+            sh = rois.Polyline(points, z=shape.the_z, c=shape.the_c,
+                               t=shape.the_t, label=shape.text)
+        elif isinstance(shape, Label):
+            sh = rois.Label(shape.x, shape.y, z=shape.the_z, c=shape.the_c,
+                            t=shape.the_t, label=shape.text,
+                            fontSize=shape.font_size)
         else:
             continue
         shapes.append(sh)
@@ -96,7 +119,7 @@ def _int_to_rgba(omero_val):
     g = omero_val - (r << 24) >> 16
     b = omero_val - (r << 24) - (g << 16) >> 8
     a = omero_val - (r << 24) - (g << 16) - (b << 8)
-    a = a / 256.0
+    # a = a / 256.0
     return (r, g, b, a)
 
 
