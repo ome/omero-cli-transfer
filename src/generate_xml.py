@@ -417,7 +417,7 @@ def populate_image(obj, ome, conn, hostname):
     rois = roi_service.findByImage(id, None).rois
     for roi in rois:
         roi_obj = conn.getObject('Roi', roi.getId().getValue())
-        roi_ref = populate_roi(roi, roi_obj, ome, conn)
+        roi_ref = populate_roi(roi, roi_obj, ome)
         if not roi_ref:
             continue
         img.roi_ref.append(roi_ref)
