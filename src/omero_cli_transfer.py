@@ -324,11 +324,12 @@ class TransferControl(GraphControl):
         dest_dict = {x: sorted(dest_dict[x]) for x in dest_dict.keys()}
         for src_k in src_dict.keys():
             src_v = src_dict[src_k]
-            dest_v = dest_dict[src_k]
-            if len(src_v) == len(dest_v):
-                for count in range(len(src_v)):
-                    map_key = f"Image:{src_v[count]}"
-                    imgmap[map_key] = dest_v[count]
+            if src_k in dest_dict.keys():
+                dest_v = dest_dict[src_k]
+                if len(src_v) == len(dest_v):
+                    for count in range(len(src_v)):
+                        map_key = f"Image:{src_v[count]}"
+                        imgmap[map_key] = dest_v[count]
         return imgmap
 
 
