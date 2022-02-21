@@ -19,6 +19,7 @@ from hashlib import md5
 from generate_xml import populate_xml
 from generate_omero_objects import populate_omero
 
+import ezomero
 from ome_types.model import CommentAnnotation
 from ome_types import from_xml
 from omero.sys import Parameters
@@ -273,7 +274,7 @@ class TransferControl(GraphControl):
             dest_map[dest_path] = img_ids
         return dest_map
 
-    def _get_image_ids(self, file_path, gateway):
+    def _get_image_ids(self, file_path, conn):
         """Get the Ids of imported images.
         Note that this will not find images if they have not been imported.
 
@@ -283,7 +284,7 @@ class TransferControl(GraphControl):
             Ids of images imported from the specified client path, which
             itself is derived from ``file_path``.
         """
-        q = gateway.getQueryService()
+        q = conn.getQueryService()
         params = Parameters()
         path_query = str(file_path).strip('/')
         params.map = {"cpath": rstring('%s%%' % path_query)}
@@ -293,9 +294,15 @@ class TransferControl(GraphControl):
             " JOIN fs.usedFiles u"
             " WHERE u.clientPath LIKE :cpath",
             params,
-            gateway.SERVICE_OPTS
+            conn.SERVICE_OPTS
             )
-        image_ids = list(set(sorted([r[0].val for r in results])))
+        all_image_ids = list(set(sorted([r[0].val for r in results])))
+        image_ids = []
+        for img_id in all_image_ids:
+            anns = ezomero.get_map_annotation_ids(conn, "Image", img_id)
+            if not anns:
+                image_ids.append(img_id)
+
         return image_ids
 
     def _make_image_map(self, source_map, dest_map):
