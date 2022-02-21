@@ -423,6 +423,10 @@ def populate_image(obj, ome, conn, hostname):
         img.roi_ref.append(roi_ref)
     if img not in ome.images:
         ome.images.append(img)
+    for fs_image in obj.getFileset().copyImages():
+        fs_img_id = f"Image:{str(fs_image.getId())}"
+        if fs_img_id not in [i.id for i in ome.images]:
+            populate_image(fs_image, ome, conn, hostname)
     return img_ref
 
 

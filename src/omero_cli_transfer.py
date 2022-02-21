@@ -313,6 +313,8 @@ class TransferControl(GraphControl):
         for k, v in dest_map.items():
             newkey = k.split("/./")[-1]
             dest_dict[newkey].extend(v)
+        src_dict = {x: sorted(src_dict[x]) for x in src_dict.keys()}
+        dest_dict = {x: sorted(dest_dict[x]) for x in dest_dict.keys()}
         for src_k in src_dict.keys():
             src_v = src_dict[src_k]
             dest_v = dest_dict[src_k]
