@@ -381,6 +381,10 @@ def populate_image(obj, ome, conn, hostname):
     id = obj.getId()
     name = obj.getName()
     desc = obj.getDescription()
+    img_id = f"Image:{str(id)}"
+    if img_id in [i.id for i in ome.images]:
+        img_ref = ImageRef(id=img_id)
+        return img_ref
     pix = create_pixels(obj)
     img, img_ref = create_image_and_ref(id=id, name=name,
                                         description=desc, pixels=pix)
@@ -421,12 +425,12 @@ def populate_image(obj, ome, conn, hostname):
         if not roi_ref:
             continue
         img.roi_ref.append(roi_ref)
-    if img not in ome.images:
-        ome.images.append(img)
-    for fs_image in obj.getFileset().copyImages():
-        fs_img_id = f"Image:{str(fs_image.getId())}"
-        if fs_img_id not in [i.id for i in ome.images]:
-            populate_image(fs_image, ome, conn, hostname)
+    ome.images.append(img)
+    if obj.getFileset():
+        for fs_image in obj.getFileset().copyImages():
+            fs_img_id = f"Image:{str(fs_image.getId())}"
+            if fs_img_id not in [i.id for i in ome.images]:
+                populate_image(fs_image, ome, conn, hostname)
     return img_ref
 
 
