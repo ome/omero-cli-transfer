@@ -153,9 +153,16 @@ class TransferControl(GraphControl):
         for id in id_list:
             path = id_list[id]
             rel_path = path
-            rel_path = str(Path(rel_path).parent)
-            subfolder = str(Path(folder) / rel_path)
-            os.makedirs(subfolder, mode=DIR_PERM, exist_ok=True)
+            if id.split(":")[0] == "Image":
+                rel_path = str(Path(rel_path).parent)
+            subfolder = os.path.join(str(Path(folder)), rel_path)
+            if id.split(":")[0] == "Image":
+                os.makedirs(subfolder, mode=DIR_PERM, exist_ok=True)
+            else:
+                ann_folder = str(Path(subfolder).parent)
+                os.makedirs(ann_folder, mode=DIR_PERM, exist_ok=True)
+            if id.split(":")[0] == "Annotation":
+                id = "File" + id
             if rel_path == "pixel_images":
                 clean_id = id.split(":")[-1]
                 filepath = str(Path(subfolder) / (clean_id + ".tiff"))
@@ -210,7 +217,7 @@ class TransferControl(GraphControl):
         print("Matching source and destination images...")
         img_map = self._make_image_map(src_img_map, dest_img_map)
         print("Creating and linking OMERO objects...")
-        populate_omero(ome, img_map, self.gateway, hash)
+        populate_omero(ome, img_map, self.gateway, hash, folder)
         return
 
     def _load_from_zip(self, filepath, output):
@@ -240,7 +247,8 @@ class TransferControl(GraphControl):
         map_ref_ids = []
         for ann in ome.structured_annotations:
             if int(ann.id.split(":")[-1]) < 0 \
-               and type(ann) == CommentAnnotation:
+               and type(ann) == CommentAnnotation \
+               and ann.namespace.split(":")[0] == "Image":
                 map_ref_ids.append(ann.id)
                 img_map[ann.value].append(int(ann.namespace.split(":")[-1]))
                 if ann.value.endswith('mock_folder'):

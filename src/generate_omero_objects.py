@@ -1,14 +1,17 @@
 import ezomero
 from omero.model import DatasetI
 from omero.gateway import DatasetWrapper
-from ome_types.model import TagAnnotation, MapAnnotation
+from ome_types.model import TagAnnotation, MapAnnotation, FileAnnotation
 from ome_types.model import CommentAnnotation, LongAnnotation
 from ome_types.model import Line, Point, Rectangle, Ellipse, Polygon
 from ome_types.model import Polyline, Label
 from ome_types.model.simple_types import Marker
 from omero.gateway import TagAnnotationWrapper, MapAnnotationWrapper
 from omero.gateway import CommentAnnotationWrapper, LongAnnotationWrapper
+from omero.gateway import FileAnnotationWrapper
 from ezomero import rois
+from pathlib import Path
+import os
 
 
 def create_projects(pjs, conn):
@@ -36,7 +39,7 @@ def create_datasets(dss, conn):
     return ds_map
 
 
-def create_annotations(ans, conn, hash):
+def create_annotations(ans, conn, hash, folder):
     ann_map = {}
     for an in ans:
         if isinstance(an, TagAnnotation):
@@ -70,7 +73,30 @@ def create_annotations(ans, conn, hash):
             comm_ann.setNs(an.namespace)
             comm_ann.save()
             ann_map[an.id] = comm_ann.getId()
+        elif isinstance(an, FileAnnotation):
+            original_file = create_original_file(an, ans, conn, folder)
+            file_ann = FileAnnotationWrapper(conn)
+            file_ann.setDescription(an.description)
+            file_ann.setNs(an.namespace)
+            file_ann.setFile(original_file)
+            file_ann.save()
+            ann_map[an.id] = file_ann.getId()
     return ann_map
+
+
+def create_original_file(ann, ans, conn, folder):
+    print(ann)
+    curr_folder = str(Path('.').resolve())
+    for an in ann.annotation_ref:
+        clean_id = int(an.id.split(":")[-1])
+        if clean_id < 0:
+            cmnt_id = an.id
+    for an in ans:
+        if an.id == cmnt_id:
+            fpath = an.value
+    dest_path = str(os.path.join(curr_folder, folder,  '.', fpath))
+    ofile = conn.createOriginalFileFromLocalFile(dest_path)
+    return ofile
 
 
 def create_shapes(roi):
@@ -210,6 +236,8 @@ def link_one_annotation(obj, ann, ann_map, conn):
         ann_obj = conn.getObject("CommentAnnotation", ann_id)
     elif isinstance(ann, LongAnnotation):
         ann_obj = conn.getObject("LongAnnotation", ann_id)
+    elif isinstance(ann, FileAnnotation):
+        ann_obj = conn.getObject("FileAnnotation", ann_id)
     else:
         ann_obj = None
     if ann_obj:
@@ -225,11 +253,12 @@ def rename_images(imgs, img_map, conn):
     return
 
 
-def populate_omero(ome, img_map, conn, hash):
+def populate_omero(ome, img_map, conn, hash, folder):
     rename_images(ome.images, img_map, conn)
     proj_map = create_projects(ome.projects, conn)
     ds_map = create_datasets(ome.datasets, conn)
-    ann_map = create_annotations(ome.structured_annotations, conn, hash)
+    ann_map = create_annotations(ome.structured_annotations, conn,
+                                 hash, folder)
     create_rois(ome.rois, ome.images, img_map, conn)
     link_datasets(ome, proj_map, ds_map, conn)
     link_images(ome, ds_map, img_map, conn)
