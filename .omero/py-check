@@ -13,4 +13,4 @@ if [ -f .pre-commit-config.yaml ]; then
 else
     flake8 -v .
 fi
-rst-lint README.rst
+rst-lint README.md

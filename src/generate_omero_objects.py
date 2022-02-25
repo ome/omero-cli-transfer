@@ -2,10 +2,12 @@ import ezomero
 from omero.model import DatasetI
 from omero.gateway import DatasetWrapper
 from ome_types.model import TagAnnotation, MapAnnotation
+from ome_types.model import CommentAnnotation
 from ome_types.model import Line, Point, Rectangle, Ellipse, Polygon
 from ome_types.model import Polyline, Label
 from ome_types.model.simple_types import Marker
 from omero.gateway import TagAnnotationWrapper, MapAnnotationWrapper
+from omero.gateway import CommentAnnotationWrapper
 from ezomero import rois
 
 
@@ -55,6 +57,12 @@ def create_annotations(ans, conn, hash):
             map_ann.setValue(key_value_data)
             map_ann.save()
             ann_map[an.id] = map_ann.getId()
+        elif isinstance(an, CommentAnnotation):
+            comm_ann = CommentAnnotationWrapper(conn)
+            comm_ann.setValue(an.value)
+            comm_ann.setDescription(an.description)
+            comm_ann.save()
+            ann_map[an.id] = comm_ann.getId()
     return ann_map
 
 
@@ -172,6 +180,8 @@ def link_annotations(ome, proj_map, ds_map, img_map, ann_map, conn):
                 ann_obj = conn.getObject("TagAnnotation", ann_id)
             elif isinstance(ann, MapAnnotation):
                 ann_obj = conn.getObject("MapAnnotation", ann_id)
+            elif isinstance(ann, CommentAnnotation):
+                ann_obj = conn.getObject("CommentAnnotation", ann_id)
             else:
                 continue
             proj_obj.linkAnnotation(ann_obj)
@@ -186,6 +196,8 @@ def link_annotations(ome, proj_map, ds_map, img_map, ann_map, conn):
                 ann_obj = conn.getObject("TagAnnotation", ann_id)
             elif isinstance(ann, MapAnnotation):
                 ann_obj = conn.getObject("MapAnnotation", ann_id)
+            elif isinstance(ann, CommentAnnotation):
+                ann_obj = conn.getObject("CommentAnnotation", ann_id)
             else:
                 continue
             ds_obj.linkAnnotation(ann_obj)
@@ -200,6 +212,8 @@ def link_annotations(ome, proj_map, ds_map, img_map, ann_map, conn):
                 ann_obj = conn.getObject("TagAnnotation", ann_id)
             elif isinstance(ann, MapAnnotation):
                 ann_obj = conn.getObject("MapAnnotation", ann_id)
+            elif isinstance(ann, CommentAnnotation):
+                ann_obj = conn.getObject("CommentAnnotation", ann_id)
             else:
                 continue
             img_obj.linkAnnotation(ann_obj)
