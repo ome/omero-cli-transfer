@@ -4,12 +4,12 @@ from ome_types.model import Dataset, DatasetRef
 from ome_types.model import Image, ImageRef, Pixels
 from ome_types.model import TagAnnotation, MapAnnotation, ROI
 from ome_types.model import AnnotationRef, ROIRef, Map
-from ome_types.model import CommentAnnotation
+from ome_types.model import CommentAnnotation, LongAnnotation
 from ome_types.model import Point, Line, Rectangle, Ellipse, Polygon
 from ome_types.model import Polyline, Label
 from ome_types.model.map import M
 from omero.model import TagAnnotationI, MapAnnotationI
-from omero.model import CommentAnnotationI
+from omero.model import CommentAnnotationI, LongAnnotationI
 from omero.model import PointI, LineI, RectangleI, EllipseI, PolygonI
 from omero.model import PolylineI, LabelI
 import pkg_resources
@@ -70,6 +70,12 @@ def create_kv_and_ref(**kwargs):
     kv = MapAnnotation(**kwargs)
     kvref = AnnotationRef(id=kv.id)
     return kv, kvref
+
+
+def create_long_and_ref(**kwargs):
+    long = LongAnnotation(**kwargs)
+    longref = AnnotationRef(id=long.id)
+    return long, longref
 
 
 def create_roi_and_ref(**kwargs):
@@ -467,6 +473,14 @@ def add_annotation(obj, ann, ome):
                                         value=ann.getTextValue())
         if comm.id not in [i.id for i in ome.structured_annotations]:
             ome.structured_annotations.append(comm)
+        obj.annotation_ref.append(ref)
+
+    elif ann.OMERO_TYPE == LongAnnotationI:
+        long, ref = create_long_and_ref(id=ann.getId(),
+                                        namespace=ann.getNs(),
+                                        value=ann.getValue())
+        if long.id not in [i.id for i in ome.structured_annotations]:
+            ome.structured_annotations.append(long)
         obj.annotation_ref.append(ref)
 
 
