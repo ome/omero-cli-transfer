@@ -1,12 +1,17 @@
 import ezomero
 from omero.model import DatasetI
 from omero.gateway import DatasetWrapper
-from ome_types.model import TagAnnotation, MapAnnotation
+from ome_types.model import TagAnnotation, MapAnnotation, FileAnnotation
+from ome_types.model import CommentAnnotation, LongAnnotation
 from ome_types.model import Line, Point, Rectangle, Ellipse, Polygon
 from ome_types.model import Polyline, Label
 from ome_types.model.simple_types import Marker
 from omero.gateway import TagAnnotationWrapper, MapAnnotationWrapper
+from omero.gateway import CommentAnnotationWrapper, LongAnnotationWrapper
+from omero.gateway import FileAnnotationWrapper
 from ezomero import rois
+from pathlib import Path
+import os
 
 
 def create_projects(pjs, conn):
@@ -34,7 +39,7 @@ def create_datasets(dss, conn):
     return ds_map
 
 
-def create_annotations(ans, conn, hash):
+def create_annotations(ans, conn, hash, folder):
     ann_map = {}
     for an in ans:
         if isinstance(an, TagAnnotation):
@@ -55,7 +60,43 @@ def create_annotations(ans, conn, hash):
             map_ann.setValue(key_value_data)
             map_ann.save()
             ann_map[an.id] = map_ann.getId()
+        elif isinstance(an, CommentAnnotation):
+            comm_ann = CommentAnnotationWrapper(conn)
+            comm_ann.setValue(an.value)
+            comm_ann.setDescription(an.description)
+            comm_ann.save()
+            ann_map[an.id] = comm_ann.getId()
+        elif isinstance(an, LongAnnotation):
+            comm_ann = LongAnnotationWrapper(conn)
+            comm_ann.setValue(an.value)
+            comm_ann.setDescription(an.description)
+            comm_ann.setNs(an.namespace)
+            comm_ann.save()
+            ann_map[an.id] = comm_ann.getId()
+        elif isinstance(an, FileAnnotation):
+            original_file = create_original_file(an, ans, conn, folder)
+            file_ann = FileAnnotationWrapper(conn)
+            file_ann.setDescription(an.description)
+            file_ann.setNs(an.namespace)
+            file_ann.setFile(original_file)
+            file_ann.save()
+            ann_map[an.id] = file_ann.getId()
     return ann_map
+
+
+def create_original_file(ann, ans, conn, folder):
+    print(ann)
+    curr_folder = str(Path('.').resolve())
+    for an in ann.annotation_ref:
+        clean_id = int(an.id.split(":")[-1])
+        if clean_id < 0:
+            cmnt_id = an.id
+    for an in ans:
+        if an.id == cmnt_id:
+            fpath = an.value
+    dest_path = str(os.path.join(curr_folder, folder,  '.', fpath))
+    ofile = conn.createOriginalFileFromLocalFile(dest_path)
+    return ofile
 
 
 def create_shapes(roi):
@@ -167,43 +208,40 @@ def link_annotations(ome, proj_map, ds_map, img_map, ann_map, conn):
         anns = ome.structured_annotations
         for annref in proj.annotation_ref:
             ann = next(filter(lambda x: x.id == annref.id, anns))
-            ann_id = ann_map[ann.id]
-            if isinstance(ann, TagAnnotation):
-                ann_obj = conn.getObject("TagAnnotation", ann_id)
-            elif isinstance(ann, MapAnnotation):
-                ann_obj = conn.getObject("MapAnnotation", ann_id)
-            else:
-                continue
-            proj_obj.linkAnnotation(ann_obj)
+            link_one_annotation(proj_obj, ann, ann_map, conn)
     for ds in ome.datasets:
         ds_id = ds_map[ds.id]
         ds_obj = conn.getObject("Dataset", ds_id)
         anns = ome.structured_annotations
         for annref in ds.annotation_ref:
             ann = next(filter(lambda x: x.id == annref.id, anns))
-            ann_id = ann_map[ann.id]
-            if isinstance(ann, TagAnnotation):
-                ann_obj = conn.getObject("TagAnnotation", ann_id)
-            elif isinstance(ann, MapAnnotation):
-                ann_obj = conn.getObject("MapAnnotation", ann_id)
-            else:
-                continue
-            ds_obj.linkAnnotation(ann_obj)
+            link_one_annotation(ds_obj, ann, ann_map, conn)
     for img in ome.images:
         img_id = img_map[img.id]
         img_obj = conn.getObject("Image", img_id)
         anns = ome.structured_annotations
         for annref in img.annotation_ref:
             ann = next(filter(lambda x: x.id == annref.id, anns))
-            ann_id = ann_map[ann.id]
-            if isinstance(ann, TagAnnotation):
-                ann_obj = conn.getObject("TagAnnotation", ann_id)
-            elif isinstance(ann, MapAnnotation):
-                ann_obj = conn.getObject("MapAnnotation", ann_id)
-            else:
-                continue
-            img_obj.linkAnnotation(ann_obj)
+            link_one_annotation(img_obj, ann, ann_map, conn)
     return
+
+
+def link_one_annotation(obj, ann, ann_map, conn):
+    ann_id = ann_map[ann.id]
+    if isinstance(ann, TagAnnotation):
+        ann_obj = conn.getObject("TagAnnotation", ann_id)
+    elif isinstance(ann, MapAnnotation):
+        ann_obj = conn.getObject("MapAnnotation", ann_id)
+    elif isinstance(ann, CommentAnnotation):
+        ann_obj = conn.getObject("CommentAnnotation", ann_id)
+    elif isinstance(ann, LongAnnotation):
+        ann_obj = conn.getObject("LongAnnotation", ann_id)
+    elif isinstance(ann, FileAnnotation):
+        ann_obj = conn.getObject("FileAnnotation", ann_id)
+    else:
+        ann_obj = None
+    if ann_obj:
+        obj.linkAnnotation(ann_obj)
 
 
 def rename_images(imgs, img_map, conn):
@@ -215,11 +253,12 @@ def rename_images(imgs, img_map, conn):
     return
 
 
-def populate_omero(ome, img_map, conn, hash):
+def populate_omero(ome, img_map, conn, hash, folder):
     rename_images(ome.images, img_map, conn)
     proj_map = create_projects(ome.projects, conn)
     ds_map = create_datasets(ome.datasets, conn)
-    ann_map = create_annotations(ome.structured_annotations, conn, hash)
+    ann_map = create_annotations(ome.structured_annotations, conn,
+                                 hash, folder)
     create_rois(ome.rois, ome.images, img_map, conn)
     link_datasets(ome, proj_map, ds_map, conn)
     link_images(ome, ds_map, img_map, conn)

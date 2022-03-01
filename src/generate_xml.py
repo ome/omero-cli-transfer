@@ -3,17 +3,20 @@ from ome_types.model import Project, ProjectRef
 from ome_types.model import Dataset, DatasetRef
 from ome_types.model import Image, ImageRef, Pixels
 from ome_types.model import TagAnnotation, MapAnnotation, ROI
+from ome_types.model import FileAnnotation, BinaryFile, BinData
 from ome_types.model import AnnotationRef, ROIRef, Map
-from ome_types.model import CommentAnnotation
+from ome_types.model import CommentAnnotation, LongAnnotation
 from ome_types.model import Point, Line, Rectangle, Ellipse, Polygon
 from ome_types.model import Polyline, Label
 from ome_types.model.map import M
-from omero.model import TagAnnotationI, MapAnnotationI
+from omero.model import TagAnnotationI, MapAnnotationI, FileAnnotationI
+from omero.model import CommentAnnotationI, LongAnnotationI
 from omero.model import PointI, LineI, RectangleI, EllipseI, PolygonI
 from omero.model import PolylineI, LabelI
 import pkg_resources
 import ezomero
 import os
+import base64
 from uuid import uuid4
 from datetime import datetime
 from pathlib import Path
@@ -59,16 +62,34 @@ def create_tag_and_ref(**kwargs):
     return tag, tagref
 
 
+def create_comm_and_ref(**kwargs):
+    tag = CommentAnnotation(**kwargs)
+    tagref = AnnotationRef(id=tag.id)
+    return tag, tagref
+
+
 def create_kv_and_ref(**kwargs):
     kv = MapAnnotation(**kwargs)
     kvref = AnnotationRef(id=kv.id)
     return kv, kvref
 
 
+def create_long_and_ref(**kwargs):
+    long = LongAnnotation(**kwargs)
+    longref = AnnotationRef(id=long.id)
+    return long, longref
+
+
 def create_roi_and_ref(**kwargs):
     roi = ROI(**kwargs)
     roiref = ROIRef(id=roi.id)
     return roi, roiref
+
+
+def create_file_ann_and_ref(**kwargs):
+    file_ann = FileAnnotation(**kwargs)
+    file_ann_ref = AnnotationRef(id=file_ann.id)
+    return file_ann, file_ann_ref
 
 
 def create_point(shape):
@@ -280,32 +301,45 @@ def create_shapes(roi):
     return shapes
 
 
-def create_filepath_annotations(id, conn):
-    ns = f'Image:{id}'
+def create_filepath_annotations(id, conn, filename=None):
+    ns = id
     anns = []
     refs = []
-    fpaths = ezomero.get_original_filepaths(conn, id)
-    if len(fpaths) > 1:
-        allpaths = []
-        for f in fpaths:
-            f = Path(f)
-            allpaths.append(f.parts)
-        common_root = Path(*os.path.commonprefix(allpaths))
-        path = os.path.join(common_root, 'mock_folder')
-        id = (-1) * uuid4().int
-        an = CommentAnnotation(id=id,
-                               namespace=ns,
-                               value=str(path)
-                               )
-        anns.append(an)
-        anref = ROIRef(id=an.id)
-        refs.append(anref)
-    else:
-        if fpaths:
-            f = fpaths[0]
+    fp_type = ns.split(":")[0]
+    clean_id = int(ns.split(":")[-1])
+    if fp_type == "Image":
+        fpaths = ezomero.get_original_filepaths(conn, clean_id)
+        if len(fpaths) > 1:
+            allpaths = []
+            for f in fpaths:
+                f = Path(f)
+                allpaths.append(f.parts)
+            common_root = Path(*os.path.commonprefix(allpaths))
+            path = os.path.join(common_root, 'mock_folder')
+            id = (-1) * uuid4().int
+            an = CommentAnnotation(id=id,
+                                   namespace=ns,
+                                   value=str(path)
+                                   )
+            anns.append(an)
+            anref = ROIRef(id=an.id)
+            refs.append(anref)
         else:
-            f = f'pixel_images/{id}.tiff'
+            if fpaths:
+                f = fpaths[0]
+            else:
+                f = f'pixel_images/{clean_id}.tiff'
 
+            id = (-1) * uuid4().int
+            an = CommentAnnotation(id=id,
+                                   namespace=ns,
+                                   value=f
+                                   )
+            anns.append(an)
+            anref = ROIRef(id=an.id)
+            refs.append(anref)
+    elif fp_type == "Annotation":
+        f = f'file_annotations/{clean_id}/{filename}'
         id = (-1) * uuid4().int
         an = CommentAnnotation(id=id,
                                namespace=ns,
@@ -338,7 +372,7 @@ def create_provenance_metadata(id, hostname):
     return kv, ref
 
 
-def populate_roi(obj, roi_obj, ome):
+def populate_roi(obj, roi_obj, ome, conn):
     id = obj.getId().getValue()
     name = obj.getName()
     if name is not None:
@@ -352,26 +386,7 @@ def populate_roi(obj, roi_obj, ome):
     roi, roi_ref = create_roi_and_ref(id=id, name=name, description=desc,
                                       union=shapes)
     for ann in roi_obj.listAnnotations():
-        if ann.OMERO_TYPE == TagAnnotationI:
-            tag, ref = create_tag_and_ref(id=ann.getId(),
-                                          value=ann.getTextValue())
-            if tag not in ome.structured_annotations:
-                ome.structured_annotations.append(tag)
-            roi.annotation_ref.append(ref)
-        if ann.OMERO_TYPE == MapAnnotationI:
-            mmap = []
-            for _key, _value in ann.getMapValueAsMap().items():
-                if _value:
-                    mmap.append(M(k=_key, value=str(_value)))
-                else:
-                    mmap.append(M(k=_key, value=''))
-            kv, ref = create_kv_and_ref(id=ann.getId(),
-                                        namespace=ann.getNs(),
-                                        value=Map(
-                                        m=mmap))
-            if kv not in ome.structured_annotations:
-                ome.structured_annotations.append(kv)
-            roi.annotation_ref.append(ref)
+        add_annotation(roi, ann, ome, conn)
     if roi not in ome.rois:
         ome.rois.append(roi)
     return roi_ref
@@ -389,31 +404,14 @@ def populate_image(obj, ome, conn, hostname):
     img, img_ref = create_image_and_ref(id=id, name=name,
                                         description=desc, pixels=pix)
     for ann in obj.listAnnotations():
-        if ann.OMERO_TYPE == TagAnnotationI:
-            tag, ref = create_tag_and_ref(id=ann.getId(),
-                                          value=ann.getTextValue())
-            if tag not in ome.structured_annotations:
-                ome.structured_annotations.append(tag)
-            img.annotation_ref.append(ref)
-        if ann.OMERO_TYPE == MapAnnotationI:
-            mmap = []
-            for _key, _value in ann.getMapValueAsMap().items():
-                if _value:
-                    mmap.append(M(k=_key, value=str(_value)))
-                else:
-                    mmap.append(M(k=_key, value=''))
-            kv, ref = create_kv_and_ref(id=ann.getId(),
-                                        namespace=ann.getNs(),
-                                        value=Map(
-                                        m=mmap))
-            if kv not in ome.structured_annotations:
-                ome.structured_annotations.append(kv)
-            img.annotation_ref.append(ref)
+        add_annotation(img, ann, ome, conn)
+
     kv, ref = create_provenance_metadata(id, hostname)
-    if kv not in ome.structured_annotations:
+    kv_id = f"Annotation:{str(kv.id)}"
+    if kv_id not in [i.id for i in ome.structured_annotations]:
         ome.structured_annotations.append(kv)
     img.annotation_ref.append(ref)
-    filepath_anns, refs = create_filepath_annotations(id, conn)
+    filepath_anns, refs = create_filepath_annotations(img_id, conn)
     for i in range(len(filepath_anns)):
         ome.structured_annotations.append(filepath_anns[i])
         img.annotation_ref.append(refs[i])
@@ -421,11 +419,13 @@ def populate_image(obj, ome, conn, hostname):
     rois = roi_service.findByImage(id, None).rois
     for roi in rois:
         roi_obj = conn.getObject('Roi', roi.getId().getValue())
-        roi_ref = populate_roi(roi, roi_obj, ome)
+        roi_ref = populate_roi(roi, roi_obj, ome, conn)
         if not roi_ref:
             continue
         img.roi_ref.append(roi_ref)
-    ome.images.append(img)
+    img_id = f"Image:{str(img.id)}"
+    if img_id not in [i.id for i in ome.datasets]:
+        ome.images.append(img)
     if obj.getFileset():
         for fs_image in obj.getFileset().copyImages():
             fs_img_id = f"Image:{str(fs_image.getId())}"
@@ -441,31 +441,13 @@ def populate_dataset(obj, ome, conn, hostname):
     ds, ds_ref = create_dataset_and_ref(id=id, name=name,
                                         description=desc)
     for ann in obj.listAnnotations():
-        if ann.OMERO_TYPE == TagAnnotationI:
-            tag, ref = create_tag_and_ref(id=ann.getId(),
-                                          value=ann.getTextValue())
-            if tag not in ome.structured_annotations:
-                ome.structured_annotations.append(tag)
-            ds.annotation_ref.append(ref)
-        if ann.OMERO_TYPE == MapAnnotationI:
-            mmap = []
-            for _key, _value in ann.getMapValueAsMap().items():
-                if _value:
-                    mmap.append(M(k=_key, value=str(_value)))
-                else:
-                    mmap.append(M(k=_key, value=''))
-            kv, ref = create_kv_and_ref(id=ann.getId(),
-                                        namespace=ann.getNs(),
-                                        value=Map(
-                                        m=mmap))
-            if kv not in ome.structured_annotations:
-                ome.structured_annotations.append(kv)
-            ds.annotation_ref.append(ref)
+        add_annotation(ds, ann, ome, conn)
     for img in obj.listChildren():
         img_obj = conn.getObject('Image', img.getId())
         img_ref = populate_image(img_obj, ome, conn, hostname)
         ds.image_ref.append(img_ref)
-    if ds not in ome.datasets:
+    ds_id = f"Dataset:{str(ds.id)}"
+    if ds_id not in [i.id for i in ome.datasets]:
         ome.datasets.append(ds)
     return ds_ref
 
@@ -474,41 +456,88 @@ def populate_project(obj, ome, conn, hostname):
     id = obj.getId()
     name = obj.getName()
     desc = obj.getDescription()
-    test_proj, _ = create_proj_and_ref(id=id, name=name, description=desc)
+    proj, _ = create_proj_and_ref(id=id, name=name, description=desc)
     for ann in obj.listAnnotations():
-        if ann.OMERO_TYPE == TagAnnotationI:
-            tag, ref = create_tag_and_ref(id=ann.getId(),
-                                          value=ann.getTextValue())
-            if tag not in ome.structured_annotations:
-                ome.structured_annotations.append(tag)
-            test_proj.annotation_ref.append(ref)
-        if ann.OMERO_TYPE == MapAnnotationI:
-            mmap = []
-            for _key, _value in ann.getMapValueAsMap().items():
-                if _value:
-                    mmap.append(M(k=_key, value=str(_value)))
-                else:
-                    mmap.append(M(k=_key, value=''))
-
-            kv, ref = create_kv_and_ref(id=ann.getId(),
-                                        namespace=ann.getNs(),
-                                        value=Map(
-                                        m=mmap))
-            if kv not in ome.structured_annotations:
-                ome.structured_annotations.append(kv)
-            test_proj.annotation_ref.append(ref)
+        add_annotation(proj, ann, ome, conn)
     for ds in obj.listChildren():
         ds_obj = conn.getObject('Dataset', ds.getId())
         ds_ref = populate_dataset(ds_obj, ome, conn, hostname)
-        test_proj.dataset_ref.append(ds_ref)
-    ome.projects.append(test_proj)
+        proj.dataset_ref.append(ds_ref)
+    ome.projects.append(proj)
 
 
-def list_image_ids(ome):
+def add_annotation(obj, ann, ome, conn):
+    if ann.OMERO_TYPE == TagAnnotationI:
+        tag, ref = create_tag_and_ref(id=ann.getId(),
+                                      value=ann.getTextValue())
+        if tag.id not in [i.id for i in ome.structured_annotations]:
+            ome.structured_annotations.append(tag)
+        obj.annotation_ref.append(ref)
+
+    elif ann.OMERO_TYPE == MapAnnotationI:
+        mmap = []
+        for _key, _value in ann.getMapValueAsMap().items():
+            if _value:
+                mmap.append(M(k=_key, value=str(_value)))
+            else:
+                mmap.append(M(k=_key, value=''))
+        kv, ref = create_kv_and_ref(id=ann.getId(),
+                                    namespace=ann.getNs(),
+                                    value=Map(
+                                    m=mmap))
+        if kv.id not in [i.id for i in ome.structured_annotations]:
+            ome.structured_annotations.append(kv)
+        obj.annotation_ref.append(ref)
+
+    elif ann.OMERO_TYPE == CommentAnnotationI:
+        comm, ref = create_comm_and_ref(id=ann.getId(),
+                                        value=ann.getTextValue())
+        if comm.id not in [i.id for i in ome.structured_annotations]:
+            ome.structured_annotations.append(comm)
+        obj.annotation_ref.append(ref)
+
+    elif ann.OMERO_TYPE == LongAnnotationI:
+        long, ref = create_long_and_ref(id=ann.getId(),
+                                        namespace=ann.getNs(),
+                                        value=ann.getValue())
+        if long.id not in [i.id for i in ome.structured_annotations]:
+            ome.structured_annotations.append(long)
+        obj.annotation_ref.append(ref)
+
+    elif ann.OMERO_TYPE == FileAnnotationI:
+        contents = ann.getFile().getPath().encode()
+        b64 = base64.b64encode(contents)
+        length = len(b64)
+        binaryfile = BinaryFile(file_name=ann.getFile().getPath(),
+                                size=ann.getFile().getSize(),
+                                bin_data=BinData(big_endian=True,
+                                                 length=length,
+                                                 value=b64
+                                                 )
+                                )
+        long, ref = create_file_ann_and_ref(id=ann.getId(),
+                                            namespace=ann.getNs(),
+                                            binary_file=binaryfile)
+        filepath_anns, refs = create_filepath_annotations(
+                                long.id,
+                                conn,
+                                filename=ann.getFile().getPath())
+        for i in range(len(filepath_anns)):
+            ome.structured_annotations.append(filepath_anns[i])
+            long.annotation_ref.append(refs[i])
+        if long.id not in [i.id for i in ome.structured_annotations]:
+            ome.structured_annotations.append(long)
+        obj.annotation_ref.append(ref)
+
+
+def list_file_ids(ome):
     id_list = {}
     for ann in ome.structured_annotations:
-        if isinstance(ann, CommentAnnotation):
+        print(ann)
+        clean_id = int(ann.id.split(":")[-1])
+        if isinstance(ann, CommentAnnotation) and clean_id < 0:
             id_list[ann.namespace] = ann.value
+            print(id_list)
     return id_list
 
 
@@ -524,5 +553,5 @@ def populate_xml(datatype, id, filepath, conn, hostname):
     with open(filepath, 'w') as fp:
         print(to_xml(ome), file=fp)
         fp.close()
-    path_id_dict = list_image_ids(ome)
+    path_id_dict = list_file_ids(ome)
     return path_id_dict
