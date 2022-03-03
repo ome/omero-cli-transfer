@@ -152,28 +152,29 @@ class TransferControl(GraphControl):
         cli.loadplugins()
         downloaded_ids = []
         for id in id_list:
-            if id not in downloaded_ids:
+            clean_id = int(id.split(":")[-1])
+            dtype = id.split(":")[0]
+            if clean_id not in downloaded_ids:
                 path = id_list[id]
                 rel_path = path
-                if id.split(":")[0] == "Image":
+                if dtype == "Image":
                     rel_path = str(Path(rel_path).parent)
                 subfolder = os.path.join(str(Path(folder)), rel_path)
-                if id.split(":")[0] == "Image":
+                if dtype == "Image":
                     os.makedirs(subfolder, mode=DIR_PERM, exist_ok=True)
                 else:
                     ann_folder = str(Path(subfolder).parent)
                     os.makedirs(ann_folder, mode=DIR_PERM, exist_ok=True)
-                if id.split(":")[0] == "Annotation":
+                if dtype == "Annotation":
                     id = "File" + id
                 if rel_path == "pixel_images":
-                    clean_id = id.split(":")[-1]
                     filepath = str(Path(subfolder) / (clean_id + ".tiff"))
                     cli.invoke(['export', '--file', filepath, id])
                     downloaded_ids.append(id)
                 else:
                     cli.invoke(['download', id, subfolder])
-                    if id.split(":")[0] == "Image":
-                        obj = conn.getObject("Image", int(id.split(":")[-1]))
+                    if dtype == "Image":
+                        obj = conn.getObject("Image", clean_id)
                         fileset = obj.getFileset()
                         for fs_image in fileset.copyImages():
                             downloaded_ids.append(fs_image.getId())
