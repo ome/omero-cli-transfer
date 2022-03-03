@@ -1,5 +1,9 @@
 from ome_types import to_xml, OME
 from ome_types.model import Project, ProjectRef
+from ome_types.model import Screen
+from ome_types.model.screen import PlateRef
+from ome_types.model import Well, WellSample
+from ome_types.model import Plate
 from ome_types.model import Dataset, DatasetRef
 from ome_types.model import Image, ImageRef, Pixels
 from ome_types.model import TagAnnotation, MapAnnotation, ROI
@@ -26,6 +30,17 @@ def create_proj_and_ref(**kwargs):
     proj = Project(**kwargs)
     proj_ref = ProjectRef(id=proj.id)
     return proj, proj_ref
+
+
+def create_plate_and_ref(**kwargs):
+    pl = Plate(**kwargs)
+    pl_ref = PlateRef(id=pl.id)
+    return pl, pl_ref
+
+
+def create_screen(**kwargs):
+    scr = Screen(**kwargs)
+    return scr
 
 
 def create_dataset_and_ref(**kwargs):
@@ -322,7 +337,7 @@ def create_filepath_annotations(id, conn, filename=None):
                                    value=str(path)
                                    )
             anns.append(an)
-            anref = ROIRef(id=an.id)
+            anref = AnnotationRef(id=an.id)
             refs.append(anref)
         else:
             if fpaths:
@@ -346,7 +361,7 @@ def create_filepath_annotations(id, conn, filename=None):
                                value=f
                                )
         anns.append(an)
-        anref = ROIRef(id=an.id)
+        anref = AnnotationRef(id=an.id)
         refs.append(anref)
     return anns, refs
 
@@ -392,7 +407,7 @@ def populate_roi(obj, roi_obj, ome, conn):
     return roi_ref
 
 
-def populate_image(obj, ome, conn, hostname):
+def populate_image(obj, ome, conn, hostname, fset=None):
     id = obj.getId()
     name = obj.getName()
     desc = obj.getDescription()
@@ -405,7 +420,6 @@ def populate_image(obj, ome, conn, hostname):
                                         description=desc, pixels=pix)
     for ann in obj.listAnnotations():
         add_annotation(img, ann, ome, conn)
-
     kv, ref = create_provenance_metadata(id, hostname)
     kv_id = f"Annotation:{str(kv.id)}"
     if kv_id not in [i.id for i in ome.structured_annotations]:
@@ -426,11 +440,13 @@ def populate_image(obj, ome, conn, hostname):
     img_id = f"Image:{str(img.id)}"
     if img_id not in [i.id for i in ome.datasets]:
         ome.images.append(img)
-    if obj.getFileset():
-        for fs_image in obj.getFileset().copyImages():
+    if not fset:
+        fset = obj.getFileset()
+    if fset:
+        for fs_image in fset.copyImages():
             fs_img_id = f"Image:{str(fs_image.getId())}"
             if fs_img_id not in [i.id for i in ome.images]:
-                populate_image(fs_image, ome, conn, hostname)
+                populate_image(fs_image, ome, conn, hostname, fset)
     return img_ref
 
 
@@ -464,6 +480,57 @@ def populate_project(obj, ome, conn, hostname):
         ds_ref = populate_dataset(ds_obj, ome, conn, hostname)
         proj.dataset_ref.append(ds_ref)
     ome.projects.append(proj)
+
+
+def populate_screen(obj, ome, conn, hostname):
+    id = obj.getId()
+    name = obj.getName()
+    desc = obj.getDescription()
+    scr = create_screen(id=id, name=name, description=desc)
+    for ann in obj.listAnnotations():
+        add_annotation(scr, ann, ome, conn)
+    for pl in obj.listChildren():
+        pl_obj = conn.getObject('Plate', pl.getId())
+        pl_ref = populate_plate(pl_obj, ome, conn, hostname)
+        scr.plate_ref.append(pl_ref)
+    ome.screens.append(scr)
+
+
+def populate_plate(obj, ome, conn, hostname):
+    id = obj.getId()
+    name = obj.getName()
+    desc = obj.getDescription()
+    print(f"populating plate {id}")
+    pl, pl_ref = create_plate_and_ref(id=id, name=name, description=desc)
+    for ann in obj.listAnnotations():
+        add_annotation(pl, ann, ome, conn)
+    for well in obj.listChildren():
+        well_obj = conn.getObject('Well', well.getId())
+        well_ref = populate_well(well_obj, ome, conn, hostname)
+        pl.wells.append(well_ref)
+    pl_id = f"Plate:{str(pl.id)}"
+    if pl_id not in [i.id for i in ome.plates]:
+        ome.plates.append(pl)
+    return pl_ref
+
+
+def populate_well(obj, ome, conn, hostname):
+    id = obj.getId()
+    column = obj.getColumn()
+    row = obj.getRow()
+    print(f"populating well {id}")
+    samples = []
+    for index in range(obj.countWellSample()):
+        ws_obj = obj.getWellSample(index)
+        ws_id = ws_obj.getId()
+        ws_img = ws_obj.getImage()
+        ws_img_ref = populate_image(ws_img, ome, conn, hostname)
+        ws = WellSample(id=ws_id, index=index, image_ref=ws_img_ref)
+        samples.append(ws)
+    well = Well(id=id, row=row, column=column, well_samples=samples)
+    for ann in obj.listAnnotations():
+        add_annotation(well, ann, ome, conn)
+    return well
 
 
 def add_annotation(obj, ann, ome, conn):
@@ -533,7 +600,6 @@ def add_annotation(obj, ann, ome, conn):
 def list_file_ids(ome):
     id_list = {}
     for ann in ome.structured_annotations:
-        print(ann)
         clean_id = int(ann.id.split(":")[-1])
         if isinstance(ann, CommentAnnotation) and clean_id < 0:
             id_list[ann.namespace] = ann.value
@@ -546,10 +612,14 @@ def populate_xml(datatype, id, filepath, conn, hostname):
     obj = conn.getObject(datatype, id)
     if datatype == 'Project':
         populate_project(obj, ome, conn, hostname)
-    if datatype == 'Dataset':
+    elif datatype == 'Dataset':
         populate_dataset(obj, ome, conn, hostname)
-    if datatype == 'Image':
+    elif datatype == 'Image':
         populate_image(obj, ome, conn, hostname)
+    elif datatype == 'Screen':
+        populate_screen(obj, ome, conn, hostname)
+    elif datatype == 'Plate':
+        populate_plate(obj, ome, conn, hostname)
     with open(filepath, 'w') as fp:
         print(to_xml(ome), file=fp)
         fp.close()
