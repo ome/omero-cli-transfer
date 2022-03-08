@@ -316,7 +316,7 @@ def create_shapes(roi):
     return shapes
 
 
-def create_filepath_annotations(id, conn, filename=None):
+def create_filepath_annotations(id, conn, filename=None, plate_path=None):
     ns = id
     anns = []
     refs = []
@@ -359,6 +359,15 @@ def create_filepath_annotations(id, conn, filename=None):
         an = CommentAnnotation(id=id,
                                namespace=ns,
                                value=f
+                               )
+        anns.append(an)
+        anref = AnnotationRef(id=an.id)
+        refs.append(anref)
+    elif fp_type == "Plate":
+        id = (-1) * uuid4().int
+        an = CommentAnnotation(id=id,
+                               namespace=ns,
+                               value=plate_path
                                )
         anns.append(an)
         anref = AnnotationRef(id=an.id)
@@ -508,6 +517,19 @@ def populate_plate(obj, ome, conn, hostname):
         well_obj = conn.getObject('Well', well.getId())
         well_ref = populate_well(well_obj, ome, conn, hostname)
         pl.wells.append(well_ref)
+    last_image_anns = ome.images[-1].annotation_ref
+    last_image_anns_ids = [i.id for i in last_image_anns]
+    for ann in ome.structured_annotations:
+        if (ann.id in last_image_anns_ids and
+                type(ann) == CommentAnnotation and
+                int(ann.id.split(":")[-1]) < 0):
+            plate_path = ann.value
+    filepath_anns, refs = create_filepath_annotations(pl.id, conn,
+                                                      plate_path=plate_path)
+    print(filepath_anns)
+    for i in range(len(filepath_anns)):
+        ome.structured_annotations.append(filepath_anns[i])
+        pl.annotation_ref.append(refs[i])
     pl_id = f"Plate:{str(pl.id)}"
     if pl_id not in [i.id for i in ome.plates]:
         ome.plates.append(pl)
@@ -525,7 +547,8 @@ def populate_well(obj, ome, conn, hostname):
         ws_id = ws_obj.getId()
         ws_img = ws_obj.getImage()
         ws_img_ref = populate_image(ws_img, ome, conn, hostname)
-        ws = WellSample(id=ws_id, index=index, image_ref=ws_img_ref)
+        ws_index = int(ws_img_ref.id.split(":")[-1])
+        ws = WellSample(id=ws_id, index=ws_index, image_ref=ws_img_ref)
         samples.append(ws)
     well = Well(id=id, row=row, column=column, well_samples=samples)
     for ann in obj.listAnnotations():
@@ -603,7 +626,6 @@ def list_file_ids(ome):
         clean_id = int(ann.id.split(":")[-1])
         if isinstance(ann, CommentAnnotation) and clean_id < 0:
             id_list[ann.namespace] = ann.value
-            print(id_list)
     return id_list
 
 

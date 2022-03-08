@@ -9,9 +9,12 @@ from ome_types.model.simple_types import Marker
 from omero.gateway import TagAnnotationWrapper, MapAnnotationWrapper
 from omero.gateway import CommentAnnotationWrapper, LongAnnotationWrapper
 from omero.gateway import FileAnnotationWrapper
+from omero.sys import Parameters
+from omero.rtypes import rstring
 from ezomero import rois
 from pathlib import Path
 import os
+import copy
 
 
 def create_projects(pjs, conn):
@@ -20,6 +23,14 @@ def create_projects(pjs, conn):
         pj_id = ezomero.post_project(conn, pj.name, pj.description)
         pj_map[pj.id] = pj_id
     return pj_map
+
+
+def create_screens(scrs, conn):
+    scr_map = {}
+    for scr in scrs:
+        scr_id = ezomero.post_screen(conn, scr.name, scr.description)
+        scr_map[scr.id] = scr_id
+    return scr_map
 
 
 def create_datasets(dss, conn):
@@ -97,6 +108,54 @@ def create_original_file(ann, ans, conn, folder):
     dest_path = str(os.path.join(curr_folder, folder,  '.', fpath))
     ofile = conn.createOriginalFileFromLocalFile(dest_path)
     return ofile
+
+
+def create_plate_map(ome, conn):
+    """Get the Ids of imported images.
+    Note that this will not find images if they have not been imported.
+
+    Returns
+    -------
+    image_ids : list of ints
+        Ids of images imported from the specified client path, which
+        itself is derived from ``file_path``.
+    """
+    newome = copy.deepcopy(ome)
+    plate_map = {}
+    map_ref_ids = []
+    for plate in ome.plates:
+        ann_ids = [i.id for i in plate.annotation_ref]
+        for ann in ome.structured_annotations:
+            if (ann.id in ann_ids and
+                    type(ann) == CommentAnnotation and
+                    int(ann.id.split(":")[-1]) < 0):
+                newome.structured_annotations.remove(ann)
+                map_ref_ids.append(ann.id)
+                file_path = ann.value
+        q = conn.getQueryService()
+        params = Parameters()
+        path_query = str(file_path).strip('/')
+        if path_query.endswith('mock_folder'):
+            path_query = path_query.rstrip("mock_folder")
+        params.map = {"cpath": rstring('%%%s%%' % path_query)}
+        results = q.projection(
+            "SELECT p.id FROM Plate p"
+            " JOIN p.plateAcquisitions a"
+            " JOIN a.wellSample w"
+            " JOIN w.image i"
+            " JOIN i.fileset fs"
+            " JOIN fs.usedFiles u"
+            " WHERE u.clientPath LIKE :cpath",
+            params,
+            conn.SERVICE_OPTS
+            )
+        plate_id = results[0][0].val
+        plate_map[plate.id] = plate_id
+    for p in newome.plates:
+        for ref in p.annotation_ref:
+            if ref.id in map_ref_ids:
+                p.annotation_ref.remove(ref)
+    return plate_map, newome
 
 
 def create_shapes(roi):
@@ -190,6 +249,17 @@ def link_datasets(ome, proj_map, ds_map, conn):
     return
 
 
+def link_plates(ome, screen_map, plate_map, conn):
+    for screen in ome.screens:
+        screen_id = screen_map[screen.id]
+        pl_ids = []
+        for pl in screen.plate_ref:
+            pl_id = plate_map[pl.id]
+            pl_ids.append(pl_id)
+        ezomero.link_datasets_to_project(conn, pl_ids, screen_id)
+    return
+
+
 def link_images(ome, ds_map, img_map, conn):
     for ds in ome.datasets:
         ds_id = ds_map[ds.id]
@@ -201,7 +271,8 @@ def link_images(ome, ds_map, img_map, conn):
     return
 
 
-def link_annotations(ome, proj_map, ds_map, img_map, ann_map, conn):
+def link_annotations(ome, proj_map, ds_map, img_map, ann_map,
+                     scr_map, pl_map, conn):
     for proj in ome.projects:
         proj_id = proj_map[proj.id]
         proj_obj = conn.getObject("Project", proj_id)
@@ -223,6 +294,29 @@ def link_annotations(ome, proj_map, ds_map, img_map, ann_map, conn):
         for annref in img.annotation_ref:
             ann = next(filter(lambda x: x.id == annref.id, anns))
             link_one_annotation(img_obj, ann, ann_map, conn)
+    for scr in ome.screens:
+        scr_id = scr_map[scr.id]
+        scr_obj = conn.getObject("Screen", scr_id)
+        anns = ome.structured_annotations
+        for annref in scr.annotation_ref:
+            ann = next(filter(lambda x: x.id == annref.id, anns))
+            link_one_annotation(scr_obj, ann, ann_map, conn)
+    for pl in ome.plates:
+        pl_id = pl_map[pl.id]
+        pl_obj = conn.getObject("Plate", pl_id)
+        anns = ome.structured_annotations
+        for annref in pl.annotation_ref:
+            ann = next(filter(lambda x: x.id == annref.id, anns))
+            link_one_annotation(pl_obj, ann, ann_map, conn)
+        anns = ome.structured_annotations
+        for well in pl.wells:
+            if len(well.annotation_ref) > 0:
+                row, col = well.row, well.column
+                well_id = ezomero.get_well_id(conn, pl_id, row, col)
+                well_obj = conn.getObject("Well", well_id)
+                for annref in well.annotation_ref:
+                    ann = next(filter(lambda x: x.id == annref.id, anns))
+                    link_one_annotation(well_obj, ann, ann_map, conn)
     return
 
 
@@ -257,10 +351,14 @@ def populate_omero(ome, img_map, conn, hash, folder):
     rename_images(ome.images, img_map, conn)
     proj_map = create_projects(ome.projects, conn)
     ds_map = create_datasets(ome.datasets, conn)
+    screen_map = create_screens(ome.screens, conn)
+    plate_map, ome = create_plate_map(ome, conn)
     ann_map = create_annotations(ome.structured_annotations, conn,
                                  hash, folder)
     create_rois(ome.rois, ome.images, img_map, conn)
+    link_plates(ome, screen_map, plate_map, conn)
     link_datasets(ome, proj_map, ds_map, conn)
     link_images(ome, ds_map, img_map, conn)
-    link_annotations(ome, proj_map, ds_map, img_map, ann_map, conn)
+    link_annotations(ome, proj_map, ds_map, img_map, ann_map,
+                     screen_map, plate_map, conn)
     return
