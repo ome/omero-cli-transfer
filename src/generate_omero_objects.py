@@ -256,7 +256,7 @@ def link_plates(ome, screen_map, plate_map, conn):
         for pl in screen.plate_ref:
             pl_id = plate_map[pl.id]
             pl_ids.append(pl_id)
-        ezomero.link_datasets_to_project(conn, pl_ids, screen_id)
+        ezomero.link_plates_to_screen(conn, pl_ids, screen_id)
     return
 
 
