@@ -1,7 +1,9 @@
 # omero-cli-transfer
 An OMERO CLI plugin for creating and using transfer packets between OMERO servers.
 
-Transfer packets contain objects and annotations. This project creates a zip file from an object (Project/Dataset/Image) containing all original files necessary to create the images in that object, plus an XML file detailing the links between entities, annotations and ROIs thereof.
+Transfer packets contain objects and annotations. This project creates a zip file from an object 
+(Project, Dataset, Image, Screen, Plate) containing all original files necessary to create the images 
+in that object, plus an XML file detailing the links between entities, annotations and ROIs thereof.
 
 The CLI plugin add the subcommand `transfer`, which in its turn has two further subcommands `omero transfer pack` and `omero transfer unpack`. Both subcommands (pack and unpack) will use an existing OMERO session created via CLI or prompt the user for parameters to create one.
 
@@ -9,10 +11,12 @@ The CLI plugin add the subcommand `transfer`, which in its turn has two further 
 
 Creates a transfer packet for moving objects between OMERO server instances.
 
-The syntax for specifying objects is: `object`:`id` where `object` can be Image, Project or Dataset. Project is assumed if `object:` is omitted.
+The syntax for specifying objects is: `object`:`id` where `object` can be Image, Project, Dataset, Screen or Plate. 
+Project is assumed if `object:` is omitted.
 A file path needs to be provided; a zip file with the contents of the packet will be created at the specified path.
 
-Currently, only MapAnnotations and Tags are packaged into the transfer pack, and only Point, Line, Ellipse, Rectangle and Polygon-type ROIs are packaged.
+Types of annotations packaged: MapAnnotations, Tags, CommentAnnotations, FileAnnotations, LongAnnotations (ratings).
+Types of ROIs packaged: Point, Line, Ellipse, Rectangle, Polygon, Polyline, Label, Arrow.
 
 Examples:
 ```
@@ -23,7 +27,7 @@ omero transfer pack 999 zipfile.zip  # equivalent to Project:999
 
 ## `omero transfer unpack`
 
-Unpacks an existing transfer packet, imports images as orphans and uses the XML contained in the transfer packet to re-create links, annotations and ROIs.
+Unpacks an existing transfer packet, imports images/plates as orphans and uses the XML contained in the transfer packet to re-create links, annotations and ROIs.
 
 `--ln_s` forces imports to use the transfer=ln_s option, in-place importing files. Same restrictions of regular in-place imports apply.
 
