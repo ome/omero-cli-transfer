@@ -27,7 +27,7 @@ from omero.rtypes import rstring
 from omero.cli import CLI, GraphControl
 from omero.cli import ProxyStringType
 from omero.gateway import BlitzGateway
-from omero.model import Image, Dataset, Project
+from omero.model import Image, Dataset, Project, Plate, Screen
 from omero.grid import ManagedRepositoryPrx as MRepo
 
 DIR_PERM = 0o755
@@ -147,28 +147,37 @@ class TransferControl(GraphControl):
                 mrepos.append(path)
         return mrepos
 
-    def _copy_files(self, id_list, folder):
+    def _copy_files(self, id_list, folder, conn):
         cli = CLI()
         cli.loadplugins()
+        downloaded_ids = []
         for id in id_list:
-            path = id_list[id]
-            rel_path = path
-            if id.split(":")[0] == "Image":
-                rel_path = str(Path(rel_path).parent)
-            subfolder = os.path.join(str(Path(folder)), rel_path)
-            if id.split(":")[0] == "Image":
-                os.makedirs(subfolder, mode=DIR_PERM, exist_ok=True)
-            else:
-                ann_folder = str(Path(subfolder).parent)
-                os.makedirs(ann_folder, mode=DIR_PERM, exist_ok=True)
-            if id.split(":")[0] == "Annotation":
-                id = "File" + id
-            if rel_path == "pixel_images":
-                clean_id = id.split(":")[-1]
-                filepath = str(Path(subfolder) / (clean_id + ".tiff"))
-                cli.invoke(['export', '--file', filepath, id])
-            else:
-                cli.invoke(['download', id, subfolder])
+            clean_id = int(id.split(":")[-1])
+            dtype = id.split(":")[0]
+            if clean_id not in downloaded_ids:
+                path = id_list[id]
+                rel_path = path
+                if dtype == "Image":
+                    rel_path = str(Path(rel_path).parent)
+                subfolder = os.path.join(str(Path(folder)), rel_path)
+                if dtype == "Image":
+                    os.makedirs(subfolder, mode=DIR_PERM, exist_ok=True)
+                else:
+                    ann_folder = str(Path(subfolder).parent)
+                    os.makedirs(ann_folder, mode=DIR_PERM, exist_ok=True)
+                if dtype == "Annotation":
+                    id = "File" + id
+                if rel_path == "pixel_images":
+                    filepath = str(Path(subfolder) / (clean_id + ".tiff"))
+                    cli.invoke(['export', '--file', filepath, id])
+                    downloaded_ids.append(id)
+                else:
+                    cli.invoke(['download', id, subfolder])
+                    if dtype == "Image":
+                        obj = conn.getObject("Image", clean_id)
+                        fileset = obj.getFileset()
+                        for fs_image in fileset.copyImages():
+                            downloaded_ids.append(fs_image.getId())
 
     def __pack(self, args):
         if isinstance(args.object, Image):
@@ -177,8 +186,12 @@ class TransferControl(GraphControl):
             src_datatype, src_dataid = "Dataset", args.object.id
         elif isinstance(args.object, Project):
             src_datatype, src_dataid = "Project", args.object.id
+        elif isinstance(args.object, Plate):
+            src_datatype, src_dataid = "Plate", args.object.id
+        elif isinstance(args.object, Screen):
+            src_datatype, src_dataid = "Screen", args.object.id
         else:
-            print("Object is not a project, dataset or image")
+            print("Object is not a project, dataset, screen, plate or image")
             return
         obj = self.gateway.getObject(src_datatype, src_dataid)
         if obj is None:
@@ -195,7 +208,7 @@ class TransferControl(GraphControl):
         print(f"XML saved at {xml_fp}.")
 
         print("Starting file copy...")
-        self._copy_files(path_id_dict, folder)
+        self._copy_files(path_id_dict, folder, self.gateway)
         print("Creating zip file...")
         shutil.make_archive(os.path.splitext(zip_path)[0], 'zip', folder)
         print("Cleaning up...")
@@ -212,6 +225,7 @@ class TransferControl(GraphControl):
             ln_s = True
         else:
             ln_s = False
+        print(src_img_map, filelist)
         dest_img_map = self._import_files(folder, filelist,
                                           ln_s, self.gateway)
         print("Matching source and destination images...")
