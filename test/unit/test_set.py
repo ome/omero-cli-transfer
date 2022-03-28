@@ -21,18 +21,37 @@
 
 from ome_types import from_xml
 from omero.cli import CLI
+from omero.gateway import BlitzGateway
 from omero_cli_transfer import TransferControl
 
 import pytest
 
 
-class TestLoadTransferPacket():
+class TestPackSide():
     def setup_method(self):
         self.cli = CLI()
         self.cli.register("transfer", TransferControl, "TEST")
         self.transfer = self.cli.controls['transfer']
 
-    def test_types(self):
+    def test_copy_files_inputs(self):
+        conn = BlitzGateway()
+        with pytest.raises(TypeError):
+            self.transfer._copy_files(12, "test_folder", conn)
+        with pytest.raises(TypeError):
+            self.transfer._copy_files([12], "test_folder", conn)
+        with pytest.raises(TypeError):
+            self.transfer._copy_files({'Image:12': 'test'}, 12, conn)
+        with pytest.raises(TypeError):
+            self.transfer._copy_files({'Image:12': 'test'}, "test_folder", 12)
+
+
+class TestUnpackSide():
+    def setup_method(self):
+        self.cli = CLI()
+        self.cli.register("transfer", TransferControl, "TEST")
+        self.transfer = self.cli.controls['transfer']
+
+    def test_load_zip(self):
         with pytest.raises(TypeError):
             self.transfer._load_from_zip(None, None)
         with pytest.raises(TypeError):
@@ -44,6 +63,15 @@ class TestLoadTransferPacket():
         with pytest.raises(TypeError):
             self.transfer._load_from_zip(
                 111, 'test/data/output_folder')
+        hash, ome, folder = self.transfer._load_from_zip(
+            "test/data/valid_single_image.zip", "tmp_folder")
+        assert hash == "ac050c218f01bf189f9b3bdc9cab4f37"
+        assert len(ome.images) == 1
+        assert str(folder.resolve()) == "/omero-cli-transfer/tmp_folder"
+        hash, ome, folder = self.transfer._load_from_zip(
+            "test/data/valid_single_image.zip")
+        assert str(folder.resolve()) == \
+            "/omero-cli-transfer/test/data/valid_single_image"
 
     def test_non_existing_file(self):
         with pytest.raises(FileNotFoundError):
@@ -59,6 +87,9 @@ class TestLoadTransferPacket():
                             "combined_result.tiff"]
         assert src_img_map == correct_map
         assert filelist == correct_filelist
+        ome = None
+        with pytest.raises(TypeError):
+            _, src_img_map, filelist = self.transfer._create_image_map(ome)
 
     def test_import(self):
         # well I don't know how to do this since stdin is not a terminal
