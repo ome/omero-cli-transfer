@@ -176,7 +176,7 @@ class TransferControl(GraphControl):
                 if dtype == "Annotation":
                     id = "File" + id
                 if rel_path == "pixel_images":
-                    filepath = str(Path(subfolder) / (clean_id + ".tiff"))
+                    filepath = str(Path(subfolder) / (str(clean_id) + ".tiff"))
                     cli.invoke(['export', '--file', filepath, id])
                     downloaded_ids.append(id)
                 else:
