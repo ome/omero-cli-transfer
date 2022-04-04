@@ -34,6 +34,8 @@ class TestTransfer(CLITest):
         images = self.import_fake_file(
                 images_count=2, sizeZ=sizez, sizeT=sizet, sizeC=sizec,
                 client=self.client)
+        images.append(self.create_test_image(100, 100, 1, 1, 1,
+                                             self.client.getSession()))
         self.imageid = "Image:%s" % images[0].id.val
         self.source = "Image:%s" % images[1].id.val
         for image in images:
@@ -76,7 +78,7 @@ class TestTransfer(CLITest):
 
         if package_name == "test/data/valid_single_image.zip":
             im_ids = ezomero.get_image_ids(self.gw)
-            assert len(im_ids) == 3
+            assert len(im_ids) == 4
             img, _ = ezomero.get_image(self.gw, im_ids[-1])
             assert img.getName() == 'combined_result.tiff'
             assert len(ezomero.get_roi_ids(self.gw, im_ids[-1])) == 3
