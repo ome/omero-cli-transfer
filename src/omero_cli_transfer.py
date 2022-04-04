@@ -20,7 +20,7 @@ from generate_xml import populate_xml
 from generate_omero_objects import populate_omero
 
 import ezomero
-from ome_types.model import CommentAnnotation
+from ome_types.model import CommentAnnotation, OME
 from ome_types import from_xml
 from omero.sys import Parameters
 from omero.rtypes import rstring
@@ -148,6 +148,14 @@ class TransferControl(GraphControl):
         return mrepos
 
     def _copy_files(self, id_list, folder, conn):
+        if not isinstance(id_list, dict):
+            raise TypeError("id_list must be a dict")
+        if not all(isinstance(item, str) for item in id_list.keys()):
+            raise TypeError("id_list keys must be strings")
+        if not isinstance(folder, str):
+            raise TypeError("folder must be a string")
+        if not isinstance(conn, BlitzGateway):
+            raise TypeError("invalid type for connection object")
         cli = CLI()
         cli.loadplugins()
         downloaded_ids = []
@@ -234,13 +242,13 @@ class TransferControl(GraphControl):
         populate_omero(ome, img_map, self.gateway, hash, folder)
         return
 
-    def _load_from_zip(self, filepath, output):
+    def _load_from_zip(self, filepath, output=None):
         if (not filepath) or (not isinstance(filepath, str)):
             raise TypeError("filepath must be a string")
         if output and not isinstance(output, str):
             raise TypeError("output folder must be a string")
         parent_folder = Path(filepath).parent
-        filename = os.path.splitext(filepath)[0]
+        filename = Path(filepath).resolve().stem
         if output:
             folder = Path(output)
         else:
@@ -255,6 +263,8 @@ class TransferControl(GraphControl):
         return hash, ome, folder
 
     def _create_image_map(self, ome):
+        if not (type(ome) is OME):
+            raise TypeError("XML is not valid OME format")
         img_map = defaultdict(list)
         filelist = []
         newome = copy.deepcopy(ome)

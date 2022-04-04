@@ -9,12 +9,14 @@ import pytest
 import os
 
 SUPPORTED = [
-    "idonly", "imageid", "datasetid", "projectid"]
+    "idonly", "imageid", "datasetid", "projectid", "plateid", "screenid"]
 
 TEST_FILES = [
         "test/data/valid_single_image.zip",
         "test/data/valid_single_dataset.zip",
         "test/data/valid_single_project.zip",
+        "test/data/simple_plate.zip",
+        "test/data/simple_screen.zip",
 ]
 
 
@@ -28,12 +30,16 @@ class TestTransfer(CLITest):
         self.imageid = "Image:-1"
         self.datasetid = "Dataset:-1"
         self.projectid = "Project:-1"
+        self.plateid = "Project:-1"
+        self.screenid = "Project:-1"
         self.gw = BlitzGateway(client_obj=self.client)
 
     def create_image(self, sizec=4, sizez=1, sizet=1, target_name=None):
         images = self.import_fake_file(
                 images_count=2, sizeZ=sizez, sizeT=sizet, sizeC=sizec,
                 client=self.client)
+        images.append(self.create_test_image(100, 100, 1, 1, 1,
+                                             self.client.getSession()))
         self.imageid = "Image:%s" % images[0].id.val
         self.source = "Image:%s" % images[1].id.val
         for image in images:
@@ -53,6 +59,16 @@ class TestTransfer(CLITest):
             for i in images:
                 self.link(obj1=dataset, obj2=i)
 
+    def create_plate(self, sizec=4, sizez=1, sizet=1, target_name=None):
+        plates = self.import_plates(plates=2, client=self.client)
+        self.plateid = "Plate:%s" % plates[0].id.val
+        self.source = "Plate:%s" % plates[1].id.val
+        screen = ezomero.post_screen(self.gw, "test_screen")
+        self.screen = self.gw.getObject("Screen", screen)
+        self.screenid = "Screen:%s" % self.screen.id
+        for p in plates:
+            self.link(obj1=self.screen, obj2=p)
+
     @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
     def test_non_existing_object(self, target_name, tmpdir):
         self.args += ["pack", getattr(self, target_name),
@@ -62,7 +78,11 @@ class TestTransfer(CLITest):
 
     @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
     def test_pack(self, target_name, tmpdir):
-        self.create_image(target_name=target_name)
+        if target_name == "datasetid" or target_name == "projectid" or\
+           target_name == "idonly" or target_name == "imageid":
+            self.create_image(target_name=target_name)
+        elif target_name == "plateid" or target_name == "screenid":
+            self.create_plate(target_name=target_name)
         target = getattr(self, target_name)
         self.args += ["pack", target, str(tmpdir / 'test.zip')]
         self.cli.invoke(self.args, strict=True)
@@ -76,7 +96,7 @@ class TestTransfer(CLITest):
 
         if package_name == "test/data/valid_single_image.zip":
             im_ids = ezomero.get_image_ids(self.gw)
-            assert len(im_ids) == 3
+            assert len(im_ids) == 4
             img, _ = ezomero.get_image(self.gw, im_ids[-1])
             assert img.getName() == 'combined_result.tiff'
             assert len(ezomero.get_roi_ids(self.gw, im_ids[-1])) == 3
@@ -119,3 +139,37 @@ class TestTransfer(CLITest):
                             self.gw, "Project", pj_id)) == 1
             assert len(ezomero.get_tag_ids(
                             self.gw, "Project", pj_id)) == 0
+
+        if package_name == "test/data/simple_plate.zip":
+            pls = self.gw.getObjects("Plate", opts={'orphaned': True})
+            count = 0
+            for p in pls:
+                pl_id = p.getId()
+                count += 1
+            assert count == 1
+            pl = self.gw.getObject("Plate", pl_id)
+            wells = pl.listChildren()
+            count = 0
+            for well in wells:
+                well_id = well.getId()
+                count += 1
+            assert count == 1
+            well = self.gw.getObject("Well", well_id)
+            index = well.countWellSample()
+            assert index == 1
+
+        if package_name == "test/data/simple_screen.zip":
+            scs = self.gw.getObjects("Screen")
+            count = 0
+            for s in scs:
+                sc_id = s.getId()
+                count += 1
+            assert count == 3
+            count = 0
+            scr = self.gw.getObject("Screen", sc_id)
+            for p in scr.listChildren():
+                pl_id = p.getId()
+                count += 1
+            assert count == 2
+            assert len(ezomero.get_tag_ids(
+                            self.gw, "Screen", sc_id)) == 1
