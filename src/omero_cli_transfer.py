@@ -124,6 +124,9 @@ class TransferControl(GraphControl):
                 "--ln_s_import", help="Use in-place import",
                 action="store_true")
         unpack.add_argument(
+                "--folder", help="Pass path to a folder rather than a pack",
+                action="store_true")
+        unpack.add_argument(
             "--output", type=str, help="Output directory where zip "
                                        "file will be extracted"
         )
@@ -239,8 +242,14 @@ class TransferControl(GraphControl):
         return
 
     def __unpack(self, args):
-        print(f"Unzipping {args.filepath}...")
-        hash, ome, folder = self._load_from_pack(args.filepath, args.output)
+        if not args.folder:
+            print(f"Unzipping {args.filepath}...")
+            hash, ome, folder = self._load_from_pack(args.filepath,
+                                                     args.output)
+        else:
+            folder = Path(args.filepath)
+            ome = from_xml(folder / "transfer.xml")
+            hash = "imported from folder"
         print("Generating Image mapping and import filelist...")
         ome, src_img_map, filelist = self._create_image_map(ome)
         print("Importing data as orphans...")

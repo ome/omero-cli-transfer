@@ -20,6 +20,10 @@ TEST_FILES = [
         "test/data/simple_screen.zip",
 ]
 
+TEST_FOLDERS = [
+        "test/data/valid_single_image/"
+]
+
 
 class TestTransfer(CLITest):
 
@@ -94,12 +98,11 @@ class TestTransfer(CLITest):
         assert os.path.exists(str(tmpdir / 'test.zip'))
         assert os.path.getsize(str(tmpdir / 'test.zip')) > 0
 
-    @pytest.mark.parametrize('package_name', TEST_FILES)
-    def test_unpack(self, package_name):
-        self.args += ["unpack", package_name]
+    @pytest.mark.parametrize('folder_name', TEST_FOLDERS)
+    def test_unpack_folder(self, folder_name):
+        self.args += ["unpack", "--folder", folder_name]
         self.cli.invoke(self.args, strict=True)
-
-        if package_name == "test/data/valid_single_image.tar":
+        if folder_name == "test/data/valid_single_image/":
             im_ids = ezomero.get_image_ids(self.gw)
             assert len(im_ids) == 4
             img, _ = ezomero.get_image(self.gw, im_ids[-1])
@@ -110,9 +113,25 @@ class TestTransfer(CLITest):
             assert len(ezomero.get_tag_ids(
                             self.gw, "Image", im_ids[-1])) == 1
 
-        if package_name == "test/data/valid_single_image.zip":
+    @pytest.mark.parametrize('package_name', TEST_FILES)
+    def test_unpack(self, package_name):
+        self.args += ["unpack", package_name]
+        self.cli.invoke(self.args, strict=True)
+
+        if package_name == "test/data/valid_single_image.tar":
             im_ids = ezomero.get_image_ids(self.gw)
             assert len(im_ids) == 5
+            img, _ = ezomero.get_image(self.gw, im_ids[-1])
+            assert img.getName() == 'combined_result.tiff'
+            assert len(ezomero.get_roi_ids(self.gw, im_ids[-1])) == 3
+            assert len(ezomero.get_map_annotation_ids(
+                            self.gw, "Image", im_ids[-1])) == 3
+            assert len(ezomero.get_tag_ids(
+                            self.gw, "Image", im_ids[-1])) == 1
+
+        if package_name == "test/data/valid_single_image.zip":
+            im_ids = ezomero.get_image_ids(self.gw)
+            assert len(im_ids) == 6
             img, _ = ezomero.get_image(self.gw, im_ids[-1])
             assert img.getName() == 'combined_result.tiff'
             assert len(ezomero.get_roi_ids(self.gw, im_ids[-1])) == 3
