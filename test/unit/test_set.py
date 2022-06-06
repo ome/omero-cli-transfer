@@ -51,32 +51,32 @@ class TestUnpackSide():
         self.cli.register("transfer", TransferControl, "TEST")
         self.transfer = self.cli.controls['transfer']
 
-    def test_load_zip(self):
+    def test_load_pack(self):
         with pytest.raises(TypeError):
-            self.transfer._load_from_zip(None, None)
+            self.transfer._load_from_pack(None, None)
         with pytest.raises(TypeError):
-            self.transfer._load_from_zip(
+            self.transfer._load_from_pack(
                 None, 'test/data/output_folder')
         with pytest.raises(TypeError):
-            self.transfer._load_from_zip(
+            self.transfer._load_from_pack(
                 'test/data/valid_single_image.zip', 111)
         with pytest.raises(TypeError):
-            self.transfer._load_from_zip(
+            self.transfer._load_from_pack(
                 111, 'test/data/output_folder')
-        hash, ome, folder = self.transfer._load_from_zip(
+        hash, ome, folder = self.transfer._load_from_pack(
             "test/data/valid_single_image.zip", "tmp_folder")
         assert hash == "ac050c218f01bf189f9b3bdc9cab4f37"
         assert len(ome.images) == 1
         assert str(folder.resolve()) == "/omero-cli-transfer/tmp_folder"
-        hash, ome, folder = self.transfer._load_from_zip(
+        hash, ome, folder = self.transfer._load_from_pack(
             "test/data/valid_single_image.zip")
         assert str(folder.resolve()) == \
             "/omero-cli-transfer/test/data/valid_single_image"
 
     def test_non_existing_file(self):
         with pytest.raises(FileNotFoundError):
-            self.transfer._load_from_zip('data/fake_file.zip',
-                                         'data/output_folder')
+            self.transfer._load_from_pack('data/fake_file.zip',
+                                          'data/output_folder')
 
     def test_src_img_map(self):
         ome = from_xml('test/data/transfer.xml')
