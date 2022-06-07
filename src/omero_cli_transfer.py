@@ -15,6 +15,7 @@ from functools import wraps
 import shutil
 from collections import defaultdict
 from hashlib import md5
+from zipfile import ZipFile
 
 from generate_xml import populate_xml
 from generate_omero_objects import populate_omero
@@ -111,13 +112,19 @@ class TransferControl(GraphControl):
         render_type = ProxyStringType("Project")
         obj_help = ("Object to be packed for transfer")
         pack.add_argument("object", type=render_type, help=obj_help)
-        file_help = ("Path to where the zip file will be saved")
+        file_help = ("Path to where the packed file will be saved")
+        pack.add_argument(
+                "--zip", help="Pack into a zip file rather than a tarball",
+                action="store_true")
         pack.add_argument("filepath", type=str, help=file_help)
 
         file_help = ("Path to where the zip file is saved")
         unpack.add_argument("filepath", type=str, help=file_help)
         unpack.add_argument(
                 "--ln_s_import", help="Use in-place import",
+                action="store_true")
+        unpack.add_argument(
+                "--folder", help="Pass path to a folder rather than a pack",
                 action="store_true")
         unpack.add_argument(
             "--output", type=str, help="Output directory where zip "
@@ -187,6 +194,14 @@ class TransferControl(GraphControl):
                         for fs_image in fileset.copyImages():
                             downloaded_ids.append(fs_image.getId())
 
+    def _package_files(self, tar_path, zip, folder):
+        if zip:
+            print("Creating zip file...")
+            shutil.make_archive(tar_path, 'zip', folder)
+        else:
+            print("Creating tar file...")
+            shutil.make_archive(tar_path, 'tar', folder)
+
     def __pack(self, args):
         if isinstance(args.object, Image):
             src_datatype, src_dataid = "Image", args.object.id
@@ -206,8 +221,12 @@ class TransferControl(GraphControl):
             raise ValueError("Object not found or outside current"
                              " permissions for current user.")
         print("Populating xml...")
-        zip_path = Path(args.filepath)
-        folder = str(zip_path) + "_folder"
+        if args.zip:
+            zip = True
+        else:
+            zip = False
+        tar_path = Path(args.filepath)
+        folder = str(tar_path) + "_folder"
         os.makedirs(folder, mode=DIR_PERM, exist_ok=True)
         xml_fp = str(Path(folder) / "transfer.xml")
         # repo = self._get_path_to_repo()[0]
@@ -217,15 +236,20 @@ class TransferControl(GraphControl):
 
         print("Starting file copy...")
         self._copy_files(path_id_dict, folder, self.gateway)
-        print("Creating zip file...")
-        shutil.make_archive(os.path.splitext(zip_path)[0], 'zip', folder)
+        self._package_files(os.path.splitext(tar_path)[0], zip, folder)
         print("Cleaning up...")
         shutil.rmtree(folder)
         return
 
     def __unpack(self, args):
-        print(f"Unzipping {args.filepath}...")
-        hash, ome, folder = self._load_from_zip(args.filepath, args.output)
+        if not args.folder:
+            print(f"Unzipping {args.filepath}...")
+            hash, ome, folder = self._load_from_pack(args.filepath,
+                                                     args.output)
+        else:
+            folder = Path(args.filepath)
+            ome = from_xml(folder / "transfer.xml")
+            hash = "imported from folder"
         print("Generating Image mapping and import filelist...")
         ome, src_img_map, filelist = self._create_image_map(ome)
         print("Importing data as orphans...")
@@ -242,7 +266,7 @@ class TransferControl(GraphControl):
         populate_omero(ome, img_map, self.gateway, hash, folder)
         return
 
-    def _load_from_zip(self, filepath, output=None):
+    def _load_from_pack(self, filepath, output=None):
         if (not filepath) or (not isinstance(filepath, str)):
             raise TypeError("filepath must be a string")
         if output and not isinstance(output, str):
@@ -256,7 +280,13 @@ class TransferControl(GraphControl):
         if Path(filepath).exists():
             with open(filepath, 'rb') as file:
                 hash = md5(file.read()).hexdigest()
-            shutil.unpack_archive(filepath, str(folder), 'zip')
+            if Path(filepath).suffix == '.zip':
+                with ZipFile(filepath, 'r') as zipobj:
+                    zipobj.extractall(str(folder))
+            elif Path(filepath).suffix == '.tar':
+                shutil.unpack_archive(filepath, str(folder), 'tar')
+            else:
+                raise ValueError("File is not a zip or tar file")
         else:
             raise FileNotFoundError("filepath is not a zip file")
         ome = from_xml(folder / "transfer.xml")
