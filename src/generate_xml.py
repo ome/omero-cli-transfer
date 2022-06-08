@@ -20,6 +20,7 @@ from omero.model import PolylineI, LabelI
 import pkg_resources
 import ezomero
 import os
+import csv
 import base64
 from uuid import uuid4
 from datetime import datetime
@@ -647,3 +648,91 @@ def populate_xml(datatype, id, filepath, conn, hostname):
         fp.close()
     path_id_dict = list_file_ids(ome)
     return path_id_dict
+
+
+def populate_tsv(datatype, id, filepath, conn, hostname):
+    ome = OME()
+    obj = conn.getObject(datatype, id)
+    if datatype == 'Project':
+        populate_project(obj, ome, conn, hostname)
+    elif datatype == 'Dataset':
+        populate_dataset(obj, ome, conn, hostname)
+    elif datatype == 'Screen':
+        populate_screen(obj, ome, conn, hostname)
+    elif datatype == 'Plate':
+        populate_plate(obj, ome, conn, hostname)
+    path_id_dict = list_file_ids(ome)
+    with open(filepath, 'w') as fp:
+        writer = csv.writer(fp, delimiter='\t')
+        if datatype == 'Project':
+            write_project(ome, writer, path_id_dict)
+        elif datatype == 'Dataset':
+            write_dataset(ome, writer, path_id_dict)
+        elif datatype == 'Screen':
+            write_screen(ome, writer, path_id_dict)
+        elif datatype == 'Plate':
+            write_plate(ome, writer, path_id_dict)
+        fp.close()
+    return path_id_dict
+
+
+def generate_columns(ome, ids):
+    columns = ["filename"]
+    if [v for v in ids.values() if v.startswith("file_annotations")]:
+        columns.append("data_type")
+    for ann in ome.structured_annotations:
+        if isinstance(ann, CommentAnnotation) and ("comment" not in columns):
+            clean_id = int(ann.id.split(":")[-1])
+            if clean_id > 0:
+                columns.append("comment")
+    anns = ome.structured_annotations
+    for i in ome.images:
+        for ann_ref in i.annotation_ref:
+            ann = next(filter(lambda x: x.id == ann_ref.id, anns))
+            if isinstance(ann, MapAnnotation):
+                for v in ann.value.m:
+                    if v.k not in columns:
+                        columns.append(v.k)
+    return columns
+
+
+def list_files(ome, ids, top_level):
+    files = []
+    for k, v in ids.items():
+        if v.startswith("file_annotations") or v.endswith("mock_folder"):
+            files.append("more work")
+        else:
+            if top_level == "Project":
+                proj_name = ome.projects[0].name
+                dataset_name = ""
+                for d in ome.datasets:
+                    i = filter(lambda x: x.id == k, d.image_ref)
+                    if any(i):
+                        dataset_name = d.name
+                image_name = v.split("/")[-1]
+                if (proj_name + "/" + dataset_name +
+                        "/" + image_name) not in files:
+                    files.append(proj_name + "/" + dataset_name +
+                                 "/" + image_name)
+    return files
+
+
+def write_project(ome, writer, ids):
+    columns = generate_columns(ome, ids)
+    columns.append("original_omero_ids")
+    writer.writerow(columns)
+    allfiles = list_files(ome, ids, "Project")
+    print(allfiles)
+    return
+
+
+def write_dataset(ome, fp):
+    return
+
+
+def write_screen(ome, fp):
+    return
+
+
+def write_plate(ome, fp):
+    return

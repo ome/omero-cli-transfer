@@ -17,7 +17,7 @@ from collections import defaultdict
 from hashlib import md5
 from zipfile import ZipFile
 
-from generate_xml import populate_xml
+from generate_xml import populate_xml, populate_tsv
 from generate_omero_objects import populate_omero
 
 import ezomero
@@ -116,6 +116,10 @@ class TransferControl(GraphControl):
         pack.add_argument(
                 "--zip", help="Pack into a zip file rather than a tarball",
                 action="store_true")
+        pack.add_argument(
+                "--barchive", help="Pack into a file compliant with Bioimage"
+                                   " Archive submission standards",
+                action="store_true")
         pack.add_argument("filepath", type=str, help=file_help)
 
         file_help = ("Path to where the zip file is saved")
@@ -204,6 +208,9 @@ class TransferControl(GraphControl):
 
     def __pack(self, args):
         if isinstance(args.object, Image):
+            if self.barchive:
+                raise ValueError("Single image cannot be packaged for "
+                                 "Bioimage Archive")
             src_datatype, src_dataid = "Image", args.object.id
         elif isinstance(args.object, Dataset):
             src_datatype, src_dataid = "Dataset", args.object.id
@@ -221,22 +228,24 @@ class TransferControl(GraphControl):
             raise ValueError("Object not found or outside current"
                              " permissions for current user.")
         print("Populating xml...")
-        if args.zip:
-            zip = True
-        else:
-            zip = False
         tar_path = Path(args.filepath)
         folder = str(tar_path) + "_folder"
         os.makedirs(folder, mode=DIR_PERM, exist_ok=True)
-        xml_fp = str(Path(folder) / "transfer.xml")
+        if args.barchive:
+            md_fp = str(Path(folder) / "submission.tsv")
+            path_id_dict = populate_tsv(src_datatype, src_dataid, md_fp,
+                                    self.gateway, self.hostname)
+        else:
+            md_fp = str(Path(folder) / "transfer.xml")
+            path_id_dict = populate_xml(src_datatype, src_dataid, md_fp,
+                                    self.gateway, self.hostname)
         # repo = self._get_path_to_repo()[0]
-        path_id_dict = populate_xml(src_datatype, src_dataid,
-                                    xml_fp, self.gateway, self.hostname)
-        print(f"XML saved at {xml_fp}.")
+        
+        print(f"Metadata saved at {md_fp}.")
 
         print("Starting file copy...")
         self._copy_files(path_id_dict, folder, self.gateway)
-        self._package_files(os.path.splitext(tar_path)[0], zip, folder)
+        self._package_files(os.path.splitext(tar_path)[0], args.zip, folder)
         print("Cleaning up...")
         shutil.rmtree(folder)
         return
