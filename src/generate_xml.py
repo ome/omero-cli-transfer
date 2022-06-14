@@ -1,3 +1,4 @@
+from distutils.command.clean import clean
 from ome_types import to_xml, OME
 from ome_types.model import Project, ProjectRef
 from ome_types.model import Screen
@@ -25,6 +26,7 @@ import base64
 from uuid import uuid4
 from datetime import datetime
 from pathlib import Path
+import shutil
 
 
 def create_proj_and_ref(**kwargs):
@@ -630,7 +632,7 @@ def list_file_ids(ome):
     return id_list
 
 
-def populate_xml(datatype, id, filepath, conn, hostname):
+def populate_xml(datatype, id, filepath, conn, hostname, barchive):
     ome = OME()
     obj = conn.getObject(datatype, id)
     if datatype == 'Project':
@@ -643,37 +645,23 @@ def populate_xml(datatype, id, filepath, conn, hostname):
         populate_screen(obj, ome, conn, hostname)
     elif datatype == 'Plate':
         populate_plate(obj, ome, conn, hostname)
-    with open(filepath, 'w') as fp:
-        print(to_xml(ome), file=fp)
-        fp.close()
+    if not barchive:
+        with open(filepath, 'w') as fp:
+            print(to_xml(ome), file=fp)
+            fp.close()
     path_id_dict = list_file_ids(ome)
-    return path_id_dict
+    return ome, path_id_dict
 
 
-def populate_tsv(datatype, id, filepath, conn, hostname):
-    ome = OME()
-    obj = conn.getObject(datatype, id)
-    if datatype == 'Project':
-        populate_project(obj, ome, conn, hostname)
-    elif datatype == 'Dataset':
-        populate_dataset(obj, ome, conn, hostname)
-    elif datatype == 'Screen':
-        populate_screen(obj, ome, conn, hostname)
-    elif datatype == 'Plate':
-        populate_plate(obj, ome, conn, hostname)
-    path_id_dict = list_file_ids(ome)
+def populate_tsv(datatype, ome, filepath, conn, path_id_dict, folder):
+    if datatype == "Plate" or datatype == "Screen":
+        print("Bioimage Archive export of Plate/Screen currently unsupported")
+        return
     with open(filepath, 'w') as fp:
         writer = csv.writer(fp, delimiter='\t')
-        if datatype == 'Project':
-            write_project(ome, writer, path_id_dict)
-        elif datatype == 'Dataset':
-            write_dataset(ome, writer, path_id_dict)
-        elif datatype == 'Screen':
-            write_screen(ome, writer, path_id_dict)
-        elif datatype == 'Plate':
-            write_plate(ome, writer, path_id_dict)
+        write_lines(datatype, ome, writer, path_id_dict, folder)
         fp.close()
-    return path_id_dict
+    return
 
 
 def generate_columns(ome, ids):
@@ -717,22 +705,100 @@ def list_files(ome, ids, top_level):
     return files
 
 
-def write_project(ome, writer, ids):
+def find_dataset(id, ome):
+    for d in ome.datasets:
+        if any(filter(lambda x: x.id == id, d.image_ref)):
+            return d.name
+
+
+def generate_lines_and_move(img, ome, ids, folder, top_level):
+    # Note that if an image is in multiple datasets (or a dataset in multiple
+    # projects), only one copy of the data will exist! 
+    orig_path = ids[img.id]
+    files = []
+    if orig_path.endswith("mock_folder"):
+        subfolder = os.path.join(folder, orig_path.rsplit("/", 1)[0])
+        paths = list(Path(subfolder).rglob("*.*"))
+        clean_paths = []
+        for path in paths:
+            p = path.relative_to(subfolder)
+            clean_paths.append(p)
+    else:
+        clean_paths = [Path(orig_path.rsplit("/", 1)[1])]
+    print(clean_paths)
+    ds_name = find_dataset(img.id, ome)
+    paths = {}
+    orig_parent = Path(orig_path).parent
+    if top_level == 'Project':
+        proj_name = ome.projects[0].name
+        for p in clean_paths:
+            dest = os.path.join(folder, proj_name, ds_name, p)
+            orig = os.path.join(folder, orig_parent, p)
+            paths[orig] = dest
+    elif top_level == "Dataset":
+        for p in clean_paths:
+            dest = os.path.join(folder, ds_name, p)
+            orig = os.path.join(folder, orig_parent, p)
+            paths[orig] = dest
+    print(paths)
+    for orig, dest in paths.items():
+        parent = Path(dest).parent
+        os.makedirs(parent, exist_ok=True)
+        print(orig)
+        if Path(orig).exists():
+            print("path exists")
+            shutil.move(orig, dest)
+            files.append(dest)
+    # 
+    # need to loop over images and then:
+
+    # move data to destination folder path
+    # construct line with new path, annotations, image IDs
+
+    # return files, lines
+    return files, []
+
+
+
+def generate_lines_ann(ann, ome, ids, folder):
+    clean_id = int(ann.id.split(":")[-1])
+
+    return []
+
+
+def delete_empty_folders(root):
+
+    deleted = set()
+
+    for current_dir, subdirs, files in os.walk(root, topdown=False):
+        still_has_subdirs = False
+        for subdir in subdirs:
+            if os.path.join(current_dir, subdir) not in deleted:
+                still_has_subdirs = True
+        if not any(files) and not still_has_subdirs:
+            os.rmdir(current_dir)
+            deleted.add(current_dir)
+
+    return deleted
+
+
+def write_lines(top_level, ome, writer, ids, folder):
     columns = generate_columns(ome, ids)
     columns.append("original_omero_ids")
     writer.writerow(columns)
-    allfiles = list_files(ome, ids, "Project")
-    print(allfiles)
+    all_files = []
+    for i in ome.images:
+        files, lines = generate_lines_and_move(i, ome, ids, folder,
+                                               top_level)
+        all_files.extend(files)
+        for line in lines:
+            writer.writerow(line)
+    for ann in ome.structured_annotations:
+        if isinstance(ann, FileAnnotation):
+            lines = generate_lines_ann(ann, ome, ids, folder)
+            for line in lines:
+                writer.writerow(line)
+    print(all_files)
+    delete_empty_folders(folder)
     return
 
-
-def write_dataset(ome, fp):
-    return
-
-
-def write_screen(ome, fp):
-    return
-
-
-def write_plate(ome, fp):
-    return

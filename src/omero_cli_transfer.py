@@ -233,18 +233,19 @@ class TransferControl(GraphControl):
         os.makedirs(folder, mode=DIR_PERM, exist_ok=True)
         if args.barchive:
             md_fp = str(Path(folder) / "submission.tsv")
-            path_id_dict = populate_tsv(src_datatype, src_dataid, md_fp,
-                                    self.gateway, self.hostname)
         else:
             md_fp = str(Path(folder) / "transfer.xml")
-            path_id_dict = populate_xml(src_datatype, src_dataid, md_fp,
-                                    self.gateway, self.hostname)
-        # repo = self._get_path_to_repo()[0]
-        
-        print(f"Metadata saved at {md_fp}.")
+            print(f"Saving metadata at {md_fp}.")
+        ome, path_id_dict = populate_xml(src_datatype, src_dataid, md_fp,
+                                         self.gateway, self.hostname,
+                                         args.barchive)
 
         print("Starting file copy...")
         self._copy_files(path_id_dict, folder, self.gateway)
+        if args.barchive:
+            print(f"Creating Bioimage Archive TSV at {md_fp}.")
+            populate_tsv(src_datatype, ome, md_fp,
+                         self.gateway, path_id_dict, folder)
         self._package_files(os.path.splitext(tar_path)[0], args.zip, folder)
         print("Cleaning up...")
         shutil.rmtree(folder)
