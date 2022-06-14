@@ -711,11 +711,12 @@ def find_dataset(id, ome):
             return d.name
 
 
-def generate_lines_and_move(img, ome, ids, folder, top_level):
+def generate_lines_and_move(img, ome, ids, folder, top_level,
+                            lines, columns):
     # Note that if an image is in multiple datasets (or a dataset in multiple
-    # projects), only one copy of the data will exist! 
+    # projects), only one copy of the data will exist!
+    allfiles = [line[0] for line in lines]
     orig_path = ids[img.id]
-    files = []
     if orig_path.endswith("mock_folder"):
         subfolder = os.path.join(folder, orig_path.rsplit("/", 1)[0])
         paths = list(Path(subfolder).rglob("*.*"))
@@ -725,7 +726,6 @@ def generate_lines_and_move(img, ome, ids, folder, top_level):
             clean_paths.append(p)
     else:
         clean_paths = [Path(orig_path.rsplit("/", 1)[1])]
-    print(clean_paths)
     ds_name = find_dataset(img.id, ome)
     paths = {}
     orig_parent = Path(orig_path).parent
@@ -740,24 +740,57 @@ def generate_lines_and_move(img, ome, ids, folder, top_level):
             dest = os.path.join(folder, ds_name, p)
             orig = os.path.join(folder, orig_parent, p)
             paths[orig] = dest
-    print(paths)
     for orig, dest in paths.items():
-        parent = Path(dest).parent
-        os.makedirs(parent, exist_ok=True)
-        print(orig)
-        if Path(orig).exists():
-            print("path exists")
-            shutil.move(orig, dest)
-            files.append(dest)
-    # 
+        cl_id = img.id.split(":")[-1]
+        if dest in allfiles:
+            idx = allfiles.index(dest)
+            lines[idx][-1] = lines[idx][-1] + ", " + cl_id
+        else:
+            newline = [dest, "Image"]
+            vals = get_annotation_vals(columns, img, ome)
+            newline.extend(vals)
+            newline.append(cl_id)
+            lines.append(newline)    
     # need to loop over images and then:
 
-    # move data to destination folder path
     # construct line with new path, annotations, image IDs
 
     # return files, lines
-    return files, []
+    return paths
 
+
+def get_annotation_vals(cols, img, ome):
+    anns = []
+    for ann in img.annotation_ref:
+        a = next(filter(lambda x: x.id == ann.id,
+                 ome.structured_annotations))
+        anns.append(a)
+    vals = []
+    commented = False
+    for col in cols:
+        if col == "filename" or col == "data_type" \
+           or col == "original_omero_ids":
+            continue
+        if col == "comment":
+            for ann in anns:
+                if isinstance(ann, CommentAnnotation) and \
+                   int(ann.id.split(":")[-1]) > 0 and not commented:
+                    vals.append(ann.value)
+                    commented = True
+            if not commented:
+                vals.append(" ")
+        else:
+            hascol = False
+            for ann in anns:
+                if isinstance(ann, MapAnnotation) and \
+                   int(ann.id.split(":")[-1]) > 0:
+                    for v in ann.value.m:
+                        if v.k == col:
+                            vals.append(v.value)
+                            hascol = True
+            if not hascol:
+                vals.append(" ")
+    return vals
 
 
 def generate_lines_ann(ann, ome, ids, folder):
@@ -786,19 +819,26 @@ def write_lines(top_level, ome, writer, ids, folder):
     columns = generate_columns(ome, ids)
     columns.append("original_omero_ids")
     writer.writerow(columns)
-    all_files = []
+    lines = []
+    paths = []
     for i in ome.images:
-        files, lines = generate_lines_and_move(i, ome, ids, folder,
-                                               top_level)
-        all_files.extend(files)
-        for line in lines:
-            writer.writerow(line)
+        tmppaths = generate_lines_and_move(i, ome, ids, folder,
+                                           top_level, lines, columns)
+        paths.append(tmppaths)
+    for line in lines:
+        line[0] = line[0].split(folder)[-1].lstrip("/")
+        writer.writerow(line)
     for ann in ome.structured_annotations:
         if isinstance(ann, FileAnnotation):
             lines = generate_lines_ann(ann, ome, ids, folder)
             for line in lines:
                 writer.writerow(line)
-    print(all_files)
+    for p in paths:
+        for orig, dest in p.items():
+            parent = Path(dest).parent
+            os.makedirs(parent, exist_ok=True)
+            if Path(orig).exists():
+                shutil.move(orig, dest)
     delete_empty_folders(folder)
     return
 
