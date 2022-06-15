@@ -357,6 +357,7 @@ def create_filepath_annotations(id, conn, filename=None, plate_path=None):
             anref = ROIRef(id=an.id)
             refs.append(anref)
     elif fp_type == "Annotation":
+        filename = str(Path(filename).name)
         f = f'file_annotations/{clean_id}/{filename}'
         id = (-1) * uuid4().int
         an = CommentAnnotation(id=id,
@@ -529,7 +530,6 @@ def populate_plate(obj, ome, conn, hostname):
             plate_path = ann.value
     filepath_anns, refs = create_filepath_annotations(pl.id, conn,
                                                       plate_path=plate_path)
-    print(filepath_anns)
     for i in range(len(filepath_anns)):
         ome.structured_annotations.append(filepath_anns[i])
         pl.annotation_ref.append(refs[i])
@@ -601,7 +601,8 @@ def add_annotation(obj, ann, ome, conn):
         contents = ann.getFile().getPath().encode()
         b64 = base64.b64encode(contents)
         length = len(b64)
-        binaryfile = BinaryFile(file_name=ann.getFile().getPath(),
+        fpath = os.path.join(ann.getFile().getPath(), ann.getFile().getName())
+        binaryfile = BinaryFile(file_name=fpath,
                                 size=ann.getFile().getSize(),
                                 bin_data=BinData(big_endian=True,
                                                  length=length,
@@ -614,7 +615,7 @@ def add_annotation(obj, ann, ome, conn):
         filepath_anns, refs = create_filepath_annotations(
                                 long.id,
                                 conn,
-                                filename=ann.getFile().getPath())
+                                filename=ann.getFile().getName())
         for i in range(len(filepath_anns)):
             ome.structured_annotations.append(filepath_anns[i])
             long.annotation_ref.append(refs[i])
@@ -750,7 +751,7 @@ def generate_lines_and_move(img, ome, ids, folder, top_level,
             vals = get_annotation_vals(columns, img, ome)
             newline.extend(vals)
             newline.append(cl_id)
-            lines.append(newline)    
+            lines.append(newline)
     # need to loop over images and then:
 
     # construct line with new path, annotations, image IDs
@@ -793,10 +794,32 @@ def get_annotation_vals(cols, img, ome):
     return vals
 
 
-def generate_lines_ann(ann, ome, ids, folder):
-    clean_id = int(ann.id.split(":")[-1])
+def get_file_ann_imgs(ann, ome):
+    ids = ""
+    for i in ome.images:
+        if any(filter(lambda x: x.id == ann.id, i.annotation_ref)):
+            if ids:
+                ids = ids + ", " + i.id.split(":")[-1]
+            else:
+                ids = i.id.split(":")[-1]
+    if not ids:
+        ids = " "
+    return ids
 
-    return []
+
+def generate_lines_ann(ann, ome, ids, cols):
+    dest = ids[ann.id]
+    newline = [dest, "File Annotation"]
+    for col in cols:
+        if col == "filename" or col == "data_type":
+            continue
+        if col != "original_omero_ids":
+            newline.append(" ")
+        else:
+            ids = get_file_ann_imgs(ann, ome)
+            newline.append(ids)
+
+    return newline
 
 
 def delete_empty_folders(root):
@@ -830,9 +853,8 @@ def write_lines(top_level, ome, writer, ids, folder):
         writer.writerow(line)
     for ann in ome.structured_annotations:
         if isinstance(ann, FileAnnotation):
-            lines = generate_lines_ann(ann, ome, ids, folder)
-            for line in lines:
-                writer.writerow(line)
+            line = generate_lines_ann(ann, ome, ids, columns)
+            writer.writerow(line)
     for p in paths:
         for orig, dest in p.items():
             parent = Path(dest).parent
