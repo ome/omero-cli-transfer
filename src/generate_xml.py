@@ -1,4 +1,3 @@
-from distutils.command.clean import clean
 from ome_types import to_xml, OME
 from ome_types.model import Project, ProjectRef
 from ome_types.model import Screen
@@ -863,4 +862,3 @@ def write_lines(top_level, ome, writer, ids, folder):
                 shutil.move(orig, dest)
     delete_empty_folders(folder)
     return
-

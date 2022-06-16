@@ -208,7 +208,7 @@ class TransferControl(GraphControl):
 
     def __pack(self, args):
         if isinstance(args.object, Image):
-            if self.barchive:
+            if args.barchive:
                 raise ValueError("Single image cannot be packaged for "
                                  "Bioimage Archive")
             src_datatype, src_dataid = "Image", args.object.id
