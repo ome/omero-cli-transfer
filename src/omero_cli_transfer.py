@@ -207,10 +207,11 @@ class TransferControl(GraphControl):
             shutil.make_archive(tar_path, 'tar', folder)
 
     def __pack(self, args):
-        if isinstance(args.object, Image):
+        if isinstance(args.object, Image) or isinstance(args.object, Screen) \
+           or isinstance(args.object, Plate):
             if args.barchive:
-                raise ValueError("Single image cannot be packaged for "
-                                 "Bioimage Archive")
+                raise ValueError("Single image, plate or screen cannot be "
+                                 "packaged for Bioimage Archive")
             src_datatype, src_dataid = "Image", args.object.id
         elif isinstance(args.object, Dataset):
             src_datatype, src_dataid = "Dataset", args.object.id
