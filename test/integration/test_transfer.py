@@ -97,6 +97,16 @@ class TestTransfer(CLITest):
         self.cli.invoke(args, strict=True)
         assert os.path.exists(str(tmpdir / 'test.zip'))
         assert os.path.getsize(str(tmpdir / 'test.zip')) > 0
+        args = self.args + ["pack", target, "--barchive",
+                            str(tmpdir / 'testba.tar')]
+        if target_name == "datasetid" or target_name == "projectid" \
+           or target_name == "idonly":
+            self.cli.invoke(args, strict=True)
+            assert os.path.exists(str(tmpdir / 'testba.tar'))
+            assert os.path.getsize(str(tmpdir / 'testba.tar')) > 0
+        else:
+            with pytest.raises(ValueError):
+                self.cli.invoke(args, strict=True)
 
     @pytest.mark.parametrize('folder_name', TEST_FOLDERS)
     def test_unpack_folder(self, folder_name):

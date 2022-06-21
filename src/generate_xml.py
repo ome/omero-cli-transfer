@@ -20,10 +20,12 @@ from omero.model import PolylineI, LabelI
 import pkg_resources
 import ezomero
 import os
+import csv
 import base64
 from uuid import uuid4
 from datetime import datetime
 from pathlib import Path
+import shutil
 
 
 def create_proj_and_ref(**kwargs):
@@ -354,6 +356,7 @@ def create_filepath_annotations(id, conn, filename=None, plate_path=None):
             anref = ROIRef(id=an.id)
             refs.append(anref)
     elif fp_type == "Annotation":
+        filename = str(Path(filename).name)
         f = f'file_annotations/{clean_id}/{filename}'
         id = (-1) * uuid4().int
         an = CommentAnnotation(id=id,
@@ -526,7 +529,6 @@ def populate_plate(obj, ome, conn, hostname):
             plate_path = ann.value
     filepath_anns, refs = create_filepath_annotations(pl.id, conn,
                                                       plate_path=plate_path)
-    print(filepath_anns)
     for i in range(len(filepath_anns)):
         ome.structured_annotations.append(filepath_anns[i])
         pl.annotation_ref.append(refs[i])
@@ -598,7 +600,8 @@ def add_annotation(obj, ann, ome, conn):
         contents = ann.getFile().getPath().encode()
         b64 = base64.b64encode(contents)
         length = len(b64)
-        binaryfile = BinaryFile(file_name=ann.getFile().getPath(),
+        fpath = os.path.join(ann.getFile().getPath(), ann.getFile().getName())
+        binaryfile = BinaryFile(file_name=fpath,
                                 size=ann.getFile().getSize(),
                                 bin_data=BinData(big_endian=True,
                                                  length=length,
@@ -611,7 +614,7 @@ def add_annotation(obj, ann, ome, conn):
         filepath_anns, refs = create_filepath_annotations(
                                 long.id,
                                 conn,
-                                filename=ann.getFile().getPath())
+                                filename=ann.getFile().getName())
         for i in range(len(filepath_anns)):
             ome.structured_annotations.append(filepath_anns[i])
             long.annotation_ref.append(refs[i])
@@ -629,7 +632,7 @@ def list_file_ids(ome):
     return id_list
 
 
-def populate_xml(datatype, id, filepath, conn, hostname):
+def populate_xml(datatype, id, filepath, conn, hostname, barchive):
     ome = OME()
     obj = conn.getObject(datatype, id)
     if datatype == 'Project':
@@ -642,8 +645,220 @@ def populate_xml(datatype, id, filepath, conn, hostname):
         populate_screen(obj, ome, conn, hostname)
     elif datatype == 'Plate':
         populate_plate(obj, ome, conn, hostname)
-    with open(filepath, 'w') as fp:
-        print(to_xml(ome), file=fp)
-        fp.close()
+    if not barchive:
+        with open(filepath, 'w') as fp:
+            print(to_xml(ome), file=fp)
+            fp.close()
     path_id_dict = list_file_ids(ome)
-    return path_id_dict
+    return ome, path_id_dict
+
+
+def populate_tsv(datatype, ome, filepath, conn, path_id_dict, folder):
+    if datatype == "Plate" or datatype == "Screen":
+        print("Bioimage Archive export of Plate/Screen currently unsupported")
+        return
+    with open(filepath, 'w') as fp:
+        writer = csv.writer(fp, delimiter='\t')
+        write_lines(datatype, ome, writer, path_id_dict, folder)
+        fp.close()
+    return
+
+
+def generate_columns(ome, ids):
+    columns = ["filename"]
+    if [v for v in ids.values() if v.startswith("file_annotations")]:
+        columns.append("data_type")
+    for ann in ome.structured_annotations:
+        if isinstance(ann, CommentAnnotation) and ("comment" not in columns):
+            clean_id = int(ann.id.split(":")[-1])
+            if clean_id > 0:
+                columns.append("comment")
+    anns = ome.structured_annotations
+    for i in ome.images:
+        for ann_ref in i.annotation_ref:
+            ann = next(filter(lambda x: x.id == ann_ref.id, anns))
+            if isinstance(ann, MapAnnotation):
+                for v in ann.value.m:
+                    if v.k not in columns:
+                        columns.append(v.k)
+    return columns
+
+
+def list_files(ome, ids, top_level):
+    files = []
+    for k, v in ids.items():
+        if v.startswith("file_annotations") or v.endswith("mock_folder"):
+            files.append("more work")
+        else:
+            if top_level == "Project":
+                proj_name = ome.projects[0].name
+                dataset_name = ""
+                for d in ome.datasets:
+                    i = filter(lambda x: x.id == k, d.image_ref)
+                    if any(i):
+                        dataset_name = d.name
+                image_name = v.split("/")[-1]
+                if (proj_name + "/" + dataset_name +
+                        "/" + image_name) not in files:
+                    files.append(proj_name + "/" + dataset_name +
+                                 "/" + image_name)
+    return files
+
+
+def find_dataset(id, ome):
+    for d in ome.datasets:
+        if any(filter(lambda x: x.id == id, d.image_ref)):
+            return d.name
+
+
+def generate_lines_and_move(img, ome, ids, folder, top_level,
+                            lines, columns):
+    # Note that if an image is in multiple datasets (or a dataset in multiple
+    # projects), only one copy of the data will exist!
+    allfiles = [line[0] for line in lines]
+    orig_path = ids[img.id]
+    if orig_path.endswith("mock_folder"):
+        subfolder = os.path.join(folder, orig_path.rsplit("/", 1)[0])
+        paths = list(Path(subfolder).rglob("*.*"))
+        clean_paths = []
+        for path in paths:
+            p = path.relative_to(subfolder)
+            clean_paths.append(p)
+    else:
+        clean_paths = [Path(orig_path.rsplit("/", 1)[1])]
+    ds_name = find_dataset(img.id, ome)
+    paths = {}
+    orig_parent = Path(orig_path).parent
+    if top_level == 'Project':
+        proj_name = ome.projects[0].name
+        for p in clean_paths:
+            dest = os.path.join(folder, proj_name, ds_name, p)
+            orig = os.path.join(folder, orig_parent, p)
+            paths[orig] = dest
+    elif top_level == "Dataset":
+        for p in clean_paths:
+            dest = os.path.join(folder, ds_name, p)
+            orig = os.path.join(folder, orig_parent, p)
+            paths[orig] = dest
+    for orig, dest in paths.items():
+        cl_id = img.id.split(":")[-1]
+        if dest in allfiles:
+            idx = allfiles.index(dest)
+            lines[idx][-1] = lines[idx][-1] + ", " + cl_id
+        else:
+            newline = [dest, "Image"]
+            vals = get_annotation_vals(columns, img, ome)
+            newline.extend(vals)
+            newline.append(cl_id)
+            lines.append(newline)
+    # need to loop over images and then:
+
+    # construct line with new path, annotations, image IDs
+
+    # return files, lines
+    return paths
+
+
+def get_annotation_vals(cols, img, ome):
+    anns = []
+    for ann in img.annotation_ref:
+        a = next(filter(lambda x: x.id == ann.id,
+                 ome.structured_annotations))
+        anns.append(a)
+    vals = []
+    commented = False
+    for col in cols:
+        if col == "filename" or col == "data_type" \
+           or col == "original_omero_ids":
+            continue
+        if col == "comment":
+            for ann in anns:
+                if isinstance(ann, CommentAnnotation) and \
+                   int(ann.id.split(":")[-1]) > 0 and not commented:
+                    vals.append(ann.value)
+                    commented = True
+            if not commented:
+                vals.append(" ")
+        else:
+            hascol = False
+            for ann in anns:
+                if isinstance(ann, MapAnnotation) and \
+                   int(ann.id.split(":")[-1]) > 0:
+                    for v in ann.value.m:
+                        if v.k == col:
+                            vals.append(v.value)
+                            hascol = True
+            if not hascol:
+                vals.append(" ")
+    return vals
+
+
+def get_file_ann_imgs(ann, ome):
+    ids = ""
+    for i in ome.images:
+        if any(filter(lambda x: x.id == ann.id, i.annotation_ref)):
+            if ids:
+                ids = ids + ", " + i.id.split(":")[-1]
+            else:
+                ids = i.id.split(":")[-1]
+    if not ids:
+        ids = " "
+    return ids
+
+
+def generate_lines_ann(ann, ome, ids, cols):
+    dest = ids[ann.id]
+    newline = [dest, "File Annotation"]
+    for col in cols:
+        if col == "filename" or col == "data_type":
+            continue
+        if col != "original_omero_ids":
+            newline.append(" ")
+        else:
+            ids = get_file_ann_imgs(ann, ome)
+            newline.append(ids)
+
+    return newline
+
+
+def delete_empty_folders(root):
+
+    deleted = set()
+
+    for current_dir, subdirs, files in os.walk(root, topdown=False):
+        still_has_subdirs = False
+        for subdir in subdirs:
+            if os.path.join(current_dir, subdir) not in deleted:
+                still_has_subdirs = True
+        if not any(files) and not still_has_subdirs:
+            os.rmdir(current_dir)
+            deleted.add(current_dir)
+
+    return deleted
+
+
+def write_lines(top_level, ome, writer, ids, folder):
+    columns = generate_columns(ome, ids)
+    columns.append("original_omero_ids")
+    writer.writerow(columns)
+    lines = []
+    paths = []
+    for i in ome.images:
+        tmppaths = generate_lines_and_move(i, ome, ids, folder,
+                                           top_level, lines, columns)
+        paths.append(tmppaths)
+    for line in lines:
+        line[0] = line[0].split(folder)[-1].lstrip("/")
+        writer.writerow(line)
+    for ann in ome.structured_annotations:
+        if isinstance(ann, FileAnnotation):
+            line = generate_lines_ann(ann, ome, ids, columns)
+            writer.writerow(line)
+    for p in paths:
+        for orig, dest in p.items():
+            parent = Path(dest).parent
+            os.makedirs(parent, exist_ok=True)
+            if Path(orig).exists():
+                shutil.move(orig, dest)
+    delete_empty_folders(folder)
+    return

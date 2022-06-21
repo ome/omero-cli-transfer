@@ -17,7 +17,7 @@ from collections import defaultdict
 from hashlib import md5
 from zipfile import ZipFile
 
-from generate_xml import populate_xml
+from generate_xml import populate_xml, populate_tsv
 from generate_omero_objects import populate_omero
 
 import ezomero
@@ -48,17 +48,23 @@ OMERO server instances.
 The syntax for specifying objects is: <object>:<id>
 <object> can be Image, Project or Dataset.
 Project is assumed if <object>: is omitted.
-A file path needs to be provided; a zip file with the contents of
+A file path needs to be provided; a tar file with the contents of
 the packet will be created at the specified path.
 
-Currently, only MapAnnotations and Tags are packaged into the transfer
-pack, and only Point, Line, Ellipse, Rectangle and Polygon-type ROIs are
-packaged.
+Currently, only MapAnnotations, Tags, FileAnnotations and CommentAnnotations
+are packaged into the transfer pack, and only Point, Line, Ellipse, Rectangle
+and Polygon-type ROIs are packaged.
+
+--zip packs the object into a compressed zip file rather than a tarball.
+
+--barchive creates a package compliant with Bioimage Archive submission
+standards - see repo README for more detail.
 
 Examples:
-omero transfer pack Image:123 transfer_pack.zip
-omero transfer pack Dataset:1111 /home/user/new_folder/new_pack.zip
-omero transfer pack 999 zipfile.zip  # equivalent to Project:999
+omero transfer pack Image:123 transfer_pack.tar
+omero transfer pack --zip Image:123 transfer_pack.zip
+omero transfer pack Dataset:1111 /home/user/new_folder/new_pack.tar
+omero transfer pack 999 tarfile.tar  # equivalent to Project:999
 """)
 
 UNPACK_HELP = ("""Unpacks a transfer packet into an OMERO hierarchy.
@@ -73,9 +79,13 @@ files. Same restrictions of regular in-place imports apply.
 --output allows for specifying an optional output folder where the packet
 will be unzipped.
 
+--folder allows the user to point to a previously-unpacked folder rather than
+a single file.
+
 Examples:
 omero transfer unpack transfer_pack.zip
 omero transfer unpack --output /home/user/optional_folder --ln_s
+omero transfer unpack --folder /home/user/unpacked_folder/
 """)
 
 
@@ -115,6 +125,10 @@ class TransferControl(GraphControl):
         file_help = ("Path to where the packed file will be saved")
         pack.add_argument(
                 "--zip", help="Pack into a zip file rather than a tarball",
+                action="store_true")
+        pack.add_argument(
+                "--barchive", help="Pack into a file compliant with Bioimage"
+                                   " Archive submission standards",
                 action="store_true")
         pack.add_argument("filepath", type=str, help=file_help)
 
@@ -203,7 +217,11 @@ class TransferControl(GraphControl):
             shutil.make_archive(tar_path, 'tar', folder)
 
     def __pack(self, args):
-        if isinstance(args.object, Image):
+        if isinstance(args.object, Image) or isinstance(args.object, Screen) \
+           or isinstance(args.object, Plate):
+            if args.barchive:
+                raise ValueError("Single image, plate or screen cannot be "
+                                 "packaged for Bioimage Archive")
             src_datatype, src_dataid = "Image", args.object.id
         elif isinstance(args.object, Dataset):
             src_datatype, src_dataid = "Dataset", args.object.id
@@ -221,22 +239,25 @@ class TransferControl(GraphControl):
             raise ValueError("Object not found or outside current"
                              " permissions for current user.")
         print("Populating xml...")
-        if args.zip:
-            zip = True
-        else:
-            zip = False
         tar_path = Path(args.filepath)
         folder = str(tar_path) + "_folder"
         os.makedirs(folder, mode=DIR_PERM, exist_ok=True)
-        xml_fp = str(Path(folder) / "transfer.xml")
-        # repo = self._get_path_to_repo()[0]
-        path_id_dict = populate_xml(src_datatype, src_dataid,
-                                    xml_fp, self.gateway, self.hostname)
-        print(f"XML saved at {xml_fp}.")
+        if args.barchive:
+            md_fp = str(Path(folder) / "submission.tsv")
+        else:
+            md_fp = str(Path(folder) / "transfer.xml")
+            print(f"Saving metadata at {md_fp}.")
+        ome, path_id_dict = populate_xml(src_datatype, src_dataid, md_fp,
+                                         self.gateway, self.hostname,
+                                         args.barchive)
 
         print("Starting file copy...")
         self._copy_files(path_id_dict, folder, self.gateway)
-        self._package_files(os.path.splitext(tar_path)[0], zip, folder)
+        if args.barchive:
+            print(f"Creating Bioimage Archive TSV at {md_fp}.")
+            populate_tsv(src_datatype, ome, md_fp,
+                         self.gateway, path_id_dict, folder)
+        self._package_files(os.path.splitext(tar_path)[0], args.zip, folder)
         print("Cleaning up...")
         shutil.rmtree(folder)
         return
