@@ -52,7 +52,7 @@ A file path needs to be provided; a tar file with the contents of
 the packet will be created at the specified path.
 
 Currently, only MapAnnotations, Tags, FileAnnotations and CommentAnnotations
-are packaged into the transfer pack, and only Point, Line, Ellipse, Rectangle 
+are packaged into the transfer pack, and only Point, Line, Ellipse, Rectangle
 and Polygon-type ROIs are packaged.
 
 --zip packs the object into a compressed zip file rather than a tarball.
