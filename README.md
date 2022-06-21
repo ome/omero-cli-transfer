@@ -56,7 +56,7 @@ Unpacks an existing transfer packet, imports images as orphans and uses the XML 
 
 `--output` allows for specifying an optional output folder where the packet will be unzipped.
 
-`--folder` allows the user to point to a previously-unpacked folder rather than `a single file.
+`--folder` allows the user to point to a previously-unpacked folder rather than a single file.
 
 Examples:
 ```
@@ -70,7 +70,7 @@ omero transfer unpack --folder /home/user/unpacked_folder/
 - Folder structure in the generated zip/tar follows project/dataset structure rather than original ManagedRepository folder structure, and instead of a `transfer.xml` file, a `submission.tsv` file is generated.
 - `submission.tsv` file has:
 
-    - one line per file being submitted, between `Image`s and `FileAnnotation`s;
+    - one line per file being submitted, between `Image` files and `FileAnnotation` files;
     - a column indicating whether that file was originally an `Image` or `FileAnnotation`;
     - a "comment" column if any Image has a `CommentAnnotation`;
     - a column per key in a `MapAnnotation` inside the pack, with an empty value for all images but the ones with a `MapAnnotation` with that key; for those images, it has the value for that annotation;
