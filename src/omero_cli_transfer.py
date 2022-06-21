@@ -48,17 +48,23 @@ OMERO server instances.
 The syntax for specifying objects is: <object>:<id>
 <object> can be Image, Project or Dataset.
 Project is assumed if <object>: is omitted.
-A file path needs to be provided; a zip file with the contents of
+A file path needs to be provided; a tar file with the contents of
 the packet will be created at the specified path.
 
-Currently, only MapAnnotations and Tags are packaged into the transfer
-pack, and only Point, Line, Ellipse, Rectangle and Polygon-type ROIs are
-packaged.
+Currently, only MapAnnotations, Tags, FileAnnotations and CommentAnnotations
+are packaged into the transfer pack, and only Point, Line, Ellipse, Rectangle 
+and Polygon-type ROIs are packaged.
+
+--zip packs the object into a compressed zip file rather than a tarball.
+
+--barchive creates a package compliant with Bioimage Archive submission
+standards - see repo README for more detail.
 
 Examples:
-omero transfer pack Image:123 transfer_pack.zip
-omero transfer pack Dataset:1111 /home/user/new_folder/new_pack.zip
-omero transfer pack 999 zipfile.zip  # equivalent to Project:999
+omero transfer pack Image:123 transfer_pack.tar
+omero transfer pack --zip Image:123 transfer_pack.zip
+omero transfer pack Dataset:1111 /home/user/new_folder/new_pack.tar
+omero transfer pack 999 tarfile.tar  # equivalent to Project:999
 """)
 
 UNPACK_HELP = ("""Unpacks a transfer packet into an OMERO hierarchy.
@@ -73,9 +79,13 @@ files. Same restrictions of regular in-place imports apply.
 --output allows for specifying an optional output folder where the packet
 will be unzipped.
 
+--folder allows the user to point to a previously-unpacked folder rather than
+a single file.
+
 Examples:
 omero transfer unpack transfer_pack.zip
 omero transfer unpack --output /home/user/optional_folder --ln_s
+omero transfer unpack --folder /home/user/unpacked_folder/
 """)
 
 
