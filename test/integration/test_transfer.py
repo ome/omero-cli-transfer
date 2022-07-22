@@ -16,6 +16,7 @@ TEST_FILES = [
         "test/data/valid_single_image.zip",
         "test/data/valid_single_dataset.zip",
         "test/data/valid_single_project.zip",
+        "test/data/incomplete_project.zip",
         "test/data/simple_plate.zip",
         "test/data/simple_screen.zip",
 ]
@@ -184,6 +185,24 @@ class TestTransfer(CLITest):
                             self.gw, "Project", pj_id)) == 1
             assert len(ezomero.get_tag_ids(
                             self.gw, "Project", pj_id)) == 0
+
+        if package_name == "test/data/incomplete_project.zip":
+            ezomero.print_projects(self.gw)
+            pjs = ezomero.get_project_ids(self.gw)
+            print(pjs)
+            pjs.sort()
+            print(pjs)
+            print(f"project ids: {pjs}")
+            assert len(pjs) == 5
+            print(ezomero.get_dataset_ids(self.gw, pjs[-1]))
+            ds_ids = ezomero.get_dataset_ids(self.gw, pjs[-1])
+            ds_ids.sort()
+            print(f"dataset ids: {ds_ids}")
+            assert len(ds_ids) == 2
+            im_ids = ezomero.get_image_ids(self.gw, dataset=ds_ids[0])
+            assert len(im_ids) == 2
+            im_ids = ezomero.get_image_ids(self.gw, dataset=ds_ids[1])
+            assert len(im_ids) == 0
 
         if package_name == "test/data/simple_plate.zip":
             pls = self.gw.getObjects("Plate", opts={'orphaned': True})
