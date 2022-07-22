@@ -14,7 +14,7 @@ import copy
 from functools import wraps
 import shutil
 from collections import defaultdict
-from hashlib import md5
+import hashlib
 from zipfile import ZipFile
 
 from generate_xml import populate_xml, populate_tsv
@@ -32,6 +32,7 @@ from omero.model import Image, Dataset, Project, Plate, Screen
 from omero.grid import ManagedRepositoryPrx as MRepo
 
 DIR_PERM = 0o755
+MD5_BUF_SIZE = 65536
 
 
 HELP = ("""Transfer objects and annotations between servers.
@@ -300,7 +301,13 @@ class TransferControl(GraphControl):
             folder = parent_folder / filename
         if Path(filepath).exists():
             with open(filepath, 'rb') as file:
-                hash = md5(file.read()).hexdigest()
+                md5 = hashlib.md5()
+                while True:
+                    data = file.read(MD5_BUF_SIZE)
+                    if not data:
+                        break
+                    md5.update(data)
+                hash = md5.hexdigest()
             if Path(filepath).suffix == '.zip':
                 with ZipFile(filepath, 'r') as zipobj:
                     zipobj.extractall(str(folder))

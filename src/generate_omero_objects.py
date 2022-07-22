@@ -340,7 +340,10 @@ def link_one_annotation(obj, ann, ann_map, conn):
 
 def rename_images(imgs, img_map, conn):
     for img in imgs:
-        img_id = img_map[img.id]
+        try:
+            img_id = img_map[img.id]
+        except KeyError:
+            print(f"Image corresponding to {img.id} not found. Skipping.")
         im_obj = conn.getObject("Image", img_id)
         im_obj.setName(img.name)
         im_obj.save()
