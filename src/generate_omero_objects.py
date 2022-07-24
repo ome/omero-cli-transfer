@@ -265,8 +265,11 @@ def link_images(ome, ds_map, img_map, conn):
         ds_id = ds_map[ds.id]
         img_ids = []
         for img in ds.image_ref:
-            img_id = img_map[img.id]
-            img_ids.append(img_id)
+            try:
+                img_id = img_map[img.id]
+                img_ids.append(img_id)
+            except KeyError:
+                continue
         ezomero.link_images_to_dataset(conn, img_ids, ds_id)
     return
 
@@ -288,12 +291,15 @@ def link_annotations(ome, proj_map, ds_map, img_map, ann_map,
             ann = next(filter(lambda x: x.id == annref.id, anns))
             link_one_annotation(ds_obj, ann, ann_map, conn)
     for img in ome.images:
-        img_id = img_map[img.id]
-        img_obj = conn.getObject("Image", img_id)
-        anns = ome.structured_annotations
-        for annref in img.annotation_ref:
-            ann = next(filter(lambda x: x.id == annref.id, anns))
-            link_one_annotation(img_obj, ann, ann_map, conn)
+        try:
+            img_id = img_map[img.id]
+            img_obj = conn.getObject("Image", img_id)
+            anns = ome.structured_annotations
+            for annref in img.annotation_ref:
+                ann = next(filter(lambda x: x.id == annref.id, anns))
+                link_one_annotation(img_obj, ann, ann_map, conn)
+        except KeyError:
+            continue
     for scr in ome.screens:
         scr_id = scr_map[scr.id]
         scr_obj = conn.getObject("Screen", scr_id)
@@ -340,10 +346,13 @@ def link_one_annotation(obj, ann, ann_map, conn):
 
 def rename_images(imgs, img_map, conn):
     for img in imgs:
-        img_id = img_map[img.id]
-        im_obj = conn.getObject("Image", img_id)
-        im_obj.setName(img.name)
-        im_obj.save()
+        try:
+            img_id = img_map[img.id]
+            im_obj = conn.getObject("Image", img_id)
+            im_obj.setName(img.name)
+            im_obj.save()
+        except KeyError:
+            print(f"Image corresponding to {img.id} not found. Skipping.")
     return
 
 
