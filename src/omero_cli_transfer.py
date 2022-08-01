@@ -392,7 +392,15 @@ class TransferControl(GraphControl):
             anns = ezomero.get_map_annotation_ids(conn, "Image", img_id)
             if not anns:
                 image_ids.append(img_id)
-
+            else:
+                is_annotated = False
+                for ann in anns:
+                    ann_content = conn.getObject("MapAnnotation", ann)
+                    if ann_content.getNs() == \
+                            'openmicroscopy.org/cli/transfer':
+                        is_annotated = True
+                if not is_annotated:
+                    image_ids.append(img_id)
         return image_ids
 
     def _make_image_map(self, source_map, dest_map):
