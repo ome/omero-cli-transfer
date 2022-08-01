@@ -401,8 +401,6 @@ class TransferControl(GraphControl):
                         is_annotated = True
                 if not is_annotated:
                     image_ids.append(img_id)
-            
-
         return image_ids
 
     def _make_image_map(self, source_map, dest_map):
