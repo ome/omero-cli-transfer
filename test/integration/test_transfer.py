@@ -237,3 +237,12 @@ class TestTransfer(CLITest):
             assert count == 2
             assert len(ezomero.get_tag_ids(
                             self.gw, "Screen", sc_id)) == 1
+
+    def test_unpack_skip(self):
+        self.args += ["unpack", "test/data/valid_single_image.tar"]
+        self.args += ["--skip", "all"]
+        self.cli.invoke(self.args, strict=True)
+        im_ids = ezomero.get_image_ids(self.gw)
+        assert len(im_ids) == 7
+        img, _ = ezomero.get_image(self.gw, im_ids[-1])
+        assert img.getName() == 'combined_result.tiff'
