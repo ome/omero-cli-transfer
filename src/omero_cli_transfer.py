@@ -83,10 +83,13 @@ will be unzipped.
 --folder allows the user to point to a previously-unpacked folder rather than
 a single file.
 
+You can also pass all --skip options that are allowed by `omero import` (all,
+checksum, thumbnails, minmax, upgrade).
+
 Examples:
 omero transfer unpack transfer_pack.zip
 omero transfer unpack --output /home/user/optional_folder --ln_s
-omero transfer unpack --folder /home/user/unpacked_folder/
+omero transfer unpack --folder /home/user/unpacked_folder/ --skip upgrade
 """)
 
 
@@ -144,6 +147,11 @@ class TransferControl(GraphControl):
         unpack.add_argument(
             "--output", type=str, help="Output directory where zip "
                                        "file will be extracted"
+        )
+        unpack.add_argument(
+            "--skip", choices=['all', 'checksum', 'thumbnails', 'minmax',
+                               'upgrade'],
+            help="Skip options to be passed to omero import"
         )
 
     @gateway_required
@@ -281,7 +289,7 @@ class TransferControl(GraphControl):
             ln_s = False
         print(src_img_map, filelist)
         dest_img_map = self._import_files(folder, filelist,
-                                          ln_s, self.gateway)
+                                          ln_s, args.skip, self.gateway)
         print("Matching source and destination images...")
         img_map = self._make_image_map(src_img_map, dest_img_map)
         print("Creating and linking OMERO objects...")
@@ -346,20 +354,19 @@ class TransferControl(GraphControl):
         img_map = {x: sorted(img_map[x]) for x in img_map.keys()}
         return newome, img_map, filelist
 
-    def _import_files(self, folder, filelist, ln_s, gateway):
+    def _import_files(self, folder, filelist, ln_s, skip, gateway):
         cli = CLI()
         cli.loadplugins()
         dest_map = {}
         curr_folder = str(Path('.').resolve())
         for filepath in filelist:
             dest_path = str(os.path.join(curr_folder, folder,  '.', filepath))
+            command = ['import', dest_path]
             if ln_s:
-                cli.invoke(['import',
-                            dest_path,
-                            '--transfer=ln_s'])
-            else:
-                cli.invoke(['import',
-                            dest_path])
+                command.append('--transfer=ln_s')
+            if skip:
+                command.extend(['--skip', skip])
+            cli.invoke(command)
             img_ids = self._get_image_ids(dest_path, gateway)
             dest_map[dest_path] = img_ids
         return dest_map
