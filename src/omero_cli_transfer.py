@@ -86,10 +86,17 @@ a single file.
 You can also pass all --skip options that are allowed by `omero import` (all,
 checksum, thumbnails, minmax, upgrade).
 
+--metadata allows you to specify which transfer metadata will be added as a
+MapAnnotation to the unpacked images. Default is `all` (equivalent to `img_id,
+timestamp,software,version,hostname,md5,orig_user,orig_group`), other
+options are `none`, `img_id`, `timestamp`, `software`, `version`, `md5`, 
+`hostname`, `db_id`, `orig_user`, `orig_group`.
+
 Examples:
 omero transfer unpack transfer_pack.zip
 omero transfer unpack --output /home/user/optional_folder --ln_s
 omero transfer unpack --folder /home/user/unpacked_folder/ --skip upgrade
+omero transfer unpack transfer_pack.tar --metadata img_id,version,db_id
 """)
 
 
@@ -152,6 +159,12 @@ class TransferControl(GraphControl):
             "--skip", choices=['all', 'checksum', 'thumbnails', 'minmax',
                                'upgrade'],
             help="Skip options to be passed to omero import"
+        )
+        unpack.add_argument(
+            "--metadata", choices=['all', 'none', 'img_id', 'timestamp',
+            'software', 'version', 'md5', 'hostname', 'db_id', 'orig_user',
+            'orig_group'], nargs='+',
+            help="Metadata field to be added to MapAnnotation"
         )
 
     @gateway_required
