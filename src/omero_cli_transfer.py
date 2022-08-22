@@ -61,11 +61,18 @@ and Polygon-type ROIs are packaged.
 --barchive creates a package compliant with Bioimage Archive submission
 standards - see repo README for more detail.
 
+--metadata allows you to specify which transfer metadata will be added as a
+MapAnnotation to the images. Default is `all` (equivalent to `img_id,
+timestamp,software,version,hostname,md5,orig_user,orig_group`), other
+options are `none`, `img_id`, `timestamp`, `software`, `version`, `md5`, 
+`hostname`, `db_id`, `orig_user`, `orig_group`.
+
 Examples:
 omero transfer pack Image:123 transfer_pack.tar
 omero transfer pack --zip Image:123 transfer_pack.zip
 omero transfer pack Dataset:1111 /home/user/new_folder/new_pack.tar
 omero transfer pack 999 tarfile.tar  # equivalent to Project:999
+omero transfer pack 1 transfer_pack.tar --metadata img_id version db_id
 """)
 
 UNPACK_HELP = ("""Unpacks a transfer packet into an OMERO hierarchy.
@@ -86,17 +93,10 @@ a single file.
 You can also pass all --skip options that are allowed by `omero import` (all,
 checksum, thumbnails, minmax, upgrade).
 
---metadata allows you to specify which transfer metadata will be added as a
-MapAnnotation to the unpacked images. Default is `all` (equivalent to `img_id,
-timestamp,software,version,hostname,md5,orig_user,orig_group`), other
-options are `none`, `img_id`, `timestamp`, `software`, `version`, `md5`, 
-`hostname`, `db_id`, `orig_user`, `orig_group`.
-
 Examples:
 omero transfer unpack transfer_pack.zip
 omero transfer unpack --output /home/user/optional_folder --ln_s
 omero transfer unpack --folder /home/user/unpacked_folder/ --skip upgrade
-omero transfer unpack transfer_pack.tar --metadata img_id,version,db_id
 """)
 
 
@@ -141,6 +141,12 @@ class TransferControl(GraphControl):
                 "--barchive", help="Pack into a file compliant with Bioimage"
                                    " Archive submission standards",
                 action="store_true")
+        pack.add_argument(
+            "--metadata", choices=['all', 'none', 'img_id', 'timestamp',
+            'software', 'version', 'md5', 'hostname', 'db_id', 'orig_user',
+            'orig_group'], nargs='+',
+            help="Metadata field to be added to MapAnnotation"
+        )
         pack.add_argument("filepath", type=str, help=file_help)
 
         file_help = ("Path to where the zip file is saved")
@@ -160,12 +166,7 @@ class TransferControl(GraphControl):
                                'upgrade'],
             help="Skip options to be passed to omero import"
         )
-        unpack.add_argument(
-            "--metadata", choices=['all', 'none', 'img_id', 'timestamp',
-            'software', 'version', 'md5', 'hostname', 'db_id', 'orig_user',
-            'orig_group'], nargs='+',
-            help="Metadata field to be added to MapAnnotation"
-        )
+        
 
     @gateway_required
     def pack(self, args):
@@ -241,16 +242,16 @@ class TransferControl(GraphControl):
     def _process_metadata(self, metadata):
         if not metadata:
             metadata = 'all'
-        self.metadata = [item for item in metadata.split(',')]
-        if "all" in self.metadata:
-            self.metadata.remove("all")
-            self.metadata.extend(["img_id", "timestamp", "software",
+        if "all" in metadata:
+            metadata.remove("all")
+            metadata.extend(["img_id", "timestamp", "software",
                                   "version", "hostname", "md5", "orig_user",
                                   "orig_group"])
-        if "none" in self.metadata:
-            self.metadata = None
-        if self.metadata:
-            self.metadata = list(set(self.metadata))
+        if "none" in metadata:
+            metadata = None
+        if metadata:
+            metadata = list(set(metadata))
+        self.metadata = metadata
 
     def __pack(self, args):
         if isinstance(args.object, Image) or isinstance(args.object, Screen) \
@@ -270,6 +271,7 @@ class TransferControl(GraphControl):
         else:
             print("Object is not a project, dataset, screen, plate or image")
             return
+        self.metadata = []
         self._process_metadata(args.metadata)
         obj = self.gateway.getObject(src_datatype, src_dataid)
         if obj is None:
