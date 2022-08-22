@@ -237,6 +237,20 @@ class TransferControl(GraphControl):
         else:
             print("Creating tar file...")
             shutil.make_archive(tar_path, 'tar', folder)
+    
+    def _process_metadata(self, metadata):
+        if not metadata:
+            metadata = 'all'
+        self.metadata = [item for item in metadata.split(',')]
+        if "all" in self.metadata:
+            self.metadata.remove("all")
+            self.metadata.extend(["img_id", "timestamp", "software",
+                                  "version", "hostname", "md5", "orig_user",
+                                  "orig_group"])
+        if "none" in self.metadata:
+            self.metadata = None
+        if self.metadata:
+            self.metadata = list(set(self.metadata))
 
     def __pack(self, args):
         if isinstance(args.object, Image) or isinstance(args.object, Screen) \
@@ -256,6 +270,7 @@ class TransferControl(GraphControl):
         else:
             print("Object is not a project, dataset, screen, plate or image")
             return
+        self._process_metadata(args.metadata)
         obj = self.gateway.getObject(src_datatype, src_dataid)
         if obj is None:
             raise ValueError("Object not found or outside current"
@@ -271,7 +286,7 @@ class TransferControl(GraphControl):
             print(f"Saving metadata at {md_fp}.")
         ome, path_id_dict = populate_xml(src_datatype, src_dataid, md_fp,
                                          self.gateway, self.hostname,
-                                         args.barchive)
+                                         args.barchive, self.metadata)
 
         print("Starting file copy...")
         self._copy_files(path_id_dict, folder, self.gateway)
