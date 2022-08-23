@@ -378,15 +378,18 @@ def create_filepath_annotations(id, conn, filename=None, plate_path=None):
     return anns, refs
 
 
-def create_provenance_metadata(id, hostname, metadata):
+def create_provenance_metadata(conn, img_id, hostname, metadata):
     software = "omero-cli-transfer"
     version = pkg_resources.get_distribution(software).version
     date_time = datetime.now().strftime("%d/%m/%Y, %H:%M:%S")
-    md_dict = {'origin_image_id': id, 'origin_hostname': hostname,
+    md_dict = {'origin_image_id': img_id, 'origin_hostname': hostname,
                'packing_timestamp': date_time,
-               'software': software, 'version': version}
+               'software': software, 'version': version, 'md5': 'TBC'}
     ns = 'openmicroscopy.org/cli/transfer'
+    curr_user = conn.getUser().getName()
+    curr_group = conn.getGroupFromContext().getName()
     id = (-1) * uuid4().int
+    db_id = conn.getConfigService().gertDatabaseUuid()
     mmap = []
     for _key, _value in md_dict.items():
         if _value:
@@ -432,11 +435,12 @@ def populate_image(obj, ome, conn, hostname, metadata, fset=None):
                                         description=desc, pixels=pix)
     for ann in obj.listAnnotations():
         add_annotation(img, ann, ome, conn)
-    kv, ref = create_provenance_metadata(id, hostname, metadata)
-    kv_id = f"Annotation:{str(kv.id)}"
-    if kv_id not in [i.id for i in ome.structured_annotations]:
-        ome.structured_annotations.append(kv)
-    img.annotation_ref.append(ref)
+    kv, ref = create_provenance_metadata(conn, id, hostname, metadata)
+    if kv:
+        kv_id = f"Annotation:{str(kv.id)}"
+        if kv_id not in [i.id for i in ome.structured_annotations]:
+            ome.structured_annotations.append(kv)
+        img.annotation_ref.append(ref)
     filepath_anns, refs = create_filepath_annotations(img_id, conn)
     for i in range(len(filepath_anns)):
         ome.structured_annotations.append(filepath_anns[i])
