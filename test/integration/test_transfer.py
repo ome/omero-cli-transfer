@@ -119,10 +119,35 @@ class TestTransfer(CLITest):
             img, _ = ezomero.get_image(self.gw, im_ids[-1])
             assert img.getName() == 'combined_result.tiff'
             assert len(ezomero.get_roi_ids(self.gw, im_ids[-1])) == 3
-            assert len(ezomero.get_map_annotation_ids(
-                            self.gw, "Image", im_ids[-1])) == 3
+            map_ann_ids = ezomero.get_map_annotation_ids(
+                            self.gw, "Image", im_ids[-1])
+            assert len(map_ann_ids) == 3
+            provenance = ezomero.get_map_annotation(self.gw, map_ann_ids[-1])
+            assert len(provenance) == 8
             assert len(ezomero.get_tag_ids(
                             self.gw, "Image", im_ids[-1])) == 1
+        temp_args = self.args
+        self.args += ["--metadata", "none", "db_id"]
+        self.cli.invoke(self.args, strict=True)
+        if folder_name == "test/data/valid_single_image/":
+            im_ids = ezomero.get_image_ids(self.gw)
+            assert len(im_ids) == 5
+            map_ann_ids = ezomero.get_map_annotation_ids(
+                            self.gw, "Image", im_ids[-1])
+            assert len(map_ann_ids) == 3
+            provenance = ezomero.get_map_annotation(self.gw, map_ann_ids[-1])
+            assert len(provenance) == 1
+
+        self.args = temp_args + ["--metadata", "orig_user", "db_id"]
+        self.cli.invoke(self.args, strict=True)
+        if folder_name == "test/data/valid_single_image/":
+            im_ids = ezomero.get_image_ids(self.gw)
+            assert len(im_ids) == 6
+            map_ann_ids = ezomero.get_map_annotation_ids(
+                            self.gw, "Image", im_ids[-1])
+            assert len(map_ann_ids) == 3
+            provenance = ezomero.get_map_annotation(self.gw, map_ann_ids[-1])
+            assert len(provenance) == 2
 
     @pytest.mark.parametrize('package_name', TEST_FILES)
     def test_unpack(self, package_name):
@@ -131,7 +156,7 @@ class TestTransfer(CLITest):
 
         if package_name == "test/data/valid_single_image.tar":
             im_ids = ezomero.get_image_ids(self.gw)
-            assert len(im_ids) == 5
+            assert len(im_ids) == 7
             img, _ = ezomero.get_image(self.gw, im_ids[-1])
             assert img.getName() == 'combined_result.tiff'
             assert len(ezomero.get_roi_ids(self.gw, im_ids[-1])) == 3
@@ -142,7 +167,7 @@ class TestTransfer(CLITest):
 
         if package_name == "test/data/valid_single_image.zip":
             im_ids = ezomero.get_image_ids(self.gw)
-            assert len(im_ids) == 6
+            assert len(im_ids) == 8
             img, _ = ezomero.get_image(self.gw, im_ids[-1])
             assert img.getName() == 'combined_result.tiff'
             assert len(ezomero.get_roi_ids(self.gw, im_ids[-1])) == 3
@@ -243,6 +268,6 @@ class TestTransfer(CLITest):
         self.args += ["--skip", "all"]
         self.cli.invoke(self.args, strict=True)
         im_ids = ezomero.get_image_ids(self.gw)
-        assert len(im_ids) == 7
+        assert len(im_ids) == 9
         img, _ = ezomero.get_image(self.gw, im_ids[-1])
         assert img.getName() == 'combined_result.tiff'
