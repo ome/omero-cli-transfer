@@ -388,7 +388,7 @@ def create_provenance_metadata(conn, img_id, hostname, metadata):
     curr_user = conn.getUser().getName()
     curr_group = conn.getGroupFromContext().getName()
     id = (-1) * uuid4().int
-    db_id = conn.getConfigService().gertDatabaseUuid()
+    db_id = conn.getConfigService().getDatabaseUuid()
 
     md_dict = {}
     if "img_id" in metadata:

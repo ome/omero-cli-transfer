@@ -50,7 +50,7 @@ def create_datasets(dss, conn):
     return ds_map
 
 
-def create_annotations(ans, conn, hash, folder):
+def create_annotations(ans, conn, hash, folder, metadata):
     ann_map = {}
     for an in ans:
         if isinstance(an, TagAnnotation):
@@ -65,8 +65,28 @@ def create_annotations(ans, conn, hash, folder):
             map_ann.setNs(namespace)
             key_value_data = []
             for v in an.value.m:
-                if v.k == "md5" and int(an.id.split(":")[-1]) < 0:
-                    key_value_data.append(['zip_file_md5', hash])
+                if int(an.id.split(":")[-1]) < 0:
+                    if not metadata:
+                        key_value_data.append(['empty_metadata', "True"])
+                        break
+                    if v.k == "md5" and "md5" in metadata:
+                        key_value_data.append(['zip_file_md5', hash])
+                    if v.k == "origin_image_id" and "img_id" in metadata:
+                        key_value_data.append([v.k, v.value])
+                    if v.k == "packing_timestamp" and "timestamp" in metadata:
+                        key_value_data.append([v.k, v.value])
+                    if v.k == "software" and "software" in metadata:
+                        key_value_data.append([v.k, v.value])
+                    if v.k == "version" and "version" in metadata:
+                        key_value_data.append([v.k, v.value])
+                    if v.k == "origin_hostname" and "hostname" in metadata:
+                        key_value_data.append([v.k, v.value])
+                    if v.k == "original_user" and "orig_user" in metadata:
+                        key_value_data.append([v.k, v.value])
+                    if v.k == "original_group" and "orig_group" in metadata:
+                        key_value_data.append([v.k, v.value])
+                    if v.k == "database_id" and "db_id" in metadata:
+                        key_value_data.append([v.k, v.value])
                 else:
                     key_value_data.append([v.k, v.value])
             map_ann.setValue(key_value_data)
@@ -357,14 +377,14 @@ def rename_images(imgs, img_map, conn):
     return
 
 
-def populate_omero(ome, img_map, conn, hash, folder):
+def populate_omero(ome, img_map, conn, hash, folder, metadata):
     rename_images(ome.images, img_map, conn)
     proj_map = create_projects(ome.projects, conn)
     ds_map = create_datasets(ome.datasets, conn)
     screen_map = create_screens(ome.screens, conn)
     plate_map, ome = create_plate_map(ome, conn)
     ann_map = create_annotations(ome.structured_annotations, conn,
-                                 hash, folder)
+                                 hash, folder, metadata)
     create_rois(ome.rois, ome.images, img_map, conn)
     link_plates(ome, screen_map, plate_map, conn)
     link_datasets(ome, proj_map, ds_map, conn)

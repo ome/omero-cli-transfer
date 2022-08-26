@@ -167,6 +167,13 @@ class TransferControl(GraphControl):
                                'upgrade'],
             help="Skip options to be passed to omero import"
         )
+        unpack.add_argument(
+            "--metadata",
+            choices=['all', 'none', 'img_id', 'timestamp',
+                     'software', 'version', 'md5', 'hostname', 'db_id',
+                     'orig_user', 'orig_group'], nargs='+',
+            help="Metadata field to be added to MapAnnotation"
+        )
 
     @gateway_required
     def pack(self, args):
@@ -238,10 +245,10 @@ class TransferControl(GraphControl):
         else:
             print("Creating tar file...")
             shutil.make_archive(tar_path, 'tar', folder)
-    
+
     def _process_metadata(self, metadata):
         if not metadata:
-            metadata = 'all'
+            metadata = ['all']
         if "all" in metadata:
             metadata.remove("all")
             metadata.extend(["img_id", "timestamp", "software",
@@ -302,6 +309,8 @@ class TransferControl(GraphControl):
         return
 
     def __unpack(self, args):
+        self.metadata = []
+        self._process_metadata(args.metadata)
         if not args.folder:
             print(f"Unzipping {args.filepath}...")
             hash, ome, folder = self._load_from_pack(args.filepath,
@@ -323,7 +332,8 @@ class TransferControl(GraphControl):
         print("Matching source and destination images...")
         img_map = self._make_image_map(src_img_map, dest_img_map)
         print("Creating and linking OMERO objects...")
-        populate_omero(ome, img_map, self.gateway, hash, folder)
+        populate_omero(ome, img_map, self.gateway,
+                       hash, folder, self.metadata)
         return
 
     def _load_from_pack(self, filepath, output=None):
