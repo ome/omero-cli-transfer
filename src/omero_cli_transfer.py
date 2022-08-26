@@ -61,11 +61,11 @@ and Polygon-type ROIs are packaged.
 --barchive creates a package compliant with Bioimage Archive submission
 standards - see repo README for more detail.
 
---metadata allows you to specify which transfer metadata will be added as a
-MapAnnotation to the images. Default is `all` (equivalent to `img_id,
-timestamp,software,version,hostname,md5,orig_user,orig_group`), other
-options are `none`, `img_id`, `timestamp`, `software`, `version`, `md5`, 
-`hostname`, `db_id`, `orig_user`, `orig_group`.
+--metadata allows you to specify which transfer metadata will be saved in
+`transfer.xml` as possible MapAnnotation values to the images. Default is `all`
+(equivalent to `img_id timestamp software version hostname md5 orig_user
+orig_group`), other options are `none`, `img_id`, `timestamp`, `software`,
+`version`, `md5`, `hostname`, `db_id`, `orig_user`, `orig_group`.
 
 Examples:
 omero transfer pack Image:123 transfer_pack.tar
@@ -90,6 +90,13 @@ will be unzipped.
 --folder allows the user to point to a previously-unpacked folder rather than
 a single file.
 
+--metadata allows you to specify which transfer metadata will be used from
+`transfer.xml` as MapAnnotation values to the images. Fields that do not
+exist on `transfer.xml` will be ignored. Default is `all` (equivalent to
+`img_id timestamp software version hostname md5 orig_user orig_group`), other
+options are `none`, `img_id`, `timestamp`, `software`, `version`, `md5`,
+`hostname`, `db_id`, `orig_user`, `orig_group`.
+
 You can also pass all --skip options that are allowed by `omero import` (all,
 checksum, thumbnails, minmax, upgrade).
 
@@ -97,6 +104,7 @@ Examples:
 omero transfer unpack transfer_pack.zip
 omero transfer unpack --output /home/user/optional_folder --ln_s
 omero transfer unpack --folder /home/user/unpacked_folder/ --skip upgrade
+omero transfer unpack pack.tar --metadata db_id orig_user hostname
 """)
 
 
