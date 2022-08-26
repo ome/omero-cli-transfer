@@ -379,17 +379,37 @@ def create_filepath_annotations(id, conn, filename=None, plate_path=None):
 
 
 def create_provenance_metadata(conn, img_id, hostname, metadata):
+    if not metadata:
+        return None, None
     software = "omero-cli-transfer"
     version = pkg_resources.get_distribution(software).version
     date_time = datetime.now().strftime("%d/%m/%Y, %H:%M:%S")
-    md_dict = {'origin_image_id': img_id, 'origin_hostname': hostname,
-               'packing_timestamp': date_time,
-               'software': software, 'version': version, 'md5': 'TBC'}
     ns = 'openmicroscopy.org/cli/transfer'
     curr_user = conn.getUser().getName()
     curr_group = conn.getGroupFromContext().getName()
     id = (-1) * uuid4().int
     db_id = conn.getConfigService().gertDatabaseUuid()
+
+    md_dict = {}
+    if "img_id" in metadata:
+        md_dict['origin_image_id'] = img_id
+    if "timestamp" in metadata:
+        md_dict['packing_timestamp'] = date_time
+    if "software" in metadata:
+        md_dict['software'] = software
+    if "version" in metadata:
+        md_dict['version'] = version
+    if "hostname" in metadata:
+        md_dict['origin_hostname'] = hostname
+    if "md5" in metadata:
+        md_dict['md5'] = "TBC"
+    if "orig_user" in metadata:
+        md_dict['original_user'] = curr_user
+    if "orig_group" in metadata:
+        md_dict['original_group'] = curr_group
+    if "db_id" in metadata:
+        md_dict['database_id'] = db_id
+
     mmap = []
     for _key, _value in md_dict.items():
         if _value:

@@ -65,9 +65,10 @@ def create_annotations(ans, conn, hash, folder):
             map_ann.setNs(namespace)
             key_value_data = []
             for v in an.value.m:
-                key_value_data.append([v.k, v.value])
-            if int(an.id.split(":")[-1]) < 0:
-                key_value_data.append(['zip_file_md5', hash])
+                if v.k == "md5" and int(an.id.split(":")[-1]) < 0:
+                    key_value_data.append(['zip_file_md5', hash])
+                else:
+                    key_value_data.append([v.k, v.value])
             map_ann.setValue(key_value_data)
             map_ann.save()
             ann_map[an.id] = map_ann.getId()

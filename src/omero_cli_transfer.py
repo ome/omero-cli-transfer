@@ -142,9 +142,10 @@ class TransferControl(GraphControl):
                                    " Archive submission standards",
                 action="store_true")
         pack.add_argument(
-            "--metadata", choices=['all', 'none', 'img_id', 'timestamp',
-            'software', 'version', 'md5', 'hostname', 'db_id', 'orig_user',
-            'orig_group'], nargs='+',
+            "--metadata",
+            choices=['all', 'none', 'img_id', 'timestamp',
+                     'software', 'version', 'md5', 'hostname', 'db_id',
+                     'orig_user', 'orig_group'], nargs='+',
             help="Metadata field to be added to MapAnnotation"
         )
         pack.add_argument("filepath", type=str, help=file_help)
@@ -166,7 +167,6 @@ class TransferControl(GraphControl):
                                'upgrade'],
             help="Skip options to be passed to omero import"
         )
-        
 
     @gateway_required
     def pack(self, args):
@@ -245,8 +245,8 @@ class TransferControl(GraphControl):
         if "all" in metadata:
             metadata.remove("all")
             metadata.extend(["img_id", "timestamp", "software",
-                                  "version", "hostname", "md5", "orig_user",
-                                  "orig_group"])
+                             "version", "hostname", "md5", "orig_user",
+                             "orig_group"])
         if "none" in metadata:
             metadata = None
         if metadata:
