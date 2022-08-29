@@ -378,15 +378,38 @@ def create_filepath_annotations(id, conn, filename=None, plate_path=None):
     return anns, refs
 
 
-def create_provenance_metadata(id, hostname):
+def create_provenance_metadata(conn, img_id, hostname, metadata):
+    if not metadata:
+        return None, None
     software = "omero-cli-transfer"
     version = pkg_resources.get_distribution(software).version
     date_time = datetime.now().strftime("%d/%m/%Y, %H:%M:%S")
-    md_dict = {'origin_image_id': id, 'origin_hostname': hostname,
-               'packing_timestamp': date_time,
-               'software': software, 'version': version}
     ns = 'openmicroscopy.org/cli/transfer'
+    curr_user = conn.getUser().getName()
+    curr_group = conn.getGroupFromContext().getName()
     id = (-1) * uuid4().int
+    db_id = conn.getConfigService().getDatabaseUuid()
+
+    md_dict = {}
+    if "img_id" in metadata:
+        md_dict['origin_image_id'] = img_id
+    if "timestamp" in metadata:
+        md_dict['packing_timestamp'] = date_time
+    if "software" in metadata:
+        md_dict['software'] = software
+    if "version" in metadata:
+        md_dict['version'] = version
+    if "hostname" in metadata:
+        md_dict['origin_hostname'] = hostname
+    if "md5" in metadata:
+        md_dict['md5'] = "TBC"
+    if "orig_user" in metadata:
+        md_dict['original_user'] = curr_user
+    if "orig_group" in metadata:
+        md_dict['original_group'] = curr_group
+    if "db_id" in metadata:
+        md_dict['database_id'] = db_id
+
     mmap = []
     for _key, _value in md_dict.items():
         if _value:
@@ -419,7 +442,7 @@ def populate_roi(obj, roi_obj, ome, conn):
     return roi_ref
 
 
-def populate_image(obj, ome, conn, hostname, fset=None):
+def populate_image(obj, ome, conn, hostname, metadata, fset=None):
     id = obj.getId()
     name = obj.getName()
     desc = obj.getDescription()
@@ -432,11 +455,12 @@ def populate_image(obj, ome, conn, hostname, fset=None):
                                         description=desc, pixels=pix)
     for ann in obj.listAnnotations():
         add_annotation(img, ann, ome, conn)
-    kv, ref = create_provenance_metadata(id, hostname)
-    kv_id = f"Annotation:{str(kv.id)}"
-    if kv_id not in [i.id for i in ome.structured_annotations]:
-        ome.structured_annotations.append(kv)
-    img.annotation_ref.append(ref)
+    kv, ref = create_provenance_metadata(conn, id, hostname, metadata)
+    if kv:
+        kv_id = f"Annotation:{str(kv.id)}"
+        if kv_id not in [i.id for i in ome.structured_annotations]:
+            ome.structured_annotations.append(kv)
+        img.annotation_ref.append(ref)
     filepath_anns, refs = create_filepath_annotations(img_id, conn)
     for i in range(len(filepath_anns)):
         ome.structured_annotations.append(filepath_anns[i])
@@ -458,11 +482,11 @@ def populate_image(obj, ome, conn, hostname, fset=None):
         for fs_image in fset.copyImages():
             fs_img_id = f"Image:{str(fs_image.getId())}"
             if fs_img_id not in [i.id for i in ome.images]:
-                populate_image(fs_image, ome, conn, hostname, fset)
+                populate_image(fs_image, ome, conn, hostname, metadata, fset)
     return img_ref
 
 
-def populate_dataset(obj, ome, conn, hostname):
+def populate_dataset(obj, ome, conn, hostname, metadata):
     id = obj.getId()
     name = obj.getName()
     desc = obj.getDescription()
@@ -472,7 +496,7 @@ def populate_dataset(obj, ome, conn, hostname):
         add_annotation(ds, ann, ome, conn)
     for img in obj.listChildren():
         img_obj = conn.getObject('Image', img.getId())
-        img_ref = populate_image(img_obj, ome, conn, hostname)
+        img_ref = populate_image(img_obj, ome, conn, hostname, metadata)
         ds.image_ref.append(img_ref)
     ds_id = f"Dataset:{str(ds.id)}"
     if ds_id not in [i.id for i in ome.datasets]:
@@ -480,7 +504,7 @@ def populate_dataset(obj, ome, conn, hostname):
     return ds_ref
 
 
-def populate_project(obj, ome, conn, hostname):
+def populate_project(obj, ome, conn, hostname, metadata):
     id = obj.getId()
     name = obj.getName()
     desc = obj.getDescription()
@@ -489,12 +513,12 @@ def populate_project(obj, ome, conn, hostname):
         add_annotation(proj, ann, ome, conn)
     for ds in obj.listChildren():
         ds_obj = conn.getObject('Dataset', ds.getId())
-        ds_ref = populate_dataset(ds_obj, ome, conn, hostname)
+        ds_ref = populate_dataset(ds_obj, ome, conn, hostname, metadata)
         proj.dataset_ref.append(ds_ref)
     ome.projects.append(proj)
 
 
-def populate_screen(obj, ome, conn, hostname):
+def populate_screen(obj, ome, conn, hostname, metadata):
     id = obj.getId()
     name = obj.getName()
     desc = obj.getDescription()
@@ -503,12 +527,12 @@ def populate_screen(obj, ome, conn, hostname):
         add_annotation(scr, ann, ome, conn)
     for pl in obj.listChildren():
         pl_obj = conn.getObject('Plate', pl.getId())
-        pl_ref = populate_plate(pl_obj, ome, conn, hostname)
+        pl_ref = populate_plate(pl_obj, ome, conn, hostname, metadata)
         scr.plate_ref.append(pl_ref)
     ome.screens.append(scr)
 
 
-def populate_plate(obj, ome, conn, hostname):
+def populate_plate(obj, ome, conn, hostname, metadata):
     id = obj.getId()
     name = obj.getName()
     desc = obj.getDescription()
@@ -518,7 +542,7 @@ def populate_plate(obj, ome, conn, hostname):
         add_annotation(pl, ann, ome, conn)
     for well in obj.listChildren():
         well_obj = conn.getObject('Well', well.getId())
-        well_ref = populate_well(well_obj, ome, conn, hostname)
+        well_ref = populate_well(well_obj, ome, conn, hostname, metadata)
         pl.wells.append(well_ref)
     last_image_anns = ome.images[-1].annotation_ref
     last_image_anns_ids = [i.id for i in last_image_anns]
@@ -538,7 +562,7 @@ def populate_plate(obj, ome, conn, hostname):
     return pl_ref
 
 
-def populate_well(obj, ome, conn, hostname):
+def populate_well(obj, ome, conn, hostname, metadata):
     id = obj.getId()
     column = obj.getColumn()
     row = obj.getRow()
@@ -548,7 +572,7 @@ def populate_well(obj, ome, conn, hostname):
         ws_obj = obj.getWellSample(index)
         ws_id = ws_obj.getId()
         ws_img = ws_obj.getImage()
-        ws_img_ref = populate_image(ws_img, ome, conn, hostname)
+        ws_img_ref = populate_image(ws_img, ome, conn, hostname, metadata)
         ws_index = int(ws_img_ref.id.split(":")[-1])
         ws = WellSample(id=ws_id, index=ws_index, image_ref=ws_img_ref)
         samples.append(ws)
@@ -632,19 +656,19 @@ def list_file_ids(ome):
     return id_list
 
 
-def populate_xml(datatype, id, filepath, conn, hostname, barchive):
+def populate_xml(datatype, id, filepath, conn, hostname, barchive, metadata):
     ome = OME()
     obj = conn.getObject(datatype, id)
     if datatype == 'Project':
-        populate_project(obj, ome, conn, hostname)
+        populate_project(obj, ome, conn, hostname, metadata)
     elif datatype == 'Dataset':
-        populate_dataset(obj, ome, conn, hostname)
+        populate_dataset(obj, ome, conn, hostname, metadata)
     elif datatype == 'Image':
-        populate_image(obj, ome, conn, hostname)
+        populate_image(obj, ome, conn, hostname, metadata)
     elif datatype == 'Screen':
-        populate_screen(obj, ome, conn, hostname)
+        populate_screen(obj, ome, conn, hostname, metadata)
     elif datatype == 'Plate':
-        populate_plate(obj, ome, conn, hostname)
+        populate_plate(obj, ome, conn, hostname, metadata)
     if not barchive:
         with open(filepath, 'w') as fp:
             print(to_xml(ome), file=fp)

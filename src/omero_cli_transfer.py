@@ -61,11 +61,18 @@ and Polygon-type ROIs are packaged.
 --barchive creates a package compliant with Bioimage Archive submission
 standards - see repo README for more detail.
 
+--metadata allows you to specify which transfer metadata will be saved in
+`transfer.xml` as possible MapAnnotation values to the images. Default is `all`
+(equivalent to `img_id timestamp software version hostname md5 orig_user
+orig_group`), other options are `none`, `img_id`, `timestamp`, `software`,
+`version`, `md5`, `hostname`, `db_id`, `orig_user`, `orig_group`.
+
 Examples:
 omero transfer pack Image:123 transfer_pack.tar
 omero transfer pack --zip Image:123 transfer_pack.zip
 omero transfer pack Dataset:1111 /home/user/new_folder/new_pack.tar
 omero transfer pack 999 tarfile.tar  # equivalent to Project:999
+omero transfer pack 1 transfer_pack.tar --metadata img_id version db_id
 """)
 
 UNPACK_HELP = ("""Unpacks a transfer packet into an OMERO hierarchy.
@@ -83,6 +90,13 @@ will be unzipped.
 --folder allows the user to point to a previously-unpacked folder rather than
 a single file.
 
+--metadata allows you to specify which transfer metadata will be used from
+`transfer.xml` as MapAnnotation values to the images. Fields that do not
+exist on `transfer.xml` will be ignored. Default is `all` (equivalent to
+`img_id timestamp software version hostname md5 orig_user orig_group`), other
+options are `none`, `img_id`, `timestamp`, `software`, `version`, `md5`,
+`hostname`, `db_id`, `orig_user`, `orig_group`.
+
 You can also pass all --skip options that are allowed by `omero import` (all,
 checksum, thumbnails, minmax, upgrade).
 
@@ -90,6 +104,7 @@ Examples:
 omero transfer unpack transfer_pack.zip
 omero transfer unpack --output /home/user/optional_folder --ln_s
 omero transfer unpack --folder /home/user/unpacked_folder/ --skip upgrade
+omero transfer unpack pack.tar --metadata db_id orig_user hostname
 """)
 
 
@@ -134,6 +149,13 @@ class TransferControl(GraphControl):
                 "--barchive", help="Pack into a file compliant with Bioimage"
                                    " Archive submission standards",
                 action="store_true")
+        pack.add_argument(
+            "--metadata",
+            choices=['all', 'none', 'img_id', 'timestamp',
+                     'software', 'version', 'md5', 'hostname', 'db_id',
+                     'orig_user', 'orig_group'], nargs='+',
+            help="Metadata field to be added to MapAnnotation"
+        )
         pack.add_argument("filepath", type=str, help=file_help)
 
         file_help = ("Path to where the zip file is saved")
@@ -152,6 +174,13 @@ class TransferControl(GraphControl):
             "--skip", choices=['all', 'checksum', 'thumbnails', 'minmax',
                                'upgrade'],
             help="Skip options to be passed to omero import"
+        )
+        unpack.add_argument(
+            "--metadata",
+            choices=['all', 'none', 'img_id', 'timestamp',
+                     'software', 'version', 'md5', 'hostname', 'db_id',
+                     'orig_user', 'orig_group'], nargs='+',
+            help="Metadata field to be added to MapAnnotation"
         )
 
     @gateway_required
@@ -225,6 +254,20 @@ class TransferControl(GraphControl):
             print("Creating tar file...")
             shutil.make_archive(tar_path, 'tar', folder)
 
+    def _process_metadata(self, metadata):
+        if not metadata:
+            metadata = ['all']
+        if "all" in metadata:
+            metadata.remove("all")
+            metadata.extend(["img_id", "timestamp", "software",
+                             "version", "hostname", "md5", "orig_user",
+                             "orig_group"])
+        if "none" in metadata:
+            metadata = None
+        if metadata:
+            metadata = list(set(metadata))
+        self.metadata = metadata
+
     def __pack(self, args):
         if isinstance(args.object, Image) or isinstance(args.object, Screen) \
            or isinstance(args.object, Plate):
@@ -243,6 +286,8 @@ class TransferControl(GraphControl):
         else:
             print("Object is not a project, dataset, screen, plate or image")
             return
+        self.metadata = []
+        self._process_metadata(args.metadata)
         obj = self.gateway.getObject(src_datatype, src_dataid)
         if obj is None:
             raise ValueError("Object not found or outside current"
@@ -258,7 +303,7 @@ class TransferControl(GraphControl):
             print(f"Saving metadata at {md_fp}.")
         ome, path_id_dict = populate_xml(src_datatype, src_dataid, md_fp,
                                          self.gateway, self.hostname,
-                                         args.barchive)
+                                         args.barchive, self.metadata)
 
         print("Starting file copy...")
         self._copy_files(path_id_dict, folder, self.gateway)
@@ -272,6 +317,8 @@ class TransferControl(GraphControl):
         return
 
     def __unpack(self, args):
+        self.metadata = []
+        self._process_metadata(args.metadata)
         if not args.folder:
             print(f"Unzipping {args.filepath}...")
             hash, ome, folder = self._load_from_pack(args.filepath,
@@ -293,7 +340,8 @@ class TransferControl(GraphControl):
         print("Matching source and destination images...")
         img_map = self._make_image_map(src_img_map, dest_img_map)
         print("Creating and linking OMERO objects...")
-        populate_omero(ome, img_map, self.gateway, hash, folder)
+        populate_omero(ome, img_map, self.gateway,
+                       hash, folder, self.metadata)
         return
 
     def _load_from_pack(self, filepath, output=None):

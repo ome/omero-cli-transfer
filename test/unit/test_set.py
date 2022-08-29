@@ -44,6 +44,28 @@ class TestPackSide():
         with pytest.raises(TypeError):
             self.transfer._copy_files({'Image:12': 'test'}, "test_folder", 12)
 
+    def test_process_metadata(self):
+        metadata = None
+        self.transfer._process_metadata(metadata)
+        assert set(self.transfer.metadata) == \
+            set(["img_id", "timestamp", "software", "version", "hostname",
+                 "md5", "orig_user", "orig_group"])
+        self.transfer.metadata = []
+        metadata = ['all', 'db_id']
+        self.transfer._process_metadata(metadata)
+        assert set(self.transfer.metadata) == \
+            set(["img_id", "timestamp", "software", "version", "hostname",
+                 "md5", "orig_user", "orig_group", "db_id"])
+        self.transfer.metadata = []
+        metadata = ['none', 'db_id']
+        self.transfer._process_metadata(metadata)
+        assert self.transfer.metadata is None
+        self.transfer.metadata = []
+        metadata = ["timestamp", "software", "version"]
+        self.transfer._process_metadata(metadata)
+        assert set(self.transfer.metadata) == \
+            set(["timestamp", "software", "version"])
+
 
 class TestUnpackSide():
     def setup_method(self):

@@ -1,20 +1,20 @@
 <OME xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openmicroscopy.org/Schemas/OME/2016-06 http://www.openmicroscopy.org/Schemas/OME/2016-06/ome.xsd">
-    <Image ID="Image:1678" Name="combined_result.tiff">
+    <Image ID="Image:13" Name="combined_result.tiff">
         <Description />
-        <Pixels DimensionOrder="XYZCT" ID="Pixels:1678" SizeC="1" SizeT="1" SizeX="1024" SizeY="1024" SizeZ="1" Type="uint16">
+        <Pixels DimensionOrder="XYZCT" ID="Pixels:13" SizeC="1" SizeT="1" SizeX="1024" SizeY="1024" SizeZ="1" Type="uint16">
             <MetadataOnly />
         </Pixels>
-        <ROIRef ID="ROI:866" />
-        <ROIRef ID="ROI:867" />
-        <ROIRef ID="ROI:868" />
-        <AnnotationRef ID="Annotation:2209" />
-        <AnnotationRef ID="Annotation:2210" />
-        <AnnotationRef ID="Annotation:2551" />
-        <AnnotationRef ID="Annotation:-174848482026171096592087940885174571387" />
-        <AnnotationRef ID="Annotation:-139617669286286198004187383097309003747" />
+        <ROIRef ID="ROI:34" />
+        <ROIRef ID="ROI:35" />
+        <ROIRef ID="ROI:36" />
+        <AnnotationRef ID="Annotation:45" />
+        <AnnotationRef ID="Annotation:47" />
+        <AnnotationRef ID="Annotation:48" />
+        <AnnotationRef ID="Annotation:-224025024630226983263251575676667039416" />
+        <AnnotationRef ID="Annotation:-28260204872495984486395250199030049489" />
     </Image>
     <StructuredAnnotations>
-        <MapAnnotation ID="Annotation:2209" Namespace="openmicroscopy.org/omero/client/mapAnnotation">
+        <MapAnnotation ID="Annotation:45" Namespace="openmicroscopy.org/omero/client/mapAnnotation">
             <Value>
                 <M K="species"> </M>
                 <M K="occupation"> </M>
@@ -22,22 +22,26 @@
                 <M K="surname">this is a test to see if the kv pairs in omero have any length limits. I don't think they do, but I will write something relatively long just so I can double-check whether that is the case or not.</M>
             </Value>
         </MapAnnotation>
-        <TagAnnotation ID="Annotation:2551">
+        <TagAnnotation ID="Annotation:48">
             <Value>simple_tag</Value>
         </TagAnnotation>
-        <MapAnnotation ID="Annotation:-174848482026171096592087940885174571387" Namespace="openmicroscopy.org/cli/transfer">
+        <MapAnnotation ID="Annotation:-224025024630226983263251575676667039416" Namespace="openmicroscopy.org/cli/transfer">
             <Value>
-                <M K="origin_image_id">1678</M>
-                <M K="origin_hostname">localhost</M>
-                <M K="packing_timestamp">17/02/2022, 12:16:28</M>
+                <M K="origin_image_id">13</M>
+                <M K="packing_timestamp">26/08/2022, 11:01:27</M>
                 <M K="software">omero-cli-transfer</M>
-                <M K="version">0.0.1</M>
+                <M K="version">0.0.0</M>
+                <M K="origin_hostname">localhost</M>
+                <M K="md5">TBC</M>
+                <M K="original_user">root</M>
+                <M K="original_group">system</M>
+                <M K="database_id">59149c9d-0ff3-430a-9f1a-1d8093b4a98c</M>
             </Value>
         </MapAnnotation>
-        <CommentAnnotation ID="Annotation:-139617669286286198004187383097309003747" Namespace="Image:1678">
-            <Value>root_0/2022-01/14/18-30-55.264/combined_result.tiff</Value>
+        <CommentAnnotation ID="Annotation:-28260204872495984486395250199030049489" Namespace="Image:13">
+            <Value>root_0/2022-08/26/14-59-42.116/combined_result.tiff</Value>
         </CommentAnnotation>
-        <MapAnnotation ID="Annotation:2210" Namespace="jax.org/jax/example/namespace">
+        <MapAnnotation ID="Annotation:47" Namespace="jax.org/jax/example/namespace">
             <Value>
                 <M K="species"> </M>
                 <M K="occupation"> </M>
@@ -46,19 +50,19 @@
             </Value>
         </MapAnnotation>
     </StructuredAnnotations>
-    <ROI ID="ROI:866">
+    <ROI ID="ROI:34">
         <Union>
-            <Line ID="Shape:1766" FillColor="-256" StrokeColor="-65283" Text="" TheC="0" TheT="0" TheZ="0" X1="321.7500000000001" X2="715.6500000000001" Y1="546.4875000000001" Y2="667.3875" />
+            <Line ID="Shape:34" FillColor="-256" StrokeColor="-65283" Text="" TheC="0" TheT="0" TheZ="0" X1="321.7500000000001" X2="715.6500000000001" Y1="546.4875000000001" Y2="667.3875" />
         </Union>
     </ROI>
-    <ROI ID="ROI:867">
+    <ROI ID="ROI:35">
         <Union>
-            <Line ID="Shape:1767" FillColor="-256" StrokeColor="-65283" Text="" TheC="0" TheT="0" TheZ="0" X1="453.3750000000001" X2="862.8750000000001" Y1="242.2875000000001" Y2="481.1625000000001" />
+            <Line ID="Shape:35" FillColor="-256" StrokeColor="-65283" Text="" TheC="0" TheT="0" TheZ="0" X1="453.3750000000001" X2="862.8750000000001" Y1="242.2875000000001" Y2="481.1625000000001" />
         </Union>
     </ROI>
-    <ROI ID="ROI:868">
+    <ROI ID="ROI:36">
         <Union>
-            <Rectangle ID="Shape:1768" FillColor="-256" StrokeColor="-65283" Text="" TheC="0" TheT="0" TheZ="0" Height="154.69825576030746" Width="177.56789185846986" X="136.35047580394115" Y="644.0620035942259" />
+            <Rectangle ID="Shape:36" FillColor="-256" StrokeColor="-65283" Text="" TheC="0" TheT="0" TheZ="0" Height="154.69825576030746" Width="177.56789185846986" X="136.35047580394115" Y="644.0620035942259" />
         </Union>
     </ROI>
 </OME>
