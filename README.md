@@ -32,7 +32,7 @@ dependency ever imagined". Try at your own risk.
 
 Creates a transfer packet for moving objects between OMERO server instances.
 
-The syntax for specifying objects is: <object>:<id> where <object> can be Image, Project or Dataset. Project is assumed if <object>: is omitted. A file path needs to be provided; a tar file with the contents of the packet will be created at the specified path.
+The syntax for specifying objects is: `<object>:<id>` where `<object>` can be `Image`, `Project` or `Dataset`. `Project` is assumed if `<object>:` is omitted. A file path needs to be provided; a tar file with the contents of the packet will be created at the specified path.
 
 Currently, only MapAnnotations, Tags, FileAnnotations and CommentAnnotations are packaged into the transfer pack, and only Point, Line, Ellipse, Rectangle and Polygon-type ROIs are packaged.
 
