@@ -269,11 +269,12 @@ class TransferControl(GraphControl):
         self.metadata = metadata
 
     def __pack(self, args):
-        if isinstance(args.object, Image) or isinstance(args.object, Screen) \
-           or isinstance(args.object, Plate):
+        if isinstance(args.object, Image) or isinstance(args.object, Plate) \
+           or isinstance(args.object, Screen):
             if args.barchive:
                 raise ValueError("Single image, plate or screen cannot be "
                                  "packaged for Bioimage Archive")
+        if isinstance(args.object, Image):
             src_datatype, src_dataid = "Image", args.object.id
         elif isinstance(args.object, Dataset):
             src_datatype, src_dataid = "Dataset", args.object.id
