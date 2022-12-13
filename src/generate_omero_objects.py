@@ -1,15 +1,18 @@
 import ezomero
-from omero.model import DatasetI
+from typing import List, Tuple
+from omero.model import DatasetI, IObject
 from omero.gateway import DatasetWrapper
-from ome_types.model import TagAnnotation, MapAnnotation, FileAnnotation
-from ome_types.model import CommentAnnotation, LongAnnotation
-from ome_types.model import Line, Point, Rectangle, Ellipse, Polygon
-from ome_types.model import Polyline, Label
+from ome_types.model import TagAnnotation, MapAnnotation, FileAnnotation, ROI
+from ome_types.model import CommentAnnotation, LongAnnotation, Annotation
+from ome_types.model import Line, Point, Rectangle, Ellipse, Polygon, Shape
+from ome_types.model import Polyline, Label, Project, Screen, Dataset, OME
+from ome_types.model import Image
 from ome_types.model.simple_types import Marker
 from omero.gateway import TagAnnotationWrapper, MapAnnotationWrapper
 from omero.gateway import CommentAnnotationWrapper, LongAnnotationWrapper
-from omero.gateway import FileAnnotationWrapper
+from omero.gateway import FileAnnotationWrapper, OriginalFileWrapper
 from omero.sys import Parameters
+from omero.gateway import BlitzGateway
 from omero.rtypes import rstring
 from ezomero import rois
 from pathlib import Path
@@ -17,7 +20,7 @@ import os
 import copy
 
 
-def create_projects(pjs, conn):
+def create_projects(pjs: List[Project], conn: BlitzGateway) -> dict:
     pj_map = {}
     for pj in pjs:
         pj_id = ezomero.post_project(conn, pj.name, pj.description)
@@ -25,7 +28,7 @@ def create_projects(pjs, conn):
     return pj_map
 
 
-def create_screens(scrs, conn):
+def create_screens(scrs: List[Screen], conn: BlitzGateway) -> dict:
     scr_map = {}
     for scr in scrs:
         scr_id = ezomero.post_screen(conn, scr.name, scr.description)
@@ -33,7 +36,7 @@ def create_screens(scrs, conn):
     return scr_map
 
 
-def create_datasets(dss, conn):
+def create_datasets(dss: List[Dataset], conn: BlitzGateway) -> dict:
     """
     Currently doing it the non-ezomero way because ezomero always
     puts "orphan" Datasets in the user's default group
@@ -50,7 +53,8 @@ def create_datasets(dss, conn):
     return ds_map
 
 
-def create_annotations(ans, conn, hash, folder, metadata):
+def create_annotations(ans: List[Annotation], conn: BlitzGateway, hash: str,
+                       folder: str, metadata: List[str]) -> dict:
     ann_map = {}
     for an in ans:
         if isinstance(an, TagAnnotation):
@@ -116,8 +120,9 @@ def create_annotations(ans, conn, hash, folder, metadata):
     return ann_map
 
 
-def create_original_file(ann, ans, conn, folder):
-    print(ann)
+def create_original_file(ann: FileAnnotation, ans: List[Annotation],
+                         conn: BlitzGateway, folder: str
+                         ) -> OriginalFileWrapper:
     curr_folder = str(Path('.').resolve())
     for an in ann.annotation_ref:
         clean_id = int(an.id.split(":")[-1])
@@ -131,16 +136,8 @@ def create_original_file(ann, ans, conn, folder):
     return ofile
 
 
-def create_plate_map(ome, conn):
-    """Get the Ids of imported images.
-    Note that this will not find images if they have not been imported.
+def create_plate_map(ome: OME, conn: BlitzGateway) -> Tuple(dict, OME):
 
-    Returns
-    -------
-    image_ids : list of ints
-        Ids of images imported from the specified client path, which
-        itself is derived from ``file_path``.
-    """
     newome = copy.deepcopy(ome)
     plate_map = {}
     map_ref_ids = []
@@ -179,7 +176,7 @@ def create_plate_map(ome, conn):
     return plate_map, newome
 
 
-def create_shapes(roi):
+def create_shapes(roi: ROI) -> List[Shape]:
     shapes = []
     for shape in roi.union:
         if isinstance(shape, Point):
@@ -232,7 +229,7 @@ def create_shapes(roi):
     return shapes
 
 
-def _int_to_rgba(omero_val):
+def _int_to_rgba(omero_val: int) -> Tuple[int, int, int, int]:
     """ Helper function returning the color as an Integer in RGBA encoding """
     if omero_val < 0:
         omero_val = omero_val + (2**32)
@@ -244,7 +241,8 @@ def _int_to_rgba(omero_val):
     return (r, g, b, a)
 
 
-def create_rois(rois, imgs, img_map, conn):
+def create_rois(rois: List[ROI], imgs: List[Image], img_map: dict,
+                conn: BlitzGateway):
     for img in imgs:
         for roiref in img.roi_ref:
             roi = next(filter(lambda x: x.id == roiref.id, rois))
@@ -259,7 +257,7 @@ def create_rois(rois, imgs, img_map, conn):
     return
 
 
-def link_datasets(ome, proj_map, ds_map, conn):
+def link_datasets(ome: OME, proj_map: dict, ds_map: dict, conn: BlitzGateway):
     for proj in ome.projects:
         proj_id = proj_map[proj.id]
         ds_ids = []
@@ -270,7 +268,8 @@ def link_datasets(ome, proj_map, ds_map, conn):
     return
 
 
-def link_plates(ome, screen_map, plate_map, conn):
+def link_plates(ome: OME, screen_map: dict, plate_map: dict,
+                conn: BlitzGateway):
     for screen in ome.screens:
         screen_id = screen_map[screen.id]
         pl_ids = []
@@ -281,7 +280,7 @@ def link_plates(ome, screen_map, plate_map, conn):
     return
 
 
-def link_images(ome, ds_map, img_map, conn):
+def link_images(ome: OME, ds_map: dict, img_map: dict, conn: BlitzGateway):
     for ds in ome.datasets:
         ds_id = ds_map[ds.id]
         img_ids = []
@@ -295,8 +294,9 @@ def link_images(ome, ds_map, img_map, conn):
     return
 
 
-def link_annotations(ome, proj_map, ds_map, img_map, ann_map,
-                     scr_map, pl_map, conn):
+def link_annotations(ome: OME, proj_map: dict, ds_map: dict, img_map: dict,
+                     ann_map: dict, scr_map: dict, pl_map: dict,
+                     conn: BlitzGateway):
     for proj in ome.projects:
         proj_id = proj_map[proj.id]
         proj_obj = conn.getObject("Project", proj_id)
@@ -347,7 +347,8 @@ def link_annotations(ome, proj_map, ds_map, img_map, ann_map,
     return
 
 
-def link_one_annotation(obj, ann, ann_map, conn):
+def link_one_annotation(obj: IObject, ann: Annotation, ann_map: dict,
+                        conn: BlitzGateway):
     ann_id = ann_map[ann.id]
     if isinstance(ann, TagAnnotation):
         ann_obj = conn.getObject("TagAnnotation", ann_id)
@@ -365,7 +366,7 @@ def link_one_annotation(obj, ann, ann_map, conn):
         obj.linkAnnotation(ann_obj)
 
 
-def rename_images(imgs, img_map, conn):
+def rename_images(imgs: List[Image], img_map: dict, conn: BlitzGateway):
     for img in imgs:
         try:
             img_id = img_map[img.id]
@@ -377,7 +378,8 @@ def rename_images(imgs, img_map, conn):
     return
 
 
-def populate_omero(ome, img_map, conn, hash, folder, metadata):
+def populate_omero(ome: OME, img_map: dict, conn: BlitzGateway, hash: str,
+                   folder: str, metadata: List[str]):
     rename_images(ome.images, img_map, conn)
     proj_map = create_projects(ome.projects, conn)
     ds_map = create_datasets(ome.datasets, conn)
