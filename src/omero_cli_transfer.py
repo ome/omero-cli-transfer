@@ -16,6 +16,7 @@ import shutil
 from collections import defaultdict
 import hashlib
 from zipfile import ZipFile
+from typing import Callable, List, Any, Dict, Union, Optional, Tuple
 
 from generate_xml import populate_xml, populate_tsv
 from generate_omero_objects import populate_omero
@@ -108,7 +109,7 @@ omero transfer unpack pack.tar --metadata db_id orig_user hostname
 """)
 
 
-def gateway_required(func):
+def gateway_required(func: Callable) -> Callable:
     """
     Decorator which initializes a client (self.client),
     a BlitzGateway (self.gateway), and makes sure that
@@ -193,7 +194,7 @@ class TransferControl(GraphControl):
         """ Implements the 'pack' command """
         self.__unpack(args)
 
-    def _get_path_to_repo(self):
+    def _get_path_to_repo(self) -> List[str]:
         shared = self.client.sf.sharedResources()
         repos = shared.repositories()
         repos = list(zip(repos.descriptions, repos.proxies))
@@ -206,7 +207,8 @@ class TransferControl(GraphControl):
                 mrepos.append(path)
         return mrepos
 
-    def _copy_files(self, id_list, folder, conn):
+    def _copy_files(self, id_list: Dict[str, Any], folder: str,
+                    conn: BlitzGateway):
         if not isinstance(id_list, dict):
             raise TypeError("id_list must be a dict")
         if not all(isinstance(item, str) for item in id_list.keys()):
@@ -246,7 +248,7 @@ class TransferControl(GraphControl):
                         for fs_image in fileset.copyImages():
                             downloaded_ids.append(fs_image.getId())
 
-    def _package_files(self, tar_path, zip, folder):
+    def _package_files(self, tar_path: str, zip: bool, folder: str):
         if zip:
             print("Creating zip file...")
             shutil.make_archive(tar_path, 'zip', folder)
@@ -254,7 +256,7 @@ class TransferControl(GraphControl):
             print("Creating tar file...")
             shutil.make_archive(tar_path, 'tar', folder)
 
-    def _process_metadata(self, metadata):
+    def _process_metadata(self, metadata: Union[List[str], None]):
         if not metadata:
             metadata = ['all']
         if "all" in metadata:
@@ -345,7 +347,8 @@ class TransferControl(GraphControl):
                        hash, folder, self.metadata)
         return
 
-    def _load_from_pack(self, filepath, output=None):
+    def _load_from_pack(self, filepath: str, output: Optional[str] = None
+                        ) -> Tuple[str, OME, Path]:
         if (not filepath) or (not isinstance(filepath, str)):
             raise TypeError("filepath must be a string")
         if output and not isinstance(output, str):
@@ -377,7 +380,8 @@ class TransferControl(GraphControl):
         ome = from_xml(folder / "transfer.xml")
         return hash, ome, folder
 
-    def _create_image_map(self, ome):
+    def _create_image_map(self, ome: OME
+                          ) -> Tuple[OME, defaultdict, List[str]]:
         if not (type(ome) is OME):
             raise TypeError("XML is not valid OME format")
         img_map = defaultdict(list)
@@ -386,24 +390,28 @@ class TransferControl(GraphControl):
         map_ref_ids = []
         for ann in ome.structured_annotations:
             if int(ann.id.split(":")[-1]) < 0 \
-               and type(ann) == CommentAnnotation \
-               and ann.namespace.split(":")[0] == "Image":
-                map_ref_ids.append(ann.id)
-                img_map[ann.value].append(int(ann.namespace.split(":")[-1]))
-                if ann.value.endswith('mock_folder'):
-                    filelist.append(ann.value.rstrip("mock_folder"))
-                else:
-                    filelist.append(ann.value)
-                newome.structured_annotations.remove(ann)
+               and isinstance(ann, CommentAnnotation) \
+               and ann.namespace:
+                if ann.namespace.split(":")[0] == "Image":
+                    map_ref_ids.append(ann.id)
+                    img_map[ann.value].append(int(
+                        ann.namespace.split(":")[-1]))
+                    if ann.value.endswith('mock_folder'):
+                        filelist.append(ann.value.rstrip("mock_folder"))
+                    else:
+                        filelist.append(ann.value)
+                    newome.structured_annotations.remove(ann)
         for i in newome.images:
             for ref in i.annotation_ref:
                 if ref.id in map_ref_ids:
                     i.annotation_ref.remove(ref)
         filelist = list(set(filelist))
-        img_map = {x: sorted(img_map[x]) for x in img_map.keys()}
+        img_map = defaultdict(list, {x: sorted(img_map[x])
+                              for x in img_map.keys()})
         return newome, img_map, filelist
 
-    def _import_files(self, folder, filelist, ln_s, skip, gateway):
+    def _import_files(self, folder: Path, filelist: List[str], ln_s: bool,
+                      skip: str, gateway: BlitzGateway) -> dict:
         cli = CLI()
         cli.loadplugins()
         dest_map = {}
@@ -420,7 +428,7 @@ class TransferControl(GraphControl):
             dest_map[dest_path] = img_ids
         return dest_map
 
-    def _get_image_ids(self, file_path, conn):
+    def _get_image_ids(self, file_path: str, conn: BlitzGateway) -> List[str]:
         """Get the Ids of imported images.
         Note that this will not find images if they have not been imported.
 
@@ -459,7 +467,7 @@ class TransferControl(GraphControl):
                     image_ids.append(img_id)
         return image_ids
 
-    def _make_image_map(self, source_map, dest_map):
+    def _make_image_map(self, source_map: dict, dest_map: dict) -> dict:
         # using both source and destination file-to-image-id maps,
         # map image IDs between source and destination
         src_dict = defaultdict(list)
@@ -474,8 +482,10 @@ class TransferControl(GraphControl):
         for k, v in dest_map.items():
             newkey = k.split("/./")[-1]
             dest_dict[newkey].extend(v)
-        src_dict = {x: sorted(src_dict[x]) for x in src_dict.keys()}
-        dest_dict = {x: sorted(dest_dict[x]) for x in dest_dict.keys()}
+        src_dict = defaultdict(list, {x: sorted(src_dict[x])
+                                      for x in src_dict.keys()})
+        dest_dict = defaultdict(list, {x: sorted(dest_dict[x])
+                                       for x in dest_dict.keys()})
         for src_k in src_dict.keys():
             src_v = src_dict[src_k]
             if src_k in dest_dict.keys():

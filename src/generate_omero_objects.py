@@ -128,15 +128,15 @@ def create_original_file(ann: FileAnnotation, ans: List[Annotation],
         clean_id = int(an.id.split(":")[-1])
         if clean_id < 0:
             cmnt_id = an.id
-    for an in ans:
-        if an.id == cmnt_id:
-            fpath = an.value
+    for an_loop in ans:
+        if an_loop.id == cmnt_id and isinstance(an_loop, MapAnnotation):
+            fpath = str(an_loop.value)
     dest_path = str(os.path.join(curr_folder, folder,  '.', fpath))
     ofile = conn.createOriginalFileFromLocalFile(dest_path)
     return ofile
 
 
-def create_plate_map(ome: OME, conn: BlitzGateway) -> Tuple(dict, OME):
+def create_plate_map(ome: OME, conn: BlitzGateway) -> Tuple[dict, OME]:
 
     newome = copy.deepcopy(ome)
     plate_map = {}
@@ -186,11 +186,11 @@ def create_shapes(roi: ROI) -> List[Shape]:
             if shape.marker_start == Marker.ARROW:
                 mk_start = "Arrow"
             else:
-                mk_start = shape.marker_start
+                mk_start = str(shape.marker_start)
             if shape.marker_end == Marker.ARROW:
                 mk_end = "Arrow"
             else:
-                mk_end = shape.marker_end
+                mk_end = str(shape.marker_end)
             sh = rois.Line(shape.x1, shape.y1, shape.x2, shape.y2,
                            z=shape.the_z, c=shape.the_c, t=shape.the_t,
                            label=shape.text, markerStart=mk_start,
@@ -249,8 +249,8 @@ def create_rois(rois: List[ROI], imgs: List[Image], img_map: dict,
             shapes = create_shapes(roi)
             img_id_dest = img_map[img.id]
             # using colors for the first shape
-            fill_color = _int_to_rgba(int(roi.union[0].fill_color))
-            stroke_color = _int_to_rgba(int(roi.union[0].stroke_color))
+            fill_color = _int_to_rgba(int(str(roi.union[0].fill_color)))
+            stroke_color = _int_to_rgba(int(str(roi.union[0].stroke_color)))
             ezomero.post_roi(conn, img_id_dest, shapes, name=roi.name,
                              description=roi.description,
                              fill_color=fill_color, stroke_color=stroke_color)

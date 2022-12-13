@@ -11,12 +11,15 @@ from ome_types.model import FileAnnotation, BinaryFile, BinData
 from ome_types.model import AnnotationRef, ROIRef, Map
 from ome_types.model import CommentAnnotation, LongAnnotation
 from ome_types.model import Point, Line, Rectangle, Ellipse, Polygon
-from ome_types.model import Polyline, Label
+from ome_types.model import Polyline, Label, Shape
 from ome_types.model.map import M
+from omero.gateway import BlitzGateway
 from omero.model import TagAnnotationI, MapAnnotationI, FileAnnotationI
 from omero.model import CommentAnnotationI, LongAnnotationI
 from omero.model import PointI, LineI, RectangleI, EllipseI, PolygonI
-from omero.model import PolylineI, LabelI
+from omero.model import PolylineI, LabelI, ImageI, RoiI
+from typing import Tuple, List, Optional, Union
+from os import PathLike
 import pkg_resources
 import ezomero
 import os
@@ -28,30 +31,30 @@ from pathlib import Path
 import shutil
 
 
-def create_proj_and_ref(**kwargs):
+def create_proj_and_ref(**kwargs) -> Tuple[Project, ProjectRef]:
     proj = Project(**kwargs)
     proj_ref = ProjectRef(id=proj.id)
     return proj, proj_ref
 
 
-def create_plate_and_ref(**kwargs):
+def create_plate_and_ref(**kwargs) -> Tuple[Plate, PlateRef]:
     pl = Plate(**kwargs)
     pl_ref = PlateRef(id=pl.id)
     return pl, pl_ref
 
 
-def create_screen(**kwargs):
+def create_screen(**kwargs) -> Screen:
     scr = Screen(**kwargs)
     return scr
 
 
-def create_dataset_and_ref(**kwargs):
+def create_dataset_and_ref(**kwargs) -> Tuple[Dataset, DatasetRef]:
     ds = Dataset(**kwargs)
     ds_ref = DatasetRef(id=ds.id)
     return ds, ds_ref
 
 
-def create_pixels(obj):
+def create_pixels(obj: ImageI) -> Pixels:
     # we're assuming a single Pixels object per image
     pix_obj = obj.getPrimaryPixels()
     pixels = Pixels(
@@ -67,49 +70,49 @@ def create_pixels(obj):
     return pixels
 
 
-def create_image_and_ref(**kwargs):
+def create_image_and_ref(**kwargs) -> Tuple[Image, ImageRef]:
     img = Image(**kwargs)
     img_ref = ImageRef(id=img.id)
     return img, img_ref
 
 
-def create_tag_and_ref(**kwargs):
+def create_tag_and_ref(**kwargs) -> Tuple[TagAnnotation, AnnotationRef]:
     tag = TagAnnotation(**kwargs)
     tagref = AnnotationRef(id=tag.id)
     return tag, tagref
 
 
-def create_comm_and_ref(**kwargs):
+def create_comm_and_ref(**kwargs) -> Tuple[CommentAnnotation, AnnotationRef]:
     tag = CommentAnnotation(**kwargs)
     tagref = AnnotationRef(id=tag.id)
     return tag, tagref
 
 
-def create_kv_and_ref(**kwargs):
+def create_kv_and_ref(**kwargs) -> Tuple[MapAnnotation, AnnotationRef]:
     kv = MapAnnotation(**kwargs)
     kvref = AnnotationRef(id=kv.id)
     return kv, kvref
 
 
-def create_long_and_ref(**kwargs):
+def create_long_and_ref(**kwargs) -> Tuple[LongAnnotation, AnnotationRef]:
     long = LongAnnotation(**kwargs)
     longref = AnnotationRef(id=long.id)
     return long, longref
 
 
-def create_roi_and_ref(**kwargs):
+def create_roi_and_ref(**kwargs) -> Tuple[ROI, ROIRef]:
     roi = ROI(**kwargs)
     roiref = ROIRef(id=roi.id)
     return roi, roiref
 
 
-def create_file_ann_and_ref(**kwargs):
+def create_file_ann_and_ref(**kwargs) -> Tuple[FileAnnotation, AnnotationRef]:
     file_ann = FileAnnotation(**kwargs)
     file_ann_ref = AnnotationRef(id=file_ann.id)
     return file_ann, file_ann_ref
 
 
-def create_point(shape):
+def create_point(shape: PointI) -> Point:
     args = {'id': shape.getId().val, 'x': shape.getX().val,
             'y': shape.getY().val}
     args['text'] = ''
@@ -134,7 +137,7 @@ def create_point(shape):
     return pt
 
 
-def create_line(shape):
+def create_line(shape: LineI) -> Line:
     args = {'id': shape.getId().val, 'x1': shape.getX1().val,
             'y1': shape.getY1().val, 'x2': shape.getX2().val,
             'y2': shape.getY2().val}
@@ -164,7 +167,7 @@ def create_line(shape):
     return ln
 
 
-def create_rectangle(shape):
+def create_rectangle(shape: RectangleI) -> Rectangle:
     args = {'id': shape.getId().val, 'x': shape.getX().val,
             'y': shape.getY().val, 'height': shape.getHeight().val,
             'width': shape.getWidth().val}
@@ -190,7 +193,7 @@ def create_rectangle(shape):
     return rec
 
 
-def create_ellipse(shape):
+def create_ellipse(shape: EllipseI) -> Ellipse:
     args = {'id': shape.getId().val, 'x': shape.getX().val,
             'y': shape.getY().val, 'radius_x': shape.getRadiusX().val,
             'radius_y': shape.getRadiusY().val}
@@ -216,7 +219,7 @@ def create_ellipse(shape):
     return ell
 
 
-def create_polygon(shape):
+def create_polygon(shape: PolygonI) -> Polygon:
     args = {'id': shape.getId().val, 'points': shape.getPoints().val}
     args['text'] = ''
     args['the_c'] = 0
@@ -240,7 +243,7 @@ def create_polygon(shape):
     return pol
 
 
-def create_polyline(shape):
+def create_polyline(shape: PolylineI) -> Polyline:
     args = {'id': shape.getId().val, 'points': shape.getPoints().val}
     args['text'] = ''
     args['the_c'] = 0
@@ -264,7 +267,7 @@ def create_polyline(shape):
     return pol
 
 
-def create_label(shape):
+def create_label(shape: LabelI) -> Label:
     args = {'id': shape.getId().val, 'x': shape.getX().val,
             'y': shape.getY().val}
     args['text'] = shape.getTextValue().val
@@ -288,8 +291,8 @@ def create_label(shape):
     return pt
 
 
-def create_shapes(roi):
-    shapes = []
+def create_shapes(roi: RoiI) -> List[Shape]:
+    shapes: List[Shape] = []
     for s in roi.iterateShapes():
         if isinstance(s, PointI):
             p = create_point(s)
@@ -307,23 +310,31 @@ def create_shapes(roi):
             pol = create_polygon(s)
             shapes.append(pol)
         elif isinstance(s, PolylineI):
-            pol = create_polyline(s)
-            shapes.append(pol)
+            polline = create_polyline(s)
+            shapes.append(polline)
         elif isinstance(s, LabelI):
-            pol = create_label(s)
-            shapes.append(pol)
+            lab = create_label(s)
+            shapes.append(lab)
         else:
             print("not a real thing")
             continue
     return shapes
 
 
-def create_filepath_annotations(id, conn, filename=None, plate_path=None):
+def create_filepath_annotations(id: str, conn: BlitzGateway,
+                                filename: Union[str,
+                                                PathLike[str]] = ".",
+                                plate_path: Optional[str] = None
+                                ) -> Tuple[List[CommentAnnotation],
+                                           Union[List[AnnotationRef],
+                                                 List[ROIRef]]]:
     ns = id
     anns = []
-    refs = []
+    anrefs = []
+    roirefs = []
     fp_type = ns.split(":")[0]
     clean_id = int(ns.split(":")[-1])
+    is_roi = False
     if fp_type == "Image":
         fpaths = ezomero.get_original_filepaths(conn, clean_id)
         if len(fpaths) > 1:
@@ -333,49 +344,53 @@ def create_filepath_annotations(id, conn, filename=None, plate_path=None):
                 allpaths.append(f.parts)
             common_root = Path(*os.path.commonprefix(allpaths))
             path = os.path.join(common_root, 'mock_folder')
-            id = (-1) * uuid4().int
-            an = CommentAnnotation(id=id,
+            uid = (-1) * uuid4().int
+            an = CommentAnnotation(id=uid,
                                    namespace=ns,
                                    value=str(path)
                                    )
             anns.append(an)
             anref = AnnotationRef(id=an.id)
-            refs.append(anref)
+            anrefs.append(anref)
         else:
             if fpaths:
                 f = fpaths[0]
             else:
                 f = f'pixel_images/{clean_id}.tiff'
 
-            id = (-1) * uuid4().int
-            an = CommentAnnotation(id=id,
+            uid = (-1) * uuid4().int
+            an = CommentAnnotation(id=uid,
                                    namespace=ns,
                                    value=f
                                    )
             anns.append(an)
-            anref = ROIRef(id=an.id)
-            refs.append(anref)
+            roiref = ROIRef(id=an.id)
+            roirefs.append(roiref)
+            is_roi = True
     elif fp_type == "Annotation":
         filename = str(Path(filename).name)
         f = f'file_annotations/{clean_id}/{filename}'
-        id = (-1) * uuid4().int
-        an = CommentAnnotation(id=id,
+        uid = (-1) * uuid4().int
+        an = CommentAnnotation(id=uid,
                                namespace=ns,
                                value=f
                                )
         anns.append(an)
         anref = AnnotationRef(id=an.id)
-        refs.append(anref)
+        anrefs.append(anref)
     elif fp_type == "Plate":
-        id = (-1) * uuid4().int
-        an = CommentAnnotation(id=id,
+        uid = (-1) * uuid4().int
+        an = CommentAnnotation(id=uid,
                                namespace=ns,
                                value=plate_path
                                )
         anns.append(an)
         anref = AnnotationRef(id=an.id)
-        refs.append(anref)
-    return anns, refs
+        anrefs.append(anref)
+    if is_roi:
+        return anns, roirefs
+    else:
+        return anns, anrefs
 
 
 def create_provenance_metadata(conn, img_id, hostname, metadata):
