@@ -13,7 +13,7 @@ import os
 import copy
 from functools import wraps
 import shutil
-from collections import defaultdict
+from typing import DefaultDict
 import hashlib
 from zipfile import ZipFile
 from typing import Callable, List, Any, Dict, Union, Optional, Tuple
@@ -381,10 +381,10 @@ class TransferControl(GraphControl):
         return hash, ome, folder
 
     def _create_image_map(self, ome: OME
-                          ) -> Tuple[OME, defaultdict, List[str]]:
+                          ) -> Tuple[OME, DefaultDict, List[str]]:
         if not (type(ome) is OME):
             raise TypeError("XML is not valid OME format")
-        img_map = defaultdict(list)
+        img_map = DefaultDict(list)
         filelist = []
         newome = copy.deepcopy(ome)
         map_ref_ids = []
@@ -406,7 +406,7 @@ class TransferControl(GraphControl):
                 if ref.id in map_ref_ids:
                     i.annotation_ref.remove(ref)
         filelist = list(set(filelist))
-        img_map = defaultdict(list, {x: sorted(img_map[x])
+        img_map = DefaultDict(list, {x: sorted(img_map[x])
                               for x in img_map.keys()})
         return newome, img_map, filelist
 
@@ -470,7 +470,7 @@ class TransferControl(GraphControl):
     def _make_image_map(self, source_map: dict, dest_map: dict) -> dict:
         # using both source and destination file-to-image-id maps,
         # map image IDs between source and destination
-        src_dict = defaultdict(list)
+        src_dict = DefaultDict(list)
         imgmap = {}
         for k, v in source_map.items():
             if k.endswith("mock_folder"):
@@ -478,13 +478,13 @@ class TransferControl(GraphControl):
                 src_dict[newkey].extend(v)
             else:
                 src_dict[k].extend(v)
-        dest_dict = defaultdict(list)
+        dest_dict = DefaultDict(list)
         for k, v in dest_map.items():
             newkey = k.split("/./")[-1]
             dest_dict[newkey].extend(v)
-        src_dict = defaultdict(list, {x: sorted(src_dict[x])
+        src_dict = DefaultDict(list, {x: sorted(src_dict[x])
                                       for x in src_dict.keys()})
-        dest_dict = defaultdict(list, {x: sorted(dest_dict[x])
+        dest_dict = DefaultDict(list, {x: sorted(dest_dict[x])
                                        for x in dest_dict.keys()})
         for src_k in src_dict.keys():
             src_v = src_dict[src_k]

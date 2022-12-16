@@ -129,7 +129,7 @@ def create_original_file(ann: FileAnnotation, ans: List[Annotation],
         if clean_id < 0:
             cmnt_id = an.id
     for an_loop in ans:
-        if an_loop.id == cmnt_id and isinstance(an_loop, MapAnnotation):
+        if an_loop.id == cmnt_id and isinstance(an_loop, CommentAnnotation):
             fpath = str(an_loop.value)
     dest_path = str(os.path.join(curr_folder, folder,  '.', fpath))
     ofile = conn.createOriginalFileFromLocalFile(dest_path)
@@ -229,16 +229,16 @@ def create_shapes(roi: ROI) -> List[Shape]:
     return shapes
 
 
-def _int_to_rgba(omero_val: int) -> Tuple[int, int, int, int]:
-    """ Helper function returning the color as an Integer in RGBA encoding """
-    if omero_val < 0:
-        omero_val = omero_val + (2**32)
-    r = omero_val >> 24
-    g = omero_val - (r << 24) >> 16
-    b = omero_val - (r << 24) - (g << 16) >> 8
-    a = omero_val - (r << 24) - (g << 16) - (b << 8)
-    # a = a / 256.0
-    return (r, g, b, a)
+# def _int_to_rgba(omero_val: int) -> Tuple[int, int, int, int]:
+#    """ Helper function returning the color as an Integer in RGBA encoding """
+#     if omero_val < 0:
+#         omero_val = omero_val + (2**32)
+#     r = omero_val >> 24
+#     g = omero_val - (r << 24) >> 16
+#     b = omero_val - (r << 24) - (g << 16) >> 8
+#     a = omero_val - (r << 24) - (g << 16) - (b << 8)
+#     # a = a / 256.0
+#     return (r, g, b, a)
 
 
 def create_rois(rois: List[ROI], imgs: List[Image], img_map: dict,
@@ -246,11 +246,25 @@ def create_rois(rois: List[ROI], imgs: List[Image], img_map: dict,
     for img in imgs:
         for roiref in img.roi_ref:
             roi = next(filter(lambda x: x.id == roiref.id, rois))
+            print(roi)
             shapes = create_shapes(roi)
+            print(roi.union[0].fill_color)
+            if roi.union[0].fill_color:
+                fc = roi.union[0].fill_color.as_rgb_tuple()
+                if len(fc) == 3:
+                    fill_color = fc + (0,)
+                else:
+                    fill_color = fc
+            if roi.union[0].stroke_color:
+                sc = roi.union[0].stroke_color.as_rgb_tuple()
+                if len(sc) == 3:
+                    stroke_color = sc + (0,)
+                else:
+                    stroke_color = sc
             img_id_dest = img_map[img.id]
             # using colors for the first shape
-            fill_color = _int_to_rgba(int(str(roi.union[0].fill_color)))
-            stroke_color = _int_to_rgba(int(str(roi.union[0].stroke_color)))
+            # fill_color = _int_to_rgba(int(str(roi.union[0].fill_color)))
+            # stroke_color = _int_to_rgba(int(str(roi.union[0].stroke_color)))
             ezomero.post_roi(conn, img_id_dest, shapes, name=roi.name,
                              description=roi.description,
                              fill_color=fill_color, stroke_color=stroke_color)

@@ -19,13 +19,12 @@ from omero.model import CommentAnnotationI, LongAnnotationI, Fileset
 from omero.model import PointI, LineI, RectangleI, EllipseI, PolygonI
 from omero.model import PolylineI, LabelI, ImageI, RoiI, IObject
 from omero.model import DatasetI, ProjectI, ScreenI, PlateI, WellI, Annotation
-from typing import Tuple, List, Optional, Union, Any, Dict
+from typing import Tuple, List, Optional, Union, Any, Dict, TextIO
 from os import PathLike
 import pkg_resources
 import ezomero
 import os
 import csv
-from _csv import _writer
 import base64
 from uuid import uuid4
 from datetime import datetime
@@ -325,7 +324,7 @@ def create_shapes(roi: RoiI) -> List[Shape]:
 
 def create_filepath_annotations(id: str, conn: BlitzGateway,
                                 filename: Union[str,
-                                                PathLike[str]] = ".",
+                                                PathLike] = ".",
                                 plate_path: Optional[str] = None
                                 ) -> Tuple[List[CommentAnnotation],
                                            List[AnnotationRef]]:
@@ -710,8 +709,7 @@ def populate_tsv(datatype: str, ome: OME, filepath: str,
         print("Bioimage Archive export of Plate/Screen currently unsupported")
         return
     with open(filepath, 'w') as fp:
-        writer = csv.writer(fp, delimiter='\t')
-        write_lines(datatype, ome, writer, path_id_dict, folder)
+        write_lines(datatype, ome, fp, path_id_dict, folder)
         fp.close()
     return
 
@@ -900,10 +898,11 @@ def delete_empty_folders(root: str) -> set:
     return deleted
 
 
-def write_lines(top_level: str, ome: OME, writer: _writer, ids: dict,
+def write_lines(top_level: str, ome: OME, fp: TextIO, ids: dict,
                 folder: str):
     columns = generate_columns(ome, ids)
     columns.append("original_omero_ids")
+    writer = csv.writer(fp, delimiter='\t')
     writer.writerow(columns)
     lines: List[List[str]] = []
     paths = []
