@@ -313,7 +313,7 @@ class TransferControl(GraphControl):
         if args.barchive:
             print(f"Creating Bioimage Archive TSV at {md_fp}.")
             populate_tsv(src_datatype, ome, md_fp,
-                         self.gateway, path_id_dict, folder)
+                         path_id_dict, folder)
         self._package_files(os.path.splitext(tar_path)[0], args.zip, folder)
         print("Cleaning up...")
         shutil.rmtree(folder)
