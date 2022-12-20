@@ -11,12 +11,16 @@ from ome_types.model import FileAnnotation, BinaryFile, BinData
 from ome_types.model import AnnotationRef, ROIRef, Map
 from ome_types.model import CommentAnnotation, LongAnnotation
 from ome_types.model import Point, Line, Rectangle, Ellipse, Polygon
-from ome_types.model import Polyline, Label
+from ome_types.model import Polyline, Label, Shape
 from ome_types.model.map import M
+from omero.gateway import BlitzGateway
 from omero.model import TagAnnotationI, MapAnnotationI, FileAnnotationI
-from omero.model import CommentAnnotationI, LongAnnotationI
+from omero.model import CommentAnnotationI, LongAnnotationI, Fileset
 from omero.model import PointI, LineI, RectangleI, EllipseI, PolygonI
-from omero.model import PolylineI, LabelI
+from omero.model import PolylineI, LabelI, ImageI, RoiI, IObject
+from omero.model import DatasetI, ProjectI, ScreenI, PlateI, WellI, Annotation
+from typing import Tuple, List, Optional, Union, Any, Dict, TextIO
+from os import PathLike
 import pkg_resources
 import ezomero
 import os
@@ -28,30 +32,30 @@ from pathlib import Path
 import shutil
 
 
-def create_proj_and_ref(**kwargs):
+def create_proj_and_ref(**kwargs) -> Tuple[Project, ProjectRef]:
     proj = Project(**kwargs)
     proj_ref = ProjectRef(id=proj.id)
     return proj, proj_ref
 
 
-def create_plate_and_ref(**kwargs):
+def create_plate_and_ref(**kwargs) -> Tuple[Plate, PlateRef]:
     pl = Plate(**kwargs)
     pl_ref = PlateRef(id=pl.id)
     return pl, pl_ref
 
 
-def create_screen(**kwargs):
+def create_screen(**kwargs) -> Screen:
     scr = Screen(**kwargs)
     return scr
 
 
-def create_dataset_and_ref(**kwargs):
+def create_dataset_and_ref(**kwargs) -> Tuple[Dataset, DatasetRef]:
     ds = Dataset(**kwargs)
     ds_ref = DatasetRef(id=ds.id)
     return ds, ds_ref
 
 
-def create_pixels(obj):
+def create_pixels(obj: ImageI) -> Pixels:
     # we're assuming a single Pixels object per image
     pix_obj = obj.getPrimaryPixels()
     pixels = Pixels(
@@ -67,49 +71,49 @@ def create_pixels(obj):
     return pixels
 
 
-def create_image_and_ref(**kwargs):
+def create_image_and_ref(**kwargs) -> Tuple[Image, ImageRef]:
     img = Image(**kwargs)
     img_ref = ImageRef(id=img.id)
     return img, img_ref
 
 
-def create_tag_and_ref(**kwargs):
+def create_tag_and_ref(**kwargs) -> Tuple[TagAnnotation, AnnotationRef]:
     tag = TagAnnotation(**kwargs)
     tagref = AnnotationRef(id=tag.id)
     return tag, tagref
 
 
-def create_comm_and_ref(**kwargs):
+def create_comm_and_ref(**kwargs) -> Tuple[CommentAnnotation, AnnotationRef]:
     tag = CommentAnnotation(**kwargs)
     tagref = AnnotationRef(id=tag.id)
     return tag, tagref
 
 
-def create_kv_and_ref(**kwargs):
+def create_kv_and_ref(**kwargs) -> Tuple[MapAnnotation, AnnotationRef]:
     kv = MapAnnotation(**kwargs)
     kvref = AnnotationRef(id=kv.id)
     return kv, kvref
 
 
-def create_long_and_ref(**kwargs):
+def create_long_and_ref(**kwargs) -> Tuple[LongAnnotation, AnnotationRef]:
     long = LongAnnotation(**kwargs)
     longref = AnnotationRef(id=long.id)
     return long, longref
 
 
-def create_roi_and_ref(**kwargs):
+def create_roi_and_ref(**kwargs) -> Tuple[ROI, ROIRef]:
     roi = ROI(**kwargs)
     roiref = ROIRef(id=roi.id)
     return roi, roiref
 
 
-def create_file_ann_and_ref(**kwargs):
+def create_file_ann_and_ref(**kwargs) -> Tuple[FileAnnotation, AnnotationRef]:
     file_ann = FileAnnotation(**kwargs)
     file_ann_ref = AnnotationRef(id=file_ann.id)
     return file_ann, file_ann_ref
 
 
-def create_point(shape):
+def create_point(shape: PointI) -> Point:
     args = {'id': shape.getId().val, 'x': shape.getX().val,
             'y': shape.getY().val}
     args['text'] = ''
@@ -134,7 +138,7 @@ def create_point(shape):
     return pt
 
 
-def create_line(shape):
+def create_line(shape: LineI) -> Line:
     args = {'id': shape.getId().val, 'x1': shape.getX1().val,
             'y1': shape.getY1().val, 'x2': shape.getX2().val,
             'y2': shape.getY2().val}
@@ -164,7 +168,7 @@ def create_line(shape):
     return ln
 
 
-def create_rectangle(shape):
+def create_rectangle(shape: RectangleI) -> Rectangle:
     args = {'id': shape.getId().val, 'x': shape.getX().val,
             'y': shape.getY().val, 'height': shape.getHeight().val,
             'width': shape.getWidth().val}
@@ -190,7 +194,7 @@ def create_rectangle(shape):
     return rec
 
 
-def create_ellipse(shape):
+def create_ellipse(shape: EllipseI) -> Ellipse:
     args = {'id': shape.getId().val, 'x': shape.getX().val,
             'y': shape.getY().val, 'radius_x': shape.getRadiusX().val,
             'radius_y': shape.getRadiusY().val}
@@ -216,7 +220,7 @@ def create_ellipse(shape):
     return ell
 
 
-def create_polygon(shape):
+def create_polygon(shape: PolygonI) -> Polygon:
     args = {'id': shape.getId().val, 'points': shape.getPoints().val}
     args['text'] = ''
     args['the_c'] = 0
@@ -240,7 +244,7 @@ def create_polygon(shape):
     return pol
 
 
-def create_polyline(shape):
+def create_polyline(shape: PolylineI) -> Polyline:
     args = {'id': shape.getId().val, 'points': shape.getPoints().val}
     args['text'] = ''
     args['the_c'] = 0
@@ -264,7 +268,7 @@ def create_polyline(shape):
     return pol
 
 
-def create_label(shape):
+def create_label(shape: LabelI) -> Label:
     args = {'id': shape.getId().val, 'x': shape.getX().val,
             'y': shape.getY().val}
     args['text'] = shape.getTextValue().val
@@ -288,8 +292,8 @@ def create_label(shape):
     return pt
 
 
-def create_shapes(roi):
-    shapes = []
+def create_shapes(roi: RoiI) -> List[Shape]:
+    shapes: List[Shape] = []
     for s in roi.iterateShapes():
         if isinstance(s, PointI):
             p = create_point(s)
@@ -307,21 +311,26 @@ def create_shapes(roi):
             pol = create_polygon(s)
             shapes.append(pol)
         elif isinstance(s, PolylineI):
-            pol = create_polyline(s)
-            shapes.append(pol)
+            polline = create_polyline(s)
+            shapes.append(polline)
         elif isinstance(s, LabelI):
-            pol = create_label(s)
-            shapes.append(pol)
+            lab = create_label(s)
+            shapes.append(lab)
         else:
             print("not a real thing")
             continue
     return shapes
 
 
-def create_filepath_annotations(id, conn, filename=None, plate_path=None):
+def create_filepath_annotations(id: str, conn: BlitzGateway,
+                                filename: Union[str,
+                                                PathLike] = ".",
+                                plate_path: Optional[str] = None
+                                ) -> Tuple[List[CommentAnnotation],
+                                           List[AnnotationRef]]:
     ns = id
     anns = []
-    refs = []
+    anrefs = []
     fp_type = ns.split(":")[0]
     clean_id = int(ns.split(":")[-1])
     if fp_type == "Image":
@@ -333,52 +342,56 @@ def create_filepath_annotations(id, conn, filename=None, plate_path=None):
                 allpaths.append(f.parts)
             common_root = Path(*os.path.commonprefix(allpaths))
             path = os.path.join(common_root, 'mock_folder')
-            id = (-1) * uuid4().int
-            an = CommentAnnotation(id=id,
+            uid = (-1) * uuid4().int
+            an = CommentAnnotation(id=uid,
                                    namespace=ns,
                                    value=str(path)
                                    )
             anns.append(an)
             anref = AnnotationRef(id=an.id)
-            refs.append(anref)
+            anrefs.append(anref)
         else:
             if fpaths:
                 f = fpaths[0]
             else:
                 f = f'pixel_images/{clean_id}.tiff'
 
-            id = (-1) * uuid4().int
-            an = CommentAnnotation(id=id,
+            uid = (-1) * uuid4().int
+            an = CommentAnnotation(id=uid,
                                    namespace=ns,
                                    value=f
                                    )
             anns.append(an)
-            anref = ROIRef(id=an.id)
-            refs.append(anref)
+            anref = AnnotationRef(id=an.id)
+            anrefs.append(anref)
     elif fp_type == "Annotation":
         filename = str(Path(filename).name)
         f = f'file_annotations/{clean_id}/{filename}'
-        id = (-1) * uuid4().int
-        an = CommentAnnotation(id=id,
+        uid = (-1) * uuid4().int
+        an = CommentAnnotation(id=uid,
                                namespace=ns,
                                value=f
                                )
         anns.append(an)
         anref = AnnotationRef(id=an.id)
-        refs.append(anref)
+        anrefs.append(anref)
     elif fp_type == "Plate":
-        id = (-1) * uuid4().int
-        an = CommentAnnotation(id=id,
+        uid = (-1) * uuid4().int
+        an = CommentAnnotation(id=uid,
                                namespace=ns,
                                value=plate_path
                                )
         anns.append(an)
         anref = AnnotationRef(id=an.id)
-        refs.append(anref)
-    return anns, refs
+        anrefs.append(anref)
+    return anns, anrefs
 
 
-def create_provenance_metadata(conn, img_id, hostname, metadata):
+def create_provenance_metadata(conn: BlitzGateway, img_id: int,
+                               hostname: str,
+                               metadata: Union[List[str], None]
+                               ) -> Union[Tuple[MapAnnotation, AnnotationRef],
+                                          Tuple[None, None]]:
     if not metadata:
         return None, None
     software = "omero-cli-transfer"
@@ -390,7 +403,7 @@ def create_provenance_metadata(conn, img_id, hostname, metadata):
     id = (-1) * uuid4().int
     db_id = conn.getConfigService().getDatabaseUuid()
 
-    md_dict = {}
+    md_dict: Dict[str, Any] = {}
     if "img_id" in metadata:
         md_dict['origin_image_id'] = img_id
     if "timestamp" in metadata:
@@ -422,7 +435,8 @@ def create_provenance_metadata(conn, img_id, hostname, metadata):
     return kv, ref
 
 
-def populate_roi(obj, roi_obj, ome, conn):
+def populate_roi(obj: RoiI, roi_obj: IObject, ome: OME, conn: BlitzGateway
+                 ) -> Union[ROIRef, None]:
     id = obj.getId().getValue()
     name = obj.getName()
     if name is not None:
@@ -442,7 +456,9 @@ def populate_roi(obj, roi_obj, ome, conn):
     return roi_ref
 
 
-def populate_image(obj, ome, conn, hostname, metadata, fset=None):
+def populate_image(obj: ImageI, ome: OME, conn: BlitzGateway, hostname: str,
+                   metadata: List[str], fset: Union[None, Fileset] = None
+                   ) -> ImageRef:
     id = obj.getId()
     name = obj.getName()
     desc = obj.getDescription()
@@ -460,7 +476,8 @@ def populate_image(obj, ome, conn, hostname, metadata, fset=None):
         kv_id = f"Annotation:{str(kv.id)}"
         if kv_id not in [i.id for i in ome.structured_annotations]:
             ome.structured_annotations.append(kv)
-        img.annotation_ref.append(ref)
+        if ref:
+            img.annotation_ref.append(ref)
     filepath_anns, refs = create_filepath_annotations(img_id, conn)
     for i in range(len(filepath_anns)):
         ome.structured_annotations.append(filepath_anns[i])
@@ -486,7 +503,8 @@ def populate_image(obj, ome, conn, hostname, metadata, fset=None):
     return img_ref
 
 
-def populate_dataset(obj, ome, conn, hostname, metadata):
+def populate_dataset(obj: DatasetI, ome: OME, conn: BlitzGateway,
+                     hostname: str, metadata: List[str]) -> DatasetRef:
     id = obj.getId()
     name = obj.getName()
     desc = obj.getDescription()
@@ -504,7 +522,8 @@ def populate_dataset(obj, ome, conn, hostname, metadata):
     return ds_ref
 
 
-def populate_project(obj, ome, conn, hostname, metadata):
+def populate_project(obj: ProjectI, ome: OME, conn: BlitzGateway,
+                     hostname: str, metadata: List[str]):
     id = obj.getId()
     name = obj.getName()
     desc = obj.getDescription()
@@ -518,7 +537,8 @@ def populate_project(obj, ome, conn, hostname, metadata):
     ome.projects.append(proj)
 
 
-def populate_screen(obj, ome, conn, hostname, metadata):
+def populate_screen(obj: ScreenI, ome: OME, conn: BlitzGateway,
+                    hostname: str, metadata: List[str]):
     id = obj.getId()
     name = obj.getName()
     desc = obj.getDescription()
@@ -532,7 +552,8 @@ def populate_screen(obj, ome, conn, hostname, metadata):
     ome.screens.append(scr)
 
 
-def populate_plate(obj, ome, conn, hostname, metadata):
+def populate_plate(obj: PlateI, ome: OME, conn: BlitzGateway,
+                   hostname: str, metadata: List[str]) -> PlateRef:
     id = obj.getId()
     name = obj.getName()
     desc = obj.getDescription()
@@ -562,7 +583,8 @@ def populate_plate(obj, ome, conn, hostname, metadata):
     return pl_ref
 
 
-def populate_well(obj, ome, conn, hostname, metadata):
+def populate_well(obj: WellI, ome: OME, conn: BlitzGateway,
+                  hostname: str, metadata: List[str]) -> Well:
     id = obj.getId()
     column = obj.getColumn()
     row = obj.getRow()
@@ -582,7 +604,9 @@ def populate_well(obj, ome, conn, hostname, metadata):
     return well
 
 
-def add_annotation(obj, ann, ome, conn):
+def add_annotation(obj: Union[Project, Dataset, Image, Plate, Screen,
+                              Well, ROI],
+                   ann: Annotation, ome: OME, conn: BlitzGateway):
     if ann.OMERO_TYPE == TagAnnotationI:
         tag, ref = create_tag_and_ref(id=ann.getId(),
                                       value=ann.getTextValue())
@@ -632,22 +656,22 @@ def add_annotation(obj, ann, ome, conn):
                                                  value=b64
                                                  )
                                 )
-        long, ref = create_file_ann_and_ref(id=ann.getId(),
-                                            namespace=ann.getNs(),
-                                            binary_file=binaryfile)
+        f, ref = create_file_ann_and_ref(id=ann.getId(),
+                                         namespace=ann.getNs(),
+                                         binary_file=binaryfile)
         filepath_anns, refs = create_filepath_annotations(
-                                long.id,
+                                f.id,
                                 conn,
                                 filename=ann.getFile().getName())
         for i in range(len(filepath_anns)):
             ome.structured_annotations.append(filepath_anns[i])
-            long.annotation_ref.append(refs[i])
-        if long.id not in [i.id for i in ome.structured_annotations]:
-            ome.structured_annotations.append(long)
+            f.annotation_ref.append(refs[i])
+        if f.id not in [i.id for i in ome.structured_annotations]:
+            ome.structured_annotations.append(f)
         obj.annotation_ref.append(ref)
 
 
-def list_file_ids(ome):
+def list_file_ids(ome: OME) -> dict:
     id_list = {}
     for ann in ome.structured_annotations:
         clean_id = int(ann.id.split(":")[-1])
@@ -656,7 +680,9 @@ def list_file_ids(ome):
     return id_list
 
 
-def populate_xml(datatype, id, filepath, conn, hostname, barchive, metadata):
+def populate_xml(datatype: str, id: int, filepath: str, conn: BlitzGateway,
+                 hostname: str, barchive: bool,
+                 metadata: List[str]) -> Tuple[OME, dict]:
     ome = OME()
     obj = conn.getObject(datatype, id)
     if datatype == 'Project':
@@ -677,18 +703,18 @@ def populate_xml(datatype, id, filepath, conn, hostname, barchive, metadata):
     return ome, path_id_dict
 
 
-def populate_tsv(datatype, ome, filepath, conn, path_id_dict, folder):
+def populate_tsv(datatype: str, ome: OME, filepath: str,
+                 path_id_dict: dict, folder: str):
     if datatype == "Plate" or datatype == "Screen":
         print("Bioimage Archive export of Plate/Screen currently unsupported")
         return
     with open(filepath, 'w') as fp:
-        writer = csv.writer(fp, delimiter='\t')
-        write_lines(datatype, ome, writer, path_id_dict, folder)
+        write_lines(datatype, ome, fp, path_id_dict, folder)
         fp.close()
     return
 
 
-def generate_columns(ome, ids):
+def generate_columns(ome: OME, ids: dict) -> List[str]:
     columns = ["filename"]
     if [v for v in ids.values() if v.startswith("file_annotations")]:
         columns.append("data_type")
@@ -708,7 +734,7 @@ def generate_columns(ome, ids):
     return columns
 
 
-def list_files(ome, ids, top_level):
+def list_files(ome: OME, ids: dict, top_level: str) -> List[str]:
     files = []
     for k, v in ids.items():
         if v.startswith("file_annotations") or v.endswith("mock_folder"):
@@ -720,41 +746,50 @@ def list_files(ome, ids, top_level):
                 for d in ome.datasets:
                     i = filter(lambda x: x.id == k, d.image_ref)
                     if any(i):
-                        dataset_name = d.name
+                        if d.name:
+                            dataset_name = d.name
                 image_name = v.split("/")[-1]
-                if (proj_name + "/" + dataset_name +
-                        "/" + image_name) not in files:
-                    files.append(proj_name + "/" + dataset_name +
-                                 "/" + image_name)
+                if proj_name:
+                    if (proj_name + "/" + dataset_name +
+                            "/" + image_name) not in files:
+                        files.append(proj_name + "/" + dataset_name +
+                                     "/" + image_name)
     return files
 
 
-def find_dataset(id, ome):
+def find_dataset(id: str, ome: OME) -> Union[str, None]:
     for d in ome.datasets:
-        if any(filter(lambda x: x.id == id, d.image_ref)):
+        def lfunc(x): return x.id == id
+        if any(filter(lfunc, d.image_ref)):
             return d.name
+    return None
 
 
-def generate_lines_and_move(img, ome, ids, folder, top_level,
-                            lines, columns):
+def generate_lines_and_move(img: Image, ome: OME, ids: dict, folder: str,
+                            top_level: str, lines: List[List[str]],
+                            columns: List[str]) -> dict:
     # Note that if an image is in multiple datasets (or a dataset in multiple
     # projects), only one copy of the data will exist!
     allfiles = [line[0] for line in lines]
     orig_path = ids[img.id]
     if orig_path.endswith("mock_folder"):
         subfolder = os.path.join(folder, orig_path.rsplit("/", 1)[0])
-        paths = list(Path(subfolder).rglob("*.*"))
+        allpaths = list(Path(subfolder).rglob("*.*"))
         clean_paths = []
-        for path in paths:
+        for path in allpaths:
             p = path.relative_to(subfolder)
             clean_paths.append(p)
     else:
         clean_paths = [Path(orig_path.rsplit("/", 1)[1])]
     ds_name = find_dataset(img.id, ome)
+    if not ds_name:
+        ds_name = ""
     paths = {}
     orig_parent = Path(orig_path).parent
     if top_level == 'Project':
         proj_name = ome.projects[0].name
+        if not proj_name:
+            proj_name = ""
         for p in clean_paths:
             dest = os.path.join(folder, proj_name, ds_name, p)
             orig = os.path.join(folder, orig_parent, p)
@@ -783,10 +818,10 @@ def generate_lines_and_move(img, ome, ids, folder, top_level,
     return paths
 
 
-def get_annotation_vals(cols, img, ome):
+def get_annotation_vals(cols: List[str], img: Image, ome: OME) -> List[str]:
     anns = []
-    for ann in img.annotation_ref:
-        a = next(filter(lambda x: x.id == ann.id,
+    for annref in img.annotation_ref:
+        a = next(filter(lambda x: x.id == annref.id,
                  ome.structured_annotations))
         anns.append(a)
     vals = []
@@ -817,10 +852,11 @@ def get_annotation_vals(cols, img, ome):
     return vals
 
 
-def get_file_ann_imgs(ann, ome):
+def get_file_ann_imgs(ann: FileAnnotation, ome: OME) -> str:
     ids = ""
     for i in ome.images:
-        if any(filter(lambda x: x.id == ann.id, i.annotation_ref)):
+        def lfunc(x): return x.id == ann.id
+        if any(filter(lfunc, i.annotation_ref)):
             if ids:
                 ids = ids + ", " + i.id.split(":")[-1]
             else:
@@ -830,7 +866,8 @@ def get_file_ann_imgs(ann, ome):
     return ids
 
 
-def generate_lines_ann(ann, ome, ids, cols):
+def generate_lines_ann(ann: FileAnnotation, ome: OME, ids: dict,
+                       cols: List[str]) -> List[str]:
     dest = ids[ann.id]
     newline = [dest, "File Annotation"]
     for col in cols:
@@ -839,13 +876,13 @@ def generate_lines_ann(ann, ome, ids, cols):
         if col != "original_omero_ids":
             newline.append(" ")
         else:
-            ids = get_file_ann_imgs(ann, ome)
-            newline.append(ids)
+            ims = get_file_ann_imgs(ann, ome)
+            newline.append(ims)
 
     return newline
 
 
-def delete_empty_folders(root):
+def delete_empty_folders(root: str) -> set:
 
     deleted = set()
 
@@ -861,11 +898,13 @@ def delete_empty_folders(root):
     return deleted
 
 
-def write_lines(top_level, ome, writer, ids, folder):
+def write_lines(top_level: str, ome: OME, fp: TextIO, ids: dict,
+                folder: str):
     columns = generate_columns(ome, ids)
     columns.append("original_omero_ids")
+    writer = csv.writer(fp, delimiter='\t')
     writer.writerow(columns)
-    lines = []
+    lines: List[List[str]] = []
     paths = []
     for i in ome.images:
         tmppaths = generate_lines_and_move(i, ome, ids, folder,

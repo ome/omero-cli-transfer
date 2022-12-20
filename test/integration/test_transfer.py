@@ -65,6 +65,40 @@ class TestTransfer(CLITest):
             for i in images:
                 self.link(obj1=dataset, obj2=i)
 
+    def delete_all(self):
+        pjs = self.gw.getObjects("Project")
+        for p in pjs:
+            pj_id = p.id
+            print(f"deleting project {pj_id}")
+            self.gw.deleteObjects("Project", [pj_id], deleteAnns=True,
+                                  deleteChildren=True, wait=True)
+        ds = self.gw.getObjects("Dataset")
+        for d in ds:
+            ds_id = d.id
+            print(f"deleting dataset {ds_id}")
+            self.gw.deleteObjects("Dataset", [ds_id], deleteAnns=True,
+                                  deleteChildren=True, wait=True)
+        scs = self.gw.getObjects("Screen")
+        for sc in scs:
+            sc_id = sc.id
+            print(f"deleting screen {sc_id}")
+            self.gw.deleteObjects("Screen", [sc_id], deleteAnns=True,
+                                  deleteChildren=True, wait=True)
+        pls = self.gw.getObjects("Plate")
+        for pl in pls:
+            pl_id = pl.id
+            print(f"deleting plate {pl_id}")
+            self.gw.deleteObjects("Plate", [pl_id], deleteAnns=True,
+                                  deleteChildren=True, wait=True)
+        ims = self.gw.getObjects("Image")
+        im_ids = []
+        for im in ims:
+            im_ids.append(im.id)
+            print(f"deleting image {im.id}")
+        if im_ids:
+            self.gw.deleteObjects("Image", im_ids, deleteAnns=True,
+                                  deleteChildren=True, wait=True)
+
     def create_plate(self, sizec=4, sizez=1, sizet=1, target_name=None):
         plates = self.import_plates(plates=2, client=self.client)
         self.plateid = "Plate:%s" % plates[0].id.val
@@ -108,6 +142,7 @@ class TestTransfer(CLITest):
         else:
             with pytest.raises(ValueError):
                 self.cli.invoke(args, strict=True)
+        self.delete_all()
 
     @pytest.mark.parametrize('folder_name', TEST_FOLDERS)
     def test_unpack_folder(self, folder_name):
@@ -115,7 +150,7 @@ class TestTransfer(CLITest):
         self.cli.invoke(self.args, strict=True)
         if folder_name == "test/data/valid_single_image/":
             im_ids = ezomero.get_image_ids(self.gw)
-            assert len(im_ids) == 4
+            assert len(im_ids) == 1
             img, _ = ezomero.get_image(self.gw, im_ids[-1])
             assert img.getName() == 'combined_result.tiff'
             assert len(ezomero.get_roi_ids(self.gw, im_ids[-1])) == 3
@@ -126,28 +161,32 @@ class TestTransfer(CLITest):
             assert len(provenance) == 8
             assert len(ezomero.get_tag_ids(
                             self.gw, "Image", im_ids[-1])) == 1
+        self.delete_all()
+
         temp_args = self.args
         self.args += ["--metadata", "none", "db_id"]
         self.cli.invoke(self.args, strict=True)
         if folder_name == "test/data/valid_single_image/":
             im_ids = ezomero.get_image_ids(self.gw)
-            assert len(im_ids) == 5
+            assert len(im_ids) == 1
             map_ann_ids = ezomero.get_map_annotation_ids(
                             self.gw, "Image", im_ids[-1])
             assert len(map_ann_ids) == 3
             provenance = ezomero.get_map_annotation(self.gw, map_ann_ids[-1])
             assert len(provenance) == 1
+        self.delete_all()
 
         self.args = temp_args + ["--metadata", "orig_user", "db_id"]
         self.cli.invoke(self.args, strict=True)
         if folder_name == "test/data/valid_single_image/":
             im_ids = ezomero.get_image_ids(self.gw)
-            assert len(im_ids) == 6
+            assert len(im_ids) == 1
             map_ann_ids = ezomero.get_map_annotation_ids(
                             self.gw, "Image", im_ids[-1])
             assert len(map_ann_ids) == 3
             provenance = ezomero.get_map_annotation(self.gw, map_ann_ids[-1])
             assert len(provenance) == 2
+        self.delete_all()
 
     @pytest.mark.parametrize('package_name', TEST_FILES)
     def test_unpack(self, package_name):
@@ -156,7 +195,7 @@ class TestTransfer(CLITest):
 
         if package_name == "test/data/valid_single_image.tar":
             im_ids = ezomero.get_image_ids(self.gw)
-            assert len(im_ids) == 7
+            assert len(im_ids) == 1
             img, _ = ezomero.get_image(self.gw, im_ids[-1])
             assert img.getName() == 'combined_result.tiff'
             assert len(ezomero.get_roi_ids(self.gw, im_ids[-1])) == 3
@@ -164,10 +203,11 @@ class TestTransfer(CLITest):
                             self.gw, "Image", im_ids[-1])) == 3
             assert len(ezomero.get_tag_ids(
                             self.gw, "Image", im_ids[-1])) == 1
+            self.delete_all()
 
         if package_name == "test/data/valid_single_image.zip":
             im_ids = ezomero.get_image_ids(self.gw)
-            assert len(im_ids) == 8
+            assert len(im_ids) == 1
             img, _ = ezomero.get_image(self.gw, im_ids[-1])
             assert img.getName() == 'combined_result.tiff'
             assert len(ezomero.get_roi_ids(self.gw, im_ids[-1])) == 3
@@ -175,6 +215,7 @@ class TestTransfer(CLITest):
                             self.gw, "Image", im_ids[-1])) == 3
             assert len(ezomero.get_tag_ids(
                             self.gw, "Image", im_ids[-1])) == 1
+            self.delete_all()
 
         if package_name == "test/data/valid_single_dataset.zip":
             ds = self.gw.getObjects("Dataset", opts={'orphaned': True})
@@ -189,6 +230,7 @@ class TestTransfer(CLITest):
                             self.gw, "Dataset", ds_id)) == 1
             assert len(ezomero.get_tag_ids(
                             self.gw, "Dataset", ds_id)) == 2
+            self.delete_all()
 
         if package_name == "test/data/valid_single_project.zip":
             ezomero.print_projects(self.gw)
@@ -197,7 +239,7 @@ class TestTransfer(CLITest):
             for p in pjs:
                 pj_id = p.getId()
                 count += 1
-            assert count == 4
+            assert count == 1
             count = 0
             proj = self.gw.getObject("Project", pj_id)
             for d in proj.listChildren():
@@ -210,24 +252,20 @@ class TestTransfer(CLITest):
                             self.gw, "Project", pj_id)) == 1
             assert len(ezomero.get_tag_ids(
                             self.gw, "Project", pj_id)) == 0
+            self.delete_all()
 
         if package_name == "test/data/incomplete_project.zip":
             ezomero.print_projects(self.gw)
             pjs = ezomero.get_project_ids(self.gw)
-            print(pjs)
-            pjs.sort()
-            print(pjs)
-            print(f"project ids: {pjs}")
-            assert len(pjs) == 5
-            print(ezomero.get_dataset_ids(self.gw, pjs[-1]))
+            assert len(pjs) == 1
             ds_ids = ezomero.get_dataset_ids(self.gw, pjs[-1])
             ds_ids.sort()
-            print(f"dataset ids: {ds_ids}")
             assert len(ds_ids) == 2
             im_ids = ezomero.get_image_ids(self.gw, dataset=ds_ids[0])
             assert len(im_ids) == 2
             im_ids = ezomero.get_image_ids(self.gw, dataset=ds_ids[1])
             assert len(im_ids) == 0
+            self.delete_all()
 
         if package_name == "test/data/simple_plate.zip":
             pls = self.gw.getObjects("Plate", opts={'orphaned': True})
@@ -246,6 +284,7 @@ class TestTransfer(CLITest):
             well = self.gw.getObject("Well", well_id)
             index = well.countWellSample()
             assert index == 1
+            self.delete_all()
 
         if package_name == "test/data/simple_screen.zip":
             scs = self.gw.getObjects("Screen")
@@ -253,7 +292,7 @@ class TestTransfer(CLITest):
             for s in scs:
                 sc_id = s.getId()
                 count += 1
-            assert count == 3
+            assert count == 1
             count = 0
             scr = self.gw.getObject("Screen", sc_id)
             for p in scr.listChildren():
@@ -262,12 +301,14 @@ class TestTransfer(CLITest):
             assert count == 2
             assert len(ezomero.get_tag_ids(
                             self.gw, "Screen", sc_id)) == 1
+            self.delete_all()
 
     def test_unpack_skip(self):
         self.args += ["unpack", "test/data/valid_single_image.tar"]
         self.args += ["--skip", "all"]
         self.cli.invoke(self.args, strict=True)
         im_ids = ezomero.get_image_ids(self.gw)
-        assert len(im_ids) == 9
+        assert len(im_ids) == 1
         img, _ = ezomero.get_image(self.gw, im_ids[-1])
         assert img.getName() == 'combined_result.tiff'
+        self.delete_all()

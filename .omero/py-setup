@@ -14,7 +14,7 @@ source /tmp/miniconda/bin/activate
 conda init
 conda create -n omero python=3.7
 conda activate omero
-conda install -c ome zeroc-ice36-python
+conda install -c conda-forge zeroc-ice=3.6.5
 
 cd $TARGET
 cd $(setup_dir)
