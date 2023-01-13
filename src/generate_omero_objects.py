@@ -137,7 +137,7 @@ def create_original_file(ann: FileAnnotation, ans: List[Annotation],
 
 
 def create_plate_map(ome: OME, conn: BlitzGateway) -> Tuple[dict, OME]:
-
+    print(ome.to_xml())
     newome = copy.deepcopy(ome)
     plate_map = {}
     map_ref_ids = []
