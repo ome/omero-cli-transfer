@@ -312,3 +312,40 @@ class TestTransfer(CLITest):
         img, _ = ezomero.get_image(self.gw, im_ids[-1])
         assert img.getName() == 'combined_result.tiff'
         self.delete_all()
+
+    @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
+    def test_pack_unpack(self, target_name, tmpdir):
+        if target_name == "datasetid" or target_name == "projectid" or\
+           target_name == "idonly" or target_name == "imageid":
+            self.create_image(target_name=target_name)
+        elif target_name == "plateid" or target_name == "screenid":
+            self.create_plate(target_name=target_name)
+        target = getattr(self, target_name)
+        args = self.args + ["pack", target, str(tmpdir / 'test.tar')]
+        self.cli.invoke(args, strict=True)
+        # run unpack
+        # asserts
+        self.delete_all()
+
+        if target_name == "datasetid" or target_name == "projectid" or\
+           target_name == "idonly" or target_name == "imageid":
+            self.create_image(target_name=target_name)
+        elif target_name == "plateid" or target_name == "screenid":
+            self.create_plate(target_name=target_name)
+        args = self.args + ["pack", target, "--zip", str(tmpdir / 'test.zip')]
+        self.cli.invoke(args, strict=True)
+        # run unpack
+        # asserts
+        self.delete_all()
+
+        args = self.args + ["pack", target, "--barchive",
+                            str(tmpdir / 'testba.tar')]
+        if target_name == "datasetid" or target_name == "projectid" \
+           or target_name == "idonly":
+            self.cli.invoke(args, strict=True)
+            # run unpack
+            # asserts
+        else:
+            with pytest.raises(ValueError):
+                self.cli.invoke(args, strict=True)
+        self.delete_all()
