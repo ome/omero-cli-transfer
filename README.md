@@ -17,7 +17,7 @@ Of course, this CAN be an issue, especially given `omero-py` _officially_ only s
 it is possible to run `omero-py` in Python 3.7 or newer as well. Our recommended way to do so it using `conda`.
 With conda installed, you can do
 ```
-conda create -n myenv -c ome python=3.7 zeroc-ice36-python
+conda create -n myenv -c conda-force python=3.7 zeroc-ice==3.6.5
 conda activate myenv
 pip install omero-cli-transfer
 ```
@@ -32,9 +32,11 @@ dependency ever imagined". Try at your own risk.
 
 Creates a transfer packet for moving objects between OMERO server instances.
 
-The syntax for specifying objects is: `<object>:<id>` where `<object>` can be `Image`, `Project` or `Dataset`. `Project` is assumed if `<object>:` is omitted. A file path needs to be provided; a tar file with the contents of the packet will be created at the specified path.
+The syntax for specifying objects is: `<object>:<id>` where `<object>` can be `Image`, `Project`, `Dataset`, `Plate` or `Screen`. `Project` is assumed if `<object>:` is omitted. A file path needs to be provided; a tar file with the contents of the packet will be created at the specified path.
 
-Currently, only MapAnnotations, Tags, FileAnnotations and CommentAnnotations are packaged into the transfer pack, and only Point, Line, Ellipse, Rectangle and Polygon-type ROIs are packaged.
+Currently, only MapAnnotations, Tags, FileAnnotations and CommentAnnotations are packaged into the transfer pack. All kinds of ROI should work.
+
+Note that, if you are packing a `Plate` or `Screen`, default OMERO settings prevent you from downloading Plates and you will generate an empty pack file if you do so. If you want to generate a pack file from these entities, you will need to set `omero.policy.binary_access` appropriately.
 
 `--zip` packs the object into a compressed zip file rather than a tarball.
 
@@ -50,7 +52,7 @@ omero transfer pack 999 tarfile.tar  # equivalent to Project:999
 
 ## `omero transfer unpack`
 
-Unpacks an existing transfer packet, imports images as orphans and uses the XML contained in the transfer packet to re-create links, annotations and ROIs.
+Unpacks an existing transfer packet, imports images/plates as orphans and uses the XML contained in the transfer packet to re-create links, annotations and ROIs.
 
 `--ln_s` forces imports to use the transfer=ln_s option, in-place importing files. Same restrictions of regular in-place imports apply.
 
