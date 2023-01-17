@@ -99,10 +99,9 @@ class TestTransfer(CLITest):
             self.gw.deleteObjects("Image", im_ids, deleteAnns=True,
                                   deleteChildren=True, wait=True)
 
-    def create_plate(self, sizec=4, sizez=1, sizet=1, target_name=None):
-        plates = self.import_plates(plates=2, client=self.client)
+    def create_plate(self, plates=2, target_name=None):
+        plates = self.import_plates(plates=plates, client=self.client)
         self.plateid = "Plate:%s" % plates[0].id.val
-        self.source = "Plate:%s" % plates[1].id.val
         screen = ezomero.post_screen(self.gw, "test_screen")
         self.screen = self.gw.getObject("Screen", screen)
         self.screenid = "Screen:%s" % self.screen.id
@@ -319,7 +318,7 @@ class TestTransfer(CLITest):
            target_name == "idonly" or target_name == "imageid":
             self.create_image(target_name=target_name)
         elif target_name == "plateid" or target_name == "screenid":
-            self.create_plate(target_name=target_name)
+            self.create_plate(plates=1, target_name=target_name)
         target = getattr(self, target_name)
         args = self.args + ["pack", target, str(tmpdir / 'test.tar')]
         self.cli.invoke(args, strict=True)
@@ -333,7 +332,7 @@ class TestTransfer(CLITest):
            target_name == "idonly" or target_name == "imageid":
             self.create_image(target_name=target_name)
         elif target_name == "plateid" or target_name == "screenid":
-            self.create_plate(target_name=target_name)
+            self.create_plate(plates=1, target_name=target_name)
         target = getattr(self, target_name)
         args = self.args + ["pack", target, "--zip", str(tmpdir / 'test.zip')]
         self.cli.invoke(args, strict=True)
@@ -383,7 +382,7 @@ class TestTransfer(CLITest):
             for p in scr.listChildren():
                 pl_id = p.getId()
                 count += 1
-            assert count == 2
+            assert count == 1
             pl = self.gw.getObject("Plate", pl_id)
             wells = pl.listChildren()
             count = 0
