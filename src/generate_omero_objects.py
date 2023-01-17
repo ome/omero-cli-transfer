@@ -296,25 +296,24 @@ def create_rois(rois: List[ROI], imgs: List[Image], img_map: dict,
     for img in imgs:
         for roiref in img.roi_ref:
             roi = next(filter(lambda x: x.id == roiref.id, rois))
-            print(roi)
             shapes = create_shapes(roi)
-            print(roi.union[0].fill_color)
             if roi.union[0].fill_color:
                 fc = roi.union[0].fill_color.as_rgb_tuple()
                 if len(fc) == 3:
                     fill_color = fc + (0,)
                 else:
                     fill_color = fc
+            else:
+                fill_color = (0, 0, 0, 0)
             if roi.union[0].stroke_color:
                 sc = roi.union[0].stroke_color.as_rgb_tuple()
                 if len(sc) == 3:
                     stroke_color = sc + (0,)
                 else:
                     stroke_color = sc
+            else:
+                stroke_color = (0, 0, 0, 0)
             img_id_dest = img_map[img.id]
-            # using colors for the first shape
-            fill_color = _int_to_rgba(int(str(roi.union[0].fill_color)))
-            stroke_color = _int_to_rgba(int(str(roi.union[0].stroke_color)))
             ezomero.post_roi(conn, img_id_dest, shapes, name=roi.name,
                              description=roi.description,
                              fill_color=fill_color, stroke_color=stroke_color)
