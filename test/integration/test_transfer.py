@@ -99,10 +99,9 @@ class TestTransfer(CLITest):
             self.gw.deleteObjects("Image", im_ids, deleteAnns=True,
                                   deleteChildren=True, wait=True)
 
-    def create_plate(self, sizec=4, sizez=1, sizet=1, target_name=None):
-        plates = self.import_plates(plates=2, client=self.client)
+    def create_plate(self, plates=2, target_name=None):
+        plates = self.import_plates(plates=plates, client=self.client)
         self.plateid = "Plate:%s" % plates[0].id.val
-        self.source = "Plate:%s" % plates[1].id.val
         screen = ezomero.post_screen(self.gw, "test_screen")
         self.screen = self.gw.getObject("Screen", screen)
         self.screenid = "Screen:%s" % self.screen.id
@@ -312,3 +311,102 @@ class TestTransfer(CLITest):
         img, _ = ezomero.get_image(self.gw, im_ids[-1])
         assert img.getName() == 'combined_result.tiff'
         self.delete_all()
+
+    @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
+    def test_pack_unpack(self, target_name, tmpdir):
+        if target_name == "datasetid" or target_name == "projectid" or\
+           target_name == "idonly" or target_name == "imageid":
+            self.create_image(target_name=target_name)
+        elif target_name == "plateid" or target_name == "screenid":
+            self.create_plate(plates=1, target_name=target_name)
+        target = getattr(self, target_name)
+        args = self.args + ["pack", target, str(tmpdir / 'test.tar')]
+        self.cli.invoke(args, strict=True)
+        self.delete_all()
+        args = self.args + ["unpack", str(tmpdir / 'test.tar')]
+        self.cli.invoke(args, strict=True)
+        self.run_asserts(target_name)
+        self.delete_all()
+
+        if target_name == "datasetid" or target_name == "projectid" or\
+           target_name == "idonly" or target_name == "imageid":
+            self.create_image(target_name=target_name)
+        elif target_name == "plateid" or target_name == "screenid":
+            self.create_plate(plates=1, target_name=target_name)
+        target = getattr(self, target_name)
+        args = self.args + ["pack", target, "--zip", str(tmpdir / 'test.zip')]
+        self.cli.invoke(args, strict=True)
+        self.delete_all()
+        args = self.args + ["unpack", str(tmpdir / 'test.zip')]
+        self.cli.invoke(args, strict=True)
+        self.run_asserts(target_name)
+        self.delete_all()
+
+    def run_asserts(self, target_name):
+        if target_name == "imageid":
+            img_ids = ezomero.get_image_ids(self.gw)
+            assert len(img_ids) == 2
+        if target_name == "projectid" or target_name == "idonly":
+            pjs = self.gw.getObjects("Project")
+            count = 0
+            for p in pjs:
+                pj_id = p.getId()
+                count += 1
+            assert count == 1
+            count = 0
+            proj = self.gw.getObject("Project", pj_id)
+            for d in proj.listChildren():
+                ds_id = d.getId()
+                count += 1
+            assert count == 1
+            im_ids = ezomero.get_image_ids(self.gw, dataset=ds_id)
+            assert len(im_ids) == 3
+        if target_name == "datasetid":
+            ds = self.gw.getObjects("Dataset", opts={'orphaned': True})
+            count = 0
+            for d in ds:
+                ds_id = d.getId()
+                count += 1
+            assert count == 1
+            im_ids = ezomero.get_image_ids(self.gw, dataset=ds_id)
+            assert len(im_ids) == 3
+        if target_name == "screenid":
+            scs = self.gw.getObjects("Screen")
+            count = 0
+            for s in scs:
+                sc_id = s.getId()
+                count += 1
+            assert count == 1
+            count = 0
+            scr = self.gw.getObject("Screen", sc_id)
+            for p in scr.listChildren():
+                pl_id = p.getId()
+                count += 1
+            assert count == 1
+            pl = self.gw.getObject("Plate", pl_id)
+            wells = pl.listChildren()
+            count = 0
+            for well in wells:
+                well_id = well.getId()
+                count += 1
+            assert count == 1
+            well = self.gw.getObject("Well", well_id)
+            index = well.countWellSample()
+            assert index == 1
+        if target_name == "plate_id":
+            pls = self.gw.getObjects("Plate", opts={'orphaned': True})
+            count = 0
+            for p in pls:
+                pl_id = p.getId()
+                count += 1
+            assert count == 1
+            pl = self.gw.getObject("Plate", pl_id)
+            wells = pl.listChildren()
+            count = 0
+            for well in wells:
+                well_id = well.getId()
+                count += 1
+            assert count == 1
+            well = self.gw.getObject("Well", well_id)
+            index = well.countWellSample()
+            assert index == 1

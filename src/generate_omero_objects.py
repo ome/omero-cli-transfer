@@ -1,19 +1,19 @@
 import ezomero
 from typing import List, Tuple
-from omero.model import DatasetI, IObject
+from omero.model import DatasetI, IObject, PlateI, WellI, WellSampleI, ImageI
 from omero.gateway import DatasetWrapper
 from ome_types.model import TagAnnotation, MapAnnotation, FileAnnotation, ROI
 from ome_types.model import CommentAnnotation, LongAnnotation, Annotation
 from ome_types.model import Line, Point, Rectangle, Ellipse, Polygon, Shape
 from ome_types.model import Polyline, Label, Project, Screen, Dataset, OME
-from ome_types.model import Image
+from ome_types.model import Image, Plate
 from ome_types.model.simple_types import Marker
 from omero.gateway import TagAnnotationWrapper, MapAnnotationWrapper
 from omero.gateway import CommentAnnotationWrapper, LongAnnotationWrapper
 from omero.gateway import FileAnnotationWrapper, OriginalFileWrapper
 from omero.sys import Parameters
 from omero.gateway import BlitzGateway
-from omero.rtypes import rstring
+from omero.rtypes import rstring, RStringI, rint
 from ezomero import rois
 from pathlib import Path
 import os
@@ -136,8 +136,8 @@ def create_original_file(ann: FileAnnotation, ans: List[Annotation],
     return ofile
 
 
-def create_plate_map(ome: OME, conn: BlitzGateway) -> Tuple[dict, OME]:
-
+def create_plate_map(ome: OME, img_map: dict, conn: BlitzGateway
+                     ) -> Tuple[dict, OME]:
     newome = copy.deepcopy(ome)
     plate_map = {}
     map_ref_ids = []
@@ -167,13 +167,63 @@ def create_plate_map(ome: OME, conn: BlitzGateway) -> Tuple[dict, OME]:
             params,
             conn.SERVICE_OPTS
             )
-        plate_id = results[0][0].val
+
+        if results:
+            # plate was imported as plate
+            plate_id = results[0][0].val
+        else:
+            # plate was imported as images
+            plate_id = create_plate_from_images(plate, img_map, conn)
         plate_map[plate.id] = plate_id
     for p in newome.plates:
         for ref in p.annotation_ref:
             if ref.id in map_ref_ids:
                 p.annotation_ref.remove(ref)
     return plate_map, newome
+
+
+def create_plate_from_images(plate: Plate, img_map: dict, conn: BlitzGateway
+                             ) -> int:
+    plateobj = PlateI()
+    plateobj.name = RStringI(plate.name)
+    plateobj = conn.getUpdateService().saveAndReturnObject(plateobj)
+    plate_id = plateobj.getId().getValue()
+    for well in plate.wells:
+        img_ids = []
+        for ws in well.well_samples:
+            if ws.image_ref:
+                for imgref in ws.image_ref:
+                    img_ids.append(img_map[imgref[-1]])
+        add_image_to_plate(img_ids, plate_id, well.column,
+                           well.row, conn)
+    return plate_id
+
+
+def add_image_to_plate(image_ids: List[int], plate_id: int, column: int,
+                       row: int, conn: BlitzGateway) -> bool:
+    """
+    Add the Images to a Plate, creating a new well at the specified column and
+    row
+    NB - This will fail if there is already a well at that point
+    """
+    update_service = conn.getUpdateService()
+
+    well = WellI()
+    well.plate = PlateI(plate_id, False)
+    well.column = rint(column)
+    well.row = rint(row)
+
+    try:
+        for image_id in image_ids:
+            image = conn.getObject("Image", image_id)
+            ws = WellSampleI()
+            ws.image = ImageI(image.id, False)
+            ws.well = well
+            well.addWellSample(ws)
+        update_service.saveObject(well)
+    except Exception:
+        return False
+    return True
 
 
 def create_shapes(roi: ROI) -> List[Shape]:
@@ -229,16 +279,16 @@ def create_shapes(roi: ROI) -> List[Shape]:
     return shapes
 
 
-# def _int_to_rgba(omero_val: int) -> Tuple[int, int, int, int]:
-#    """ Helper function returning the color as an Integer in RGBA encoding """
-#     if omero_val < 0:
-#         omero_val = omero_val + (2**32)
-#     r = omero_val >> 24
-#     g = omero_val - (r << 24) >> 16
-#     b = omero_val - (r << 24) - (g << 16) >> 8
-#     a = omero_val - (r << 24) - (g << 16) - (b << 8)
-#     # a = a / 256.0
-#     return (r, g, b, a)
+def _int_to_rgba(omero_val: int) -> Tuple[int, int, int, int]:
+    """ Helper function returning the color as an Integer in RGBA encoding """
+    if omero_val < 0:
+        omero_val = omero_val + (2**32)
+    r = omero_val >> 24
+    g = omero_val - (r << 24) >> 16
+    b = omero_val - (r << 24) - (g << 16) >> 8
+    a = omero_val - (r << 24) - (g << 16) - (b << 8)
+    # a = a / 256.0
+    return (r, g, b, a)
 
 
 def create_rois(rois: List[ROI], imgs: List[Image], img_map: dict,
@@ -246,25 +296,24 @@ def create_rois(rois: List[ROI], imgs: List[Image], img_map: dict,
     for img in imgs:
         for roiref in img.roi_ref:
             roi = next(filter(lambda x: x.id == roiref.id, rois))
-            print(roi)
             shapes = create_shapes(roi)
-            print(roi.union[0].fill_color)
             if roi.union[0].fill_color:
                 fc = roi.union[0].fill_color.as_rgb_tuple()
                 if len(fc) == 3:
                     fill_color = fc + (0,)
                 else:
                     fill_color = fc
+            else:
+                fill_color = (0, 0, 0, 0)
             if roi.union[0].stroke_color:
                 sc = roi.union[0].stroke_color.as_rgb_tuple()
                 if len(sc) == 3:
                     stroke_color = sc + (0,)
                 else:
                     stroke_color = sc
+            else:
+                stroke_color = (0, 0, 0, 0)
             img_id_dest = img_map[img.id]
-            # using colors for the first shape
-            # fill_color = _int_to_rgba(int(str(roi.union[0].fill_color)))
-            # stroke_color = _int_to_rgba(int(str(roi.union[0].stroke_color)))
             ezomero.post_roi(conn, img_id_dest, shapes, name=roi.name,
                              description=roi.description,
                              fill_color=fill_color, stroke_color=stroke_color)
@@ -398,7 +447,7 @@ def populate_omero(ome: OME, img_map: dict, conn: BlitzGateway, hash: str,
     proj_map = create_projects(ome.projects, conn)
     ds_map = create_datasets(ome.datasets, conn)
     screen_map = create_screens(ome.screens, conn)
-    plate_map, ome = create_plate_map(ome, conn)
+    plate_map, ome = create_plate_map(ome, img_map, conn)
     ann_map = create_annotations(ome.structured_annotations, conn,
                                  hash, folder, metadata)
     create_rois(ome.rois, ome.images, img_map, conn)

@@ -17,6 +17,7 @@ services:
       - CONFIG_omero_db_pass=${POSTGRES_PASSWORD}
       - CONFIG_omero_upgrades_url=
       - CONFIG_Ice_IPv6=0
+      - CONFIG_omero_policy_binary__access=+read,+write,+image,+plate
     ports:
       - "${OMERO_SERVER_TCP}4063"
       - "${OMERO_SERVER_SSL}4064"

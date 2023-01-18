@@ -337,7 +337,6 @@ class TransferControl(GraphControl):
             ln_s = True
         else:
             ln_s = False
-        print(src_img_map, filelist)
         dest_img_map = self._import_files(folder, filelist,
                                           ln_s, args.skip, self.gateway)
         print("Matching source and destination images...")
