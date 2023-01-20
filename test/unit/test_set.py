@@ -48,14 +48,14 @@ class TestPackSide():
         metadata = None
         self.transfer._process_metadata(metadata)
         assert set(self.transfer.metadata) == \
-            set(["img_id", "timestamp", "software", "version", "hostname",
-                 "md5", "orig_user", "orig_group"])
+            set(["img_id", "plate_id", "timestamp", "software", "version",
+                 "hostname", "md5", "orig_user", "orig_group"])
         self.transfer.metadata = []
         metadata = ['all', 'db_id']
         self.transfer._process_metadata(metadata)
         assert set(self.transfer.metadata) == \
-            set(["img_id", "timestamp", "software", "version", "hostname",
-                 "md5", "orig_user", "orig_group", "db_id"])
+            set(["img_id", "plate_id", "timestamp", "software", "version",
+                 "hostname", "md5", "orig_user", "orig_group", "db_id"])
         self.transfer.metadata = []
         metadata = ['none', 'db_id']
         self.transfer._process_metadata(metadata)
