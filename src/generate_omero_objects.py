@@ -319,7 +319,6 @@ def create_rois(rois: List[ROI], imgs: List[Image], img_map: dict,
             else:
                 stroke_width = 1
             img_id_dest = img_map[img.id]
-            print(fill_color, stroke_color, stroke_width)
             ezomero.post_roi(conn, img_id_dest, shapes, name=roi.name,
                              description=roi.description,
                              fill_color=fill_color, stroke_color=stroke_color,
