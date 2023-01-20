@@ -302,21 +302,28 @@ def create_rois(rois: List[ROI], imgs: List[Image], img_map: dict,
                 if len(fc) == 3:
                     fill_color = fc + (0,)
                 else:
-                    fill_color = fc
+                    alpha = fc[3] * 255
+                    fill_color = fc[0:3] + (int(alpha),)
             else:
                 fill_color = (0, 0, 0, 0)
             if roi.union[0].stroke_color:
                 sc = roi.union[0].stroke_color.as_rgb_tuple()
                 if len(sc) == 3:
-                    stroke_color = sc + (0,)
+                    stroke_color = sc + (255,)
                 else:
                     stroke_color = sc
             else:
                 stroke_color = (0, 0, 0, 0)
+            if roi.union[0].stroke_width:
+                stroke_width = int(roi.union[0].stroke_width)
+            else:
+                stroke_width = 1
             img_id_dest = img_map[img.id]
+            print(fill_color, stroke_color, stroke_width)
             ezomero.post_roi(conn, img_id_dest, shapes, name=roi.name,
                              description=roi.description,
-                             fill_color=fill_color, stroke_color=stroke_color)
+                             fill_color=fill_color, stroke_color=stroke_color,
+                             stroke_width=stroke_width)
     return
 
 

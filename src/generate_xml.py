@@ -134,6 +134,8 @@ def create_point(shape: PointI) -> Point:
         args['locked'] = shape.getLocked().val
     if shape.getStrokeColor() is not None:
         args['stroke_color'] = shape.getStrokeColor().val
+    if shape.getStrokeWidth() is not None:
+        args['stroke_width'] = shape.getStrokeWidth().getValue()
     pt = Point(**args)
     return pt
 
@@ -160,6 +162,8 @@ def create_line(shape: LineI) -> Line:
         args['locked'] = shape.getLocked().val
     if shape.getStrokeColor() is not None:
         args['stroke_color'] = shape.getStrokeColor().val
+    if shape.getStrokeWidth() is not None:
+        args['stroke_width'] = shape.getStrokeWidth().getValue()
     if shape.getMarkerStart() is not None:
         args['marker_start'] = shape.getMarkerStart().val
     if shape.getMarkerEnd() is not None:
@@ -190,6 +194,8 @@ def create_rectangle(shape: RectangleI) -> Rectangle:
         args['locked'] = shape.getLocked().val
     if shape.getStrokeColor() is not None:
         args['stroke_color'] = shape.getStrokeColor().val
+    if shape.getStrokeWidth() is not None:
+        args['stroke_width'] = shape.getStrokeWidth().getValue()
     rec = Rectangle(**args)
     return rec
 
@@ -216,6 +222,8 @@ def create_ellipse(shape: EllipseI) -> Ellipse:
         args['locked'] = shape.getLocked().val
     if shape.getStrokeColor() is not None:
         args['stroke_color'] = shape.getStrokeColor().val
+    if shape.getStrokeWidth() is not None:
+        args['stroke_width'] = shape.getStrokeWidth().getValue()
     ell = Ellipse(**args)
     return ell
 
@@ -240,6 +248,8 @@ def create_polygon(shape: PolygonI) -> Polygon:
         args['locked'] = shape.getLocked().val
     if shape.getStrokeColor() is not None:
         args['stroke_color'] = shape.getStrokeColor().val
+    if shape.getStrokeWidth() is not None:
+        args['stroke_width'] = shape.getStrokeWidth().getValue()
     pol = Polygon(**args)
     return pol
 
@@ -264,6 +274,8 @@ def create_polyline(shape: PolylineI) -> Polyline:
         args['locked'] = shape.getLocked().val
     if shape.getStrokeColor() is not None:
         args['stroke_color'] = shape.getStrokeColor().val
+    if shape.getStrokeWidth() is not None:
+        args['stroke_width'] = shape.getStrokeWidth().getValue()
     pol = Polyline(**args)
     return pol
 
@@ -288,6 +300,8 @@ def create_label(shape: LabelI) -> Label:
         args['locked'] = shape.getLocked().val
     if shape.getStrokeColor() is not None:
         args['stroke_color'] = shape.getStrokeColor().val
+    if shape.getStrokeWidth() is not None:
+        args['stroke_width'] = shape.getStrokeWidth().getValue()
     pt = Label(**args)
     return pt
 
