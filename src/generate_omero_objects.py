@@ -77,6 +77,8 @@ def create_annotations(ans: List[Annotation], conn: BlitzGateway, hash: str,
                         key_value_data.append(['zip_file_md5', hash])
                     if v.k == "origin_image_id" and "img_id" in metadata:
                         key_value_data.append([v.k, v.value])
+                    if v.k == "origin_plate_id" and "plate_id" in metadata:
+                        key_value_data.append([v.k, v.value])
                     if v.k == "packing_timestamp" and "timestamp" in metadata:
                         key_value_data.append([v.k, v.value])
                     if v.k == "software" and "software" in metadata:
@@ -167,10 +169,24 @@ def create_plate_map(ome: OME, img_map: dict, conn: BlitzGateway
             params,
             conn.SERVICE_OPTS
             )
-
-        if results:
+        all_plate_ids = list(set(sorted([r[0].val for r in results])))
+        plate_ids = []
+        for pl_id in all_plate_ids:
+            anns = ezomero.get_map_annotation_ids(conn, "Plate", pl_id)
+            if not anns:
+                plate_ids.append(pl_id)
+            else:
+                is_annotated = False
+                for ann in anns:
+                    ann_content = conn.getObject("MapAnnotation", ann)
+                    if ann_content.getNs() == \
+                            'openmicroscopy.org/cli/transfer':
+                        is_annotated = True
+                if not is_annotated:
+                    plate_ids.append(pl_id)
+        if plate_ids:
             # plate was imported as plate
-            plate_id = results[0][0].val
+            plate_id = plate_ids[0]
         else:
             # plate was imported as images
             plate_id = create_plate_from_images(plate, img_map, conn)

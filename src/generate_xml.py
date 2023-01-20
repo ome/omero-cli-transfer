@@ -331,7 +331,7 @@ def create_shapes(roi: RoiI) -> List[Shape]:
             lab = create_label(s)
             shapes.append(lab)
         else:
-            print("not a real thing")
+            print("not a supported ROI type")
             continue
     return shapes
 
@@ -403,7 +403,7 @@ def create_filepath_annotations(id: str, conn: BlitzGateway,
 
 def create_provenance_metadata(conn: BlitzGateway, img_id: int,
                                hostname: str,
-                               metadata: Union[List[str], None]
+                               metadata: Union[List[str], None], plate: bool
                                ) -> Union[Tuple[MapAnnotation, AnnotationRef],
                                           Tuple[None, None]]:
     if not metadata:
@@ -418,8 +418,12 @@ def create_provenance_metadata(conn: BlitzGateway, img_id: int,
     db_id = conn.getConfigService().getDatabaseUuid()
 
     md_dict: Dict[str, Any] = {}
-    if "img_id" in metadata:
-        md_dict['origin_image_id'] = img_id
+    if plate:
+        if "plate_id" in metadata:
+            md_dict['origin_plate_id'] = img_id
+    else:
+        if "img_id" in metadata:
+            md_dict['origin_image_id'] = img_id
     if "timestamp" in metadata:
         md_dict['packing_timestamp'] = date_time
     if "software" in metadata:
@@ -485,7 +489,7 @@ def populate_image(obj: ImageI, ome: OME, conn: BlitzGateway, hostname: str,
                                         description=desc, pixels=pix)
     for ann in obj.listAnnotations():
         add_annotation(img, ann, ome, conn)
-    kv, ref = create_provenance_metadata(conn, id, hostname, metadata)
+    kv, ref = create_provenance_metadata(conn, id, hostname, metadata, False)
     if kv:
         kv_id = f"Annotation:{str(kv.id)}"
         if kv_id not in [i.id for i in ome.structured_annotations]:
@@ -575,6 +579,13 @@ def populate_plate(obj: PlateI, ome: OME, conn: BlitzGateway,
     pl, pl_ref = create_plate_and_ref(id=id, name=name, description=desc)
     for ann in obj.listAnnotations():
         add_annotation(pl, ann, ome, conn)
+    kv, ref = create_provenance_metadata(conn, id, hostname, metadata, True)
+    if kv:
+        kv_id = f"Annotation:{str(kv.id)}"
+        if kv_id not in [i.id for i in ome.structured_annotations]:
+            ome.structured_annotations.append(kv)
+        if ref:
+            pl.annotation_ref.append(ref)
     for well in obj.listChildren():
         well_obj = conn.getObject('Well', well.getId())
         well_ref = populate_well(well_obj, ome, conn, hostname, metadata)

@@ -178,7 +178,7 @@ class TransferControl(GraphControl):
         )
         unpack.add_argument(
             "--metadata",
-            choices=['all', 'none', 'img_id', 'timestamp',
+            choices=['all', 'none', 'img_id', 'plate_id', 'timestamp',
                      'software', 'version', 'md5', 'hostname', 'db_id',
                      'orig_user', 'orig_group'], nargs='+',
             help="Metadata field to be added to MapAnnotation"
@@ -261,7 +261,7 @@ class TransferControl(GraphControl):
             metadata = ['all']
         if "all" in metadata:
             metadata.remove("all")
-            metadata.extend(["img_id", "timestamp", "software",
+            metadata.extend(["img_id", "plate_id", "timestamp", "software",
                              "version", "hostname", "md5", "orig_user",
                              "orig_group"])
         if "none" in metadata:
