@@ -284,10 +284,12 @@ def create_label(shape: LabelI) -> Label:
     args = {'id': shape.getId().val, 'x': shape.getX().val,
             'y': shape.getY().val}
     args['text'] = shape.getTextValue().val
-    args['font_size'] = shape.getFontSize().getValue()
+    args['font_size'] = 50
     args['the_c'] = 0
     args['the_z'] = 0
     args['the_t'] = 0
+    if shape.getFontSize() is not None:
+        args['font_size'] = shape.getFontSize().getValue()
     if shape.getTheC() is not None:
         args['the_c'] = max(shape.getTheC().val, 0)
     if shape.getTheZ() is not None:
