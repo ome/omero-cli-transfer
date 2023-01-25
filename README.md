@@ -54,7 +54,7 @@ omero transfer pack 999 tarfile.tar  # equivalent to Project:999
 
 Unpacks an existing transfer packet, imports images/plates as orphans and uses the XML contained in the transfer packet to re-create links, annotations and ROIs.
 
-Note that `unpack` needs to be able to identify the images it imports inequivocally; this can be a problem in case you have other images with the same `clientPath` (i.e. that were imported from the exact same location, including filename) and no annotations created by omero-cli-transfer. The most common case to generate this issue is an `unpack` that fails after the import step - the lingering images are not annotated correctly and a retry of the same `unpack` will use the same `clientPath` and cause issues. The best solution is cleaning up after failed `unpack`s.
+Note that unpack needs to be able to identify the images it imports inequivocally; this can be a problem in case you have other images with the same `clientPath` (i.e. that were imported from the exact same location, including filename) and no annotations created by omero-cli-transfer. The most common case to generate this issue is an unpack that fails after the import step - the lingering images are not annotated correctly and a retry of the same unpack will use the same `clientPath` and cause issues. The best solution is cleaning up after failed unpacks.
 
 `--ln_s` forces imports to use the transfer=ln_s option, in-place importing files. Same restrictions of regular in-place imports apply.
 
