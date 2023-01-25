@@ -284,7 +284,7 @@ def create_label(shape: LabelI) -> Label:
     args = {'id': shape.getId().val, 'x': shape.getX().val,
             'y': shape.getY().val}
     args['text'] = shape.getTextValue().val
-    args['font_size'] = 50
+    args['font_size'] = 10
     args['the_c'] = 0
     args['the_z'] = 0
     args['the_t'] = 0

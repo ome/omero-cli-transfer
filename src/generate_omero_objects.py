@@ -329,7 +329,7 @@ def create_rois(rois: List[ROI], imgs: List[Image], img_map: dict,
                 else:
                     stroke_color = sc
             else:
-                stroke_color = (0, 0, 0, 0)
+                stroke_color = (255, 255, 255, 255)
             if roi.union[0].stroke_width:
                 stroke_width = int(roi.union[0].stroke_width)
             else:
