@@ -77,6 +77,8 @@ def create_annotations(ans: List[Annotation], conn: BlitzGateway, hash: str,
                         key_value_data.append(['zip_file_md5', hash])
                     if v.k == "origin_image_id" and "img_id" in metadata:
                         key_value_data.append([v.k, v.value])
+                    if v.k == "origin_plate_id" and "plate_id" in metadata:
+                        key_value_data.append([v.k, v.value])
                     if v.k == "packing_timestamp" and "timestamp" in metadata:
                         key_value_data.append([v.k, v.value])
                     if v.k == "software" and "software" in metadata:
@@ -167,10 +169,24 @@ def create_plate_map(ome: OME, img_map: dict, conn: BlitzGateway
             params,
             conn.SERVICE_OPTS
             )
-
-        if results:
+        all_plate_ids = list(set(sorted([r[0].val for r in results])))
+        plate_ids = []
+        for pl_id in all_plate_ids:
+            anns = ezomero.get_map_annotation_ids(conn, "Plate", pl_id)
+            if not anns:
+                plate_ids.append(pl_id)
+            else:
+                is_annotated = False
+                for ann in anns:
+                    ann_content = conn.getObject("MapAnnotation", ann)
+                    if ann_content.getNs() == \
+                            'openmicroscopy.org/cli/transfer':
+                        is_annotated = True
+                if not is_annotated:
+                    plate_ids.append(pl_id)
+        if plate_ids:
             # plate was imported as plate
-            plate_id = results[0][0].val
+            plate_id = plate_ids[0]
         else:
             # plate was imported as images
             plate_id = create_plate_from_images(plate, img_map, conn)
@@ -302,21 +318,27 @@ def create_rois(rois: List[ROI], imgs: List[Image], img_map: dict,
                 if len(fc) == 3:
                     fill_color = fc + (0,)
                 else:
-                    fill_color = fc
+                    alpha = fc[3] * 255
+                    fill_color = fc[0:3] + (int(alpha),)
             else:
                 fill_color = (0, 0, 0, 0)
             if roi.union[0].stroke_color:
                 sc = roi.union[0].stroke_color.as_rgb_tuple()
                 if len(sc) == 3:
-                    stroke_color = sc + (0,)
+                    stroke_color = sc + (255,)
                 else:
                     stroke_color = sc
             else:
-                stroke_color = (0, 0, 0, 0)
+                stroke_color = (255, 255, 255, 255)
+            if roi.union[0].stroke_width:
+                stroke_width = int(roi.union[0].stroke_width)
+            else:
+                stroke_width = 1
             img_id_dest = img_map[img.id]
             ezomero.post_roi(conn, img_id_dest, shapes, name=roi.name,
                              description=roi.description,
-                             fill_color=fill_color, stroke_color=stroke_color)
+                             fill_color=fill_color, stroke_color=stroke_color,
+                             stroke_width=stroke_width)
     return
 
 
