@@ -89,9 +89,12 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/TheJacksonLaboratory/omero-cli-transfer",
     install_requires=[
-        'ezomero',
-        'ome-types'
+        'ezomero==1.2.1',
+        'ome-types==0.3.3'
     ],
+    extras_require={
+        "rocrate": ["rocrate==0.7.0"],
+    },
     python_requires='>=3.7',
     cmdclass={'test': PyTest},
     tests_require=['pytest', 'restview', 'mox3'],

@@ -741,6 +741,17 @@ def populate_tsv(datatype: str, ome: OME, filepath: str,
     return
 
 
+def populate_rocrate(datatype: str, ome: OME, filepath: str,
+                     path_id_dict: dict, folder: str):
+    if datatype == "Plate" or datatype == "Screen":
+        print("Bioimage Archive export of Plate/Screen currently unsupported")
+        return
+    with open(filepath, 'w') as fp:
+        write_lines(datatype, ome, fp, path_id_dict, folder)
+        fp.close()
+    return
+
+
 def generate_columns(ome: OME, ids: dict) -> List[str]:
     columns = ["filename"]
     if [v for v in ids.values() if v.startswith("file_annotations")]:
