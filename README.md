@@ -1,4 +1,9 @@
 # omero-cli-transfer
+
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7573592.svg)](https://doi.org/10.5281/zenodo.7573592)
+
+
 An OMERO CLI plugin for creating and using transfer packets between OMERO servers.
 
 Transfer packets contain objects and annotations. This project creates a zip file from an object 
