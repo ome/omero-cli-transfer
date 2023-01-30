@@ -743,6 +743,14 @@ def populate_tsv(datatype: str, ome: OME, filepath: str,
 
 def populate_rocrate(datatype: str, ome: OME, filepath: str,
                      path_id_dict: dict, folder: str):
+    import importlib.util
+    if (importlib.util.find_spec('rocrate')):
+        from rocrate.rocrate import ROCrate
+    else:
+        raise ImportError("Could not import rocrate library. Make sure to "
+                          "install omero-cli-transfer with the optional "
+                          "[rocrate] addition")
+    rc = ROCrate()
     if datatype == "Plate" or datatype == "Screen":
         print("Bioimage Archive export of Plate/Screen currently unsupported")
         return
