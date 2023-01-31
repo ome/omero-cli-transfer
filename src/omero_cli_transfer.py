@@ -326,9 +326,11 @@ class TransferControl(GraphControl):
                          path_id_dict, folder)
         if args.rocrate:
             print(f"Creating RO-Crate metadta at {md_fp}.")
-            populate_rocrate(src_datatype, ome, md_fp,
+            populate_rocrate(src_datatype, ome, os.path.splitext(tar_path)[0],
                              path_id_dict, folder)
-        self._package_files(os.path.splitext(tar_path)[0], args.zip, folder)
+        else:
+            self._package_files(os.path.splitext(tar_path)[0], args.zip,
+                                folder)
         print("Cleaning up...")
         shutil.rmtree(folder)
         return

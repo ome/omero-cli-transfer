@@ -742,21 +742,45 @@ def populate_tsv(datatype: str, ome: OME, filepath: str,
 
 
 def populate_rocrate(datatype: str, ome: OME, filepath: str,
-                     path_id_dict: dict, folder: str):
+                     path_id_dict: dict, folder):
     import importlib.util
+    import mimetypes
     if (importlib.util.find_spec('rocrate')):
         from rocrate.rocrate import ROCrate
     else:
         raise ImportError("Could not import rocrate library. Make sure to "
                           "install omero-cli-transfer with the optional "
                           "[rocrate] addition")
-    rc = ROCrate()
     if datatype == "Plate" or datatype == "Screen":
-        print("Bioimage Archive export of Plate/Screen currently unsupported")
+        print("RO-Crate export of Plate/Screen currently unsupported")
         return
-    with open(filepath, 'w') as fp:
-        write_lines(datatype, ome, fp, path_id_dict, folder)
-        fp.close()
+    rc = ROCrate()
+    # if datatype == "Project":
+    #     for proj in ome.projects:
+    #         datasets = []
+    #         os.makedirs(f"{folder}/{proj.name}")
+    #         proj_ds = list(rc.get_entities())[-1]
+    #         print(proj)
+    #         for ds_id in proj.dataset_ref:
+    #             ds = next(filter(lambda x: x.id == ds_id.id, ome.datasets))
+    #             proj_ds.add_dataset(None, ds.name, properties={
+    #                 "name": ds.name,
+    #                 "description": ds.description
+    #             })
+    #             datasets.append(ds.name)
+            
+    # print(rc.get_entities())
+    files = path_id_dict.items()
+    for id, file in files:
+        img = next(filter(lambda x: x.id == id, ome.images))
+        format = mimetypes.MimeTypes().guess_type(file)[0]
+        if not format:
+            format = "image"
+        rc.add_file(file, properties={
+                        "name": img.name,
+                        "encodingFormat": format                            
+                    })
+    rc.write_zip(filepath)
     return
 
 
