@@ -776,9 +776,9 @@ def populate_rocrate(datatype: str, ome: OME, filepath: str,
         format = mimetypes.MimeTypes().guess_type(file)[0]
         if not format:
             format = "image"
-        rc.add_file(file, properties={
+        rc.add_file(os.path.join(folder, file), properties={
                         "name": img.name,
-                        "encodingFormat": format                            
+                        "encodingFormat": format
                     })
     rc.write_zip(filepath)
     return

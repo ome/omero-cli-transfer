@@ -325,7 +325,7 @@ class TransferControl(GraphControl):
             populate_tsv(src_datatype, ome, md_fp,
                          path_id_dict, folder)
         if args.rocrate:
-            print(f"Creating RO-Crate metadta at {md_fp}.")
+            print(f"Creating RO-Crate metadata at {md_fp}.")
             populate_rocrate(src_datatype, ome, os.path.splitext(tar_path)[0],
                              path_id_dict, folder)
         else:
