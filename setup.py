@@ -95,7 +95,7 @@ setup(
     extras_require={
         "rocrate": ["rocrate==0.7.0"],
     },
-    python_requires='>=3.7',
+    python_requires='>=3.8',
     cmdclass={'test': PyTest},
     tests_require=['pytest', 'restview', 'mox3'],
 )
