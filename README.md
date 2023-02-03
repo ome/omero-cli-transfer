@@ -31,6 +31,12 @@ but that will require locally building a wheel for `zeroc-ice` (which pip does a
 process that can be anything from "completely seamless and without issues" to "I need to install every 
 dependency ever imagined". Try at your own risk.
 
+If you want optional RO-Crate exports, you can do 
+```
+pip install omero-cli-transfer[rocrate]
+```
+instead.
+
 # Usage
 
 ## `omero transfer pack`
