@@ -741,6 +741,34 @@ def populate_tsv(datatype: str, ome: OME, filepath: str,
     return
 
 
+def populate_rocrate(datatype: str, ome: OME, filepath: str,
+                     path_id_dict: dict, folder):
+    import importlib.util
+    import mimetypes
+    if (importlib.util.find_spec('rocrate')):
+        from rocrate.rocrate import ROCrate
+    else:
+        raise ImportError("Could not import rocrate library. Make sure to "
+                          "install omero-cli-transfer with the optional "
+                          "[rocrate] addition")
+    if datatype == "Plate" or datatype == "Screen":
+        print("RO-Crate export of Plate/Screen currently unsupported")
+        return
+    rc = ROCrate()
+    files = path_id_dict.items()
+    for id, file in files:
+        img = next(filter(lambda x: x.id == id, ome.images))
+        format = mimetypes.MimeTypes().guess_type(file)[0]
+        if not format:
+            format = "image"
+        rc.add_file(os.path.join(folder, file), properties={
+                        "name": img.name,
+                        "encodingFormat": format
+                    })
+    rc.write_zip(filepath)
+    return
+
+
 def generate_columns(ome: OME, ids: dict) -> List[str]:
     columns = ["filename"]
     if [v for v in ids.values() if v.startswith("file_annotations")]:

@@ -316,7 +316,7 @@ def create_rois(rois: List[ROI], imgs: List[Image], img_map: dict,
             if roi.union[0].fill_color:
                 fc = roi.union[0].fill_color.as_rgb_tuple()
                 if len(fc) == 3:
-                    fill_color = fc + (0,)
+                    fill_color = fc + (255,)
                 else:
                     alpha = fc[3] * 255
                     fill_color = fc[0:3] + (int(alpha),)

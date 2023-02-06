@@ -18,7 +18,7 @@ import hashlib
 from zipfile import ZipFile
 from typing import Callable, List, Any, Dict, Union, Optional, Tuple
 
-from generate_xml import populate_xml, populate_tsv
+from generate_xml import populate_xml, populate_tsv, populate_rocrate
 from generate_omero_objects import populate_omero
 
 import ezomero
@@ -151,6 +151,10 @@ class TransferControl(GraphControl):
                                    " Archive submission standards",
                 action="store_true")
         pack.add_argument(
+                "--rocrate", help="Pack into a file compliant with "
+                                  "RO-Crate standards",
+                action="store_true")
+        pack.add_argument(
             "--metadata",
             choices=['all', 'none', 'img_id', 'timestamp',
                      'software', 'version', 'md5', 'hostname', 'db_id',
@@ -276,6 +280,10 @@ class TransferControl(GraphControl):
             if args.barchive:
                 raise ValueError("Single image, plate or screen cannot be "
                                  "packaged for Bioimage Archive")
+        if isinstance(args.object, Plate) or isinstance(args.object, Screen):
+            if args.rocrate:
+                raise ValueError("Single image, plate or screen cannot be "
+                                 "packaged in a RO-Crate")
         if isinstance(args.object, Image):
             src_datatype, src_dataid = "Image", args.object.id
         elif isinstance(args.object, Dataset):
@@ -301,6 +309,8 @@ class TransferControl(GraphControl):
         os.makedirs(folder, mode=DIR_PERM, exist_ok=True)
         if args.barchive:
             md_fp = str(Path(folder) / "submission.tsv")
+        elif args.rocrate:
+            md_fp = str(Path(folder) / "ro-crate-metadata.json")
         else:
             md_fp = str(Path(folder) / "transfer.xml")
             print(f"Saving metadata at {md_fp}.")
@@ -314,7 +324,13 @@ class TransferControl(GraphControl):
             print(f"Creating Bioimage Archive TSV at {md_fp}.")
             populate_tsv(src_datatype, ome, md_fp,
                          path_id_dict, folder)
-        self._package_files(os.path.splitext(tar_path)[0], args.zip, folder)
+        if args.rocrate:
+            print(f"Creating RO-Crate metadata at {md_fp}.")
+            populate_rocrate(src_datatype, ome, os.path.splitext(tar_path)[0],
+                             path_id_dict, folder)
+        else:
+            self._package_files(os.path.splitext(tar_path)[0], args.zip,
+                                folder)
         print("Cleaning up...")
         shutil.rmtree(folder)
         return
