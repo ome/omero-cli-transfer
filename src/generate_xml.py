@@ -652,7 +652,7 @@ def add_annotation(obj: Union[Project, Dataset, Image, Plate, Screen,
             if _value:
                 mmap.append(M(k=_key, value=str(_value)))
             else:
-                mmap.append(M(k=_key, value=''))
+                mmap.append(M(k=_key, value=' '))
         kv, ref = create_kv_and_ref(id=ann.getId(),
                                     namespace=ann.getNs(),
                                     value=Map(
