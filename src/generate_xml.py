@@ -12,6 +12,7 @@ from ome_types.model import AnnotationRef, ROIRef, Map
 from ome_types.model import CommentAnnotation, LongAnnotation
 from ome_types.model import Point, Line, Rectangle, Ellipse, Polygon
 from ome_types.model import Polyline, Label, Shape
+from ome_types.model import InstrumentRef
 from ome_types.model.map import M
 from omero.gateway import BlitzGateway
 from omero.model import TagAnnotationI, MapAnnotationI, FileAnnotationI
@@ -488,9 +489,29 @@ def populate_image(obj: ImageI, ome: OME, conn: BlitzGateway, hostname: str,
     if img_id in [i.id for i in ome.images]:
         img_ref = ImageRef(id=img_id)
         return img_ref
-    pix = create_pixels(obj)
-    img, img_ref = create_image_and_ref(id=id, name=name,
-                                        description=desc, pixels=pix)
+
+    # Create acquisition metadata
+    pix = transfer.pack.image.export_pixels_metadata(obj)
+    imaging_env = transfer.pack.image.export_imaging_environment_metadata(obj.getImagingEnvironment())
+    objective_set = transfer.pack.image.export_objective_settings_metadata(obj.getObjectiveSettings())
+
+    # Create instrument if not already in OME
+    instrument_ref = InstrumentRef(id=obj.getInstrument().getId())
+
+    if instrument_ref.id not in [ins.id for ins in ome.instruments]:
+        ome.instruments.append(transfer.pack.instrument.export_instrument_metadata(obj.getInstrument()))
+
+    # Create image with acquisition metadata
+    img, img_ref = create_image_and_ref(
+        id=id,
+        name=name,
+        description=desc,
+        pixels=pix,
+        imaging_environment=imaging_env,
+        objective_settings=objective_set,
+        instrument_ref=instrument_ref,
+    )
+
     for ann in obj.listAnnotations():
         add_annotation(img, ann, ome, conn)
     kv, ref = create_provenance_metadata(conn, id, hostname, metadata, False)
@@ -515,8 +536,6 @@ def populate_image(obj: ImageI, ome: OME, conn: BlitzGateway, hostname: str,
     img_id = f"Image:{str(img.id)}"
     if img_id not in [i.id for i in ome.datasets]:
         ome.images.append(img)
-        img = transfer.export_image_metadata(obj, conn, ome, in_place=False)
-        ome.images[-1] = img
         print(f"Image {img.id} exported")
     if not fset:
         fset = obj.getFileset()
