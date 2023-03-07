@@ -31,6 +31,8 @@ from datetime import datetime
 from pathlib import Path
 import shutil
 
+from omero_acquisition_transfer import transfer
+
 
 def create_proj_and_ref(**kwargs) -> Tuple[Project, ProjectRef]:
     proj = Project(**kwargs)
@@ -513,6 +515,9 @@ def populate_image(obj: ImageI, ome: OME, conn: BlitzGateway, hostname: str,
     img_id = f"Image:{str(img.id)}"
     if img_id not in [i.id for i in ome.datasets]:
         ome.images.append(img)
+        img = transfer.export_image_metadata(obj, conn, ome, in_place=False)
+        ome.images[-1] = img
+        print(f"Image {img.id} exported")
     if not fset:
         fset = obj.getFileset()
     if fset:

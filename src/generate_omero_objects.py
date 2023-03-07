@@ -19,6 +19,8 @@ from pathlib import Path
 import os
 import copy
 
+from omero_acquisition_transfer import transfer
+
 
 def create_projects(pjs: List[Project], conn: BlitzGateway) -> dict:
     pj_map = {}
@@ -463,6 +465,18 @@ def rename_images(imgs: List[Image], img_map: dict, conn: BlitzGateway):
     return
 
 
+def attach_acquisition_metadata(ome: OME, img_map: dict, conn: BlitzGateway):
+    omero_id_to_object = transfer.create_instruments(ome.instruments, conn)
+
+    for img in ome.images:
+        try:
+            img_id = img_map[img.id]
+            img_obj = conn.getObject("Image", img_id)
+            transfer.attach_image_metadata(img, img_obj, omero_id_to_object, conn)
+        except KeyError:
+            print(f"Image corresponding to {img.id} not found. Skipping.")
+
+
 def populate_omero(ome: OME, img_map: dict, conn: BlitzGateway, hash: str,
                    folder: str, metadata: List[str]):
     rename_images(ome.images, img_map, conn)
@@ -478,4 +492,6 @@ def populate_omero(ome: OME, img_map: dict, conn: BlitzGateway, hash: str,
     link_images(ome, ds_map, img_map, conn)
     link_annotations(ome, proj_map, ds_map, img_map, ann_map,
                      screen_map, plate_map, conn)
+
+    attach_acquisition_metadata(ome, img_map, conn)
     return
