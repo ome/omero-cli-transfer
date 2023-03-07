@@ -536,7 +536,6 @@ def populate_image(obj: ImageI, ome: OME, conn: BlitzGateway, hostname: str,
     img_id = f"Image:{str(img.id)}"
     if img_id not in [i.id for i in ome.datasets]:
         ome.images.append(img)
-        print(f"Image {img.id} exported")
     if not fset:
         fset = obj.getFileset()
     if fset:
