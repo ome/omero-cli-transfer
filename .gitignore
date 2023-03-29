@@ -26,6 +26,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+.idea/
 
 # testing infra - uncomment when omero-test-infra reaches python=3.7
 # .omero/
