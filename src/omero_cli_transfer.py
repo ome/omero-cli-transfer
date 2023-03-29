@@ -11,6 +11,7 @@ from pathlib import Path
 import sys
 import os
 import copy
+import glob
 from functools import wraps
 import shutil
 from typing import DefaultDict
@@ -28,7 +29,7 @@ from omero.sys import Parameters
 from omero.rtypes import rstring
 from omero.cli import CLI, GraphControl
 from omero.cli import ProxyStringType
-from omero.gateway import BlitzGateway
+from omero.gateway import BlitzGateway, ImageWrapper
 from omero.model import Image, Dataset, Project, Plate, Screen
 from omero.grid import ManagedRepositoryPrx as MRepo
 from omero_acquisition_transfer.transfer.pack import merge_metadata_tiff, move_tiff_files
@@ -259,6 +260,11 @@ class TransferControl(GraphControl):
                         for fs_image in fileset.copyImages():
                             downloaded_ids.append(fs_image.getId())
 
+    def _move_files(self, src_datatype, src_dataid, folder: str, gateway: BlitzGateway):
+        # Get file paths from target folder
+        file_paths = glob.glob(folder + '/pixel_images/*.tiff', recursive=True)
+        move_tiff_files(gateway, src_datatype, src_dataid, file_paths, folder)
+
     def _add_metadata_to_tiff(self, obj: ImageWrapper, filepath: str):
         merge_metadata_tiff(obj, filepath)
 
@@ -330,6 +336,7 @@ class TransferControl(GraphControl):
 
         print("Starting file copy...")
         self._copy_files(path_id_dict, folder, self.gateway)
+        self._move_files(src_datatype, [src_dataid.val], folder, self.gateway)
         if args.barchive:
             print(f"Creating Bioimage Archive TSV at {md_fp}.")
             populate_tsv(src_datatype, ome, md_fp,
