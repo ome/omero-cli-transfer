@@ -24,7 +24,7 @@ from generate_omero_objects import populate_omero
 
 import ezomero
 from ome_types.model import CommentAnnotation, OME
-from ome_types import from_xml
+from ome_types import from_xml, to_xml
 from omero.sys import Parameters
 from omero.rtypes import rstring
 from omero.cli import CLI, GraphControl
@@ -260,10 +260,20 @@ class TransferControl(GraphControl):
                         for fs_image in fileset.copyImages():
                             downloaded_ids.append(fs_image.getId())
 
-    def _move_files(self, src_datatype, src_dataid, folder: str, gateway: BlitzGateway):
+    def _move_files(self, src_datatype, src_dataid, ome: OME, folder: str, gateway: BlitzGateway):
         # Get file paths from target folder
-        file_paths = glob.glob(folder + '/pixel_images/*.tiff', recursive=True)
-        move_tiff_files(gateway, src_datatype, src_dataid, file_paths, folder)
+        file_paths = glob.glob(os.path.join(folder, 'pixel_images', '*.tiff'), recursive=True)
+        dest_paths = move_tiff_files(gateway, src_datatype, src_dataid, file_paths, folder)
+        clean_file_paths = [os.sep.join((path.split(os.sep)[-2:])) for path in file_paths]
+
+        map_dest_paths = dict(zip(clean_file_paths, dest_paths))
+
+        # Update OME file
+        for annot in ome.structured_annotations:
+            if isinstance(annot, CommentAnnotation):
+                if annot.value in map_dest_paths:
+                    annot.value = map_dest_paths[annot.value]
+                    print('Updated path: ' + annot.value)
 
     def _add_metadata_to_tiff(self, obj: ImageWrapper, filepath: str):
         merge_metadata_tiff(obj, filepath)
@@ -329,14 +339,20 @@ class TransferControl(GraphControl):
             md_fp = str(Path(folder) / "ro-crate-metadata.json")
         else:
             md_fp = str(Path(folder) / "transfer.xml")
-            print(f"Saving metadata at {md_fp}.")
         ome, path_id_dict = populate_xml(src_datatype, src_dataid, md_fp,
                                          self.gateway, self.hostname,
                                          args.barchive, self.metadata)
 
         print("Starting file copy...")
         self._copy_files(path_id_dict, folder, self.gateway)
-        self._move_files(src_datatype, [src_dataid.val], folder, self.gateway)
+        self._move_files(src_datatype, [src_dataid.val], ome, folder, self.gateway)
+
+        if not args.barchive:
+            print(f"Saving metadata at {md_fp}.")
+            with open(md_fp, 'w') as fp:
+                print(to_xml(ome), file=fp)
+                fp.close()
+
         if args.barchive:
             print(f"Creating Bioimage Archive TSV at {md_fp}.")
             populate_tsv(src_datatype, ome, md_fp,
