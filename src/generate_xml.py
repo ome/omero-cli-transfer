@@ -496,10 +496,13 @@ def populate_image(obj: ImageI, ome: OME, conn: BlitzGateway, hostname: str,
     objective_set = transfer.pack.export_objective_settings_metadata(obj.getObjectiveSettings())
 
     # Create instrument if not already in OME
-    instrument_ref = InstrumentRef(id=obj.getInstrument().getId())
+    instrument_ref = InstrumentRef()
 
-    if instrument_ref.id not in [ins.id for ins in ome.instruments]:
-        ome.instruments.append(transfer.pack.export_instrument_metadata(obj.getInstrument()))
+    if obj.getInstrument() is not None and obj.getInstrument()._obj is not None:
+        instrument_ref.id = obj.getInstrument().getId()
+
+        if instrument_ref.id not in [ins.id for ins in ome.instruments]:
+            ome.instruments.append(transfer.pack.export_instrument_metadata(obj.getInstrument()))
 
     # Create image with acquisition metadata
     img, img_ref = create_image_and_ref(
