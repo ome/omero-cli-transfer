@@ -31,6 +31,7 @@ from omero.cli import ProxyStringType
 from omero.gateway import BlitzGateway
 from omero.model import Image, Dataset, Project, Plate, Screen
 from omero.grid import ManagedRepositoryPrx as MRepo
+from omero_acquisition_transfer.transfer.pack import merge_metadata_tiff, move_tiff_files
 
 DIR_PERM = 0o755
 MD5_BUF_SIZE = 65536
@@ -243,6 +244,12 @@ class TransferControl(GraphControl):
                 if rel_path == "pixel_images":
                     filepath = str(Path(subfolder) / (str(clean_id) + ".tiff"))
                     cli.invoke(['export', '--file', filepath, id])
+
+                    # Add metadata into the tiff file
+                    obj = conn.getObject("Image", clean_id)
+                    if obj is not None:
+                        self._add_metadata_to_tiff(obj, filepath)
+
                     downloaded_ids.append(id)
                 else:
                     cli.invoke(['download', id, subfolder])
@@ -251,6 +258,9 @@ class TransferControl(GraphControl):
                         fileset = obj.getFileset()
                         for fs_image in fileset.copyImages():
                             downloaded_ids.append(fs_image.getId())
+
+    def _add_metadata_to_tiff(self, obj: ImageWrapper, filepath: str):
+        merge_metadata_tiff(obj, filepath)
 
     def _package_files(self, tar_path: str, zip: bool, folder: str):
         if zip:
