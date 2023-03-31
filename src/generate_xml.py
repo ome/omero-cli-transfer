@@ -494,6 +494,7 @@ def populate_image(obj: ImageI, ome: OME, conn: BlitzGateway, hostname: str,
     pix = transfer.pack.export_pixels_metadata(obj)
     imaging_env = transfer.pack.export_imaging_environment_metadata(obj.getImagingEnvironment())
     objective_set = transfer.pack.export_objective_settings_metadata(obj.getObjectiveSettings())
+    stage_label = transfer.pack.export_stage_label_metadata(obj.getStageLabel())
 
     # Create instrument if not already in OME
     instrument_ref = InstrumentRef()
@@ -513,6 +514,7 @@ def populate_image(obj: ImageI, ome: OME, conn: BlitzGateway, hostname: str,
         imaging_environment=imaging_env,
         objective_settings=objective_set,
         instrument_ref=instrument_ref,
+        stage_label=stage_label
     )
 
     for ann in obj.listAnnotations():
