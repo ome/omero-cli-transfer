@@ -1,3 +1,9 @@
+# Copyright (C) 2022 The Jackson Laboratory
+# Copyright (C) 2022 University of Dundee & Open Microscopy Environment.
+# All rights reserved.
+#
+# Use is subject to license terms supplied in LICENSE.
+
 # Install and test and OMERO plugin e.g. a Web app, a CLI plugin or a library
 #
 # This workflow will install omero-test-infra, start an OMERO environment
