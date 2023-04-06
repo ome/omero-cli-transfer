@@ -1,3 +1,9 @@
+# Copyright (C) 2022 The Jackson Laboratory
+# Copyright (C) 2015-2018 University of Dundee & Open Microscopy Environment.
+# All rights reserved.
+#
+# Use is subject to license terms supplied in LICENSE.
+
 import os
 import sys
 from setuptools import setup

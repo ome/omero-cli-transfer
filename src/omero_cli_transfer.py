@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+# Copyright (C) 2022 The Jackson Laboratory
+# All rights reserved.
+#
+# Use is subject to license terms supplied in LICENSE.
 
 """
    Plugin for transfering objects and annotations between servers

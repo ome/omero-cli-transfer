@@ -1,3 +1,8 @@
+# Copyright (C) 2022 The Jackson Laboratory
+# All rights reserved.
+#
+# Use is subject to license terms supplied in LICENSE.
+
 from __future__ import division
 
 from omero_cli_transfer import TransferControl

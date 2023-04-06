@@ -1,3 +1,8 @@
+# Copyright (C) 2022 The Jackson Laboratory
+# All rights reserved.
+#
+# Use is subject to license terms supplied in LICENSE.
+
 from ome_types import to_xml, OME
 from ome_types.model import Project, ProjectRef
 from ome_types.model import Screen

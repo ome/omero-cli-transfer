@@ -1,3 +1,8 @@
+# Copyright (C) 2022 The Jackson Laboratory
+# All rights reserved.
+#
+# Use is subject to license terms supplied in LICENSE.
+
 import ezomero
 from typing import List, Tuple
 from omero.model import DatasetI, IObject, PlateI, WellI, WellSampleI, ImageI
