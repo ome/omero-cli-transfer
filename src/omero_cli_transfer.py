@@ -152,6 +152,7 @@ class TransferControl(GraphControl):
         sub = parser.sub()
         pack = parser.add(sub, self.pack, PACK_HELP)
         unpack = parser.add(sub, self.unpack, UNPACK_HELP)
+        prepare = parser.add(sub, self.prepare, PREPARE_HELP)
 
         render_type = ProxyStringType("Project")
         obj_help = ("Object to be packed for transfer")
@@ -201,6 +202,8 @@ class TransferControl(GraphControl):
                      'orig_user', 'orig_group'], nargs='+',
             help="Metadata field to be added to MapAnnotation"
         )
+        folder_help = ("Path to folder with image files")
+        unpack.add_argument("folder", type=str, help=folder_help)
 
     @gateway_required
     def pack(self, args):
@@ -209,8 +212,13 @@ class TransferControl(GraphControl):
 
     @gateway_required
     def unpack(self, args):
-        """ Implements the 'pack' command """
+        """ Implements the 'unpack' command """
         self.__unpack(args)
+
+    @gateway_required
+    def prepare(self, args):
+        """ Implements the 'prepare' command """
+        self.__prepare(args)
 
     def _get_path_to_repo(self) -> List[str]:
         shared = self.client.sf.sharedResources()
@@ -534,6 +542,9 @@ class TransferControl(GraphControl):
                         map_key = f"Image:{src_v[count]}"
                         imgmap[map_key] = dest_v[count]
         return imgmap
+
+    def __prepare(self, args):
+        return
 
 
 try:
