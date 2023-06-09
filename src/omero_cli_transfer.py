@@ -111,6 +111,17 @@ omero transfer unpack --folder /home/user/unpacked_folder/ --skip upgrade
 omero transfer unpack pack.tar --metadata db_id orig_user hostname
 """)
 
+PREPARE_HELP = ("""Creates an XML from a folder with images.
+
+Creates an XML file appropriate for usage with `omero transfer unpack` from
+a folder that contains image files, rather than a source OMERO server. This
+is intended as a first step on a bulk-import workflow, followed by using
+`omero transfer unpack` to complete an import.
+
+Examples:
+omero transfer prepare /home/user/folder_with_files
+""")
+
 
 def gateway_required(func: Callable) -> Callable:
     """
