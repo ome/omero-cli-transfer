@@ -24,7 +24,9 @@ from omero.model import CommentAnnotationI, LongAnnotationI, Fileset
 from omero.model import PointI, LineI, RectangleI, EllipseI, PolygonI
 from omero.model import PolylineI, LabelI, ImageI, RoiI, IObject
 from omero.model import DatasetI, ProjectI, ScreenI, PlateI, WellI, Annotation
+from omero.cli import CLI
 from typing import Tuple, List, Optional, Union, Any, Dict, TextIO
+from subprocess import PIPE, DEVNULL
 from os import PathLike
 import pkg_resources
 import ezomero
@@ -35,6 +37,7 @@ from uuid import uuid4
 from datetime import datetime
 from pathlib import Path
 import shutil
+import copy
 
 
 def create_proj_and_ref(**kwargs) -> Tuple[Project, ProjectRef]:
@@ -460,6 +463,36 @@ def create_provenance_metadata(conn: BlitzGateway, img_id: int,
     return kv, ref
 
 
+def create_objects(folder):
+    img_files = []
+    for path, subdirs, files in os.walk(folder):
+        for f in files:
+            img_files.append(os.path.abspath(os.path.join(path, f)))
+    print(img_files)
+    targets = copy.deepcopy(img_files)
+    cli = CLI()
+    cli.loadplugins()
+    for img in img_files:
+        print(img)
+        if img not in (targets):
+            continue
+        cmd = ["omero", 'import', '-f', img, "\n"]
+        res = cli.popen(cmd, stdout=PIPE, stderr=DEVNULL)
+        std = res.communicate()
+        files = parse_files_import(std)
+        if len(files) > 1:
+            for f in files:
+                targets.remove(f)
+            targets.append(img)
+    print(targets)
+    objects = []
+    return objects
+
+
+def parse_files_import(text):
+    return []
+
+
 def populate_roi(obj: RoiI, roi_obj: IObject, ome: OME, conn: BlitzGateway
                  ) -> Union[ROIRef, None]:
     id = obj.getId().getValue()
@@ -731,6 +764,23 @@ def populate_xml(datatype: str, id: int, filepath: str, conn: BlitzGateway,
         with open(filepath, 'w') as fp:
             print(to_xml(ome), file=fp)
             fp.close()
+    path_id_dict = list_file_ids(ome)
+    return ome, path_id_dict
+
+
+def populate_xml_folder(folder: str, conn: BlitzGateway, session: str
+                        ) -> Tuple[OME, dict]:
+    ome = OME()
+    objects = create_objects(folder)
+    filepath = str(Path(folder) / "transfer.xml")
+    for obj in objects:
+        if type(obj) == Image:
+            populate_image(obj, ome, conn)
+        elif type(obj) == Plate:
+            populate_plate(obj, ome, conn)
+    with open(filepath, 'w') as fp:
+        print(to_xml(ome), file=fp)
+        fp.close()
     path_id_dict = list_file_ids(ome)
     return ome, path_id_dict
 

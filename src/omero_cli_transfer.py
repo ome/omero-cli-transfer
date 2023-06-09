@@ -22,6 +22,7 @@ from zipfile import ZipFile
 from typing import Callable, List, Any, Dict, Union, Optional, Tuple
 
 from generate_xml import populate_xml, populate_tsv, populate_rocrate
+from generate_xml import populate_xml_folder
 from generate_omero_objects import populate_omero
 
 import ezomero
@@ -34,6 +35,7 @@ from omero.cli import ProxyStringType
 from omero.gateway import BlitzGateway
 from omero.model import Image, Dataset, Project, Plate, Screen
 from omero.grid import ManagedRepositoryPrx as MRepo
+from subprocess import PIPE
 
 DIR_PERM = 0o755
 MD5_BUF_SIZE = 65536
@@ -132,6 +134,7 @@ def gateway_required(func: Callable) -> Callable:
     @wraps(func)
     def _wrapper(self, *args, **kwargs):
         self.client = self.ctx.conn(*args)
+        self.session = self.client.getSessionId()
         self.gateway = BlitzGateway(client_obj=self.client)
         router = self.client.getRouter(self.client.getCommunicator())
         self.hostname = str(router).split('-h ')[-1].split()[0]
@@ -203,7 +206,7 @@ class TransferControl(GraphControl):
             help="Metadata field to be added to MapAnnotation"
         )
         folder_help = ("Path to folder with image files")
-        unpack.add_argument("folder", type=str, help=folder_help)
+        prepare.add_argument("folder", type=str, help=folder_help)
 
     @gateway_required
     def pack(self, args):
@@ -544,6 +547,7 @@ class TransferControl(GraphControl):
         return imgmap
 
     def __prepare(self, args):
+        populate_xml_folder(args.folder, self.gateway, self.session)
         return
 
 
