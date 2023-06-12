@@ -3,7 +3,7 @@
 #
 # Use is subject to license terms supplied in LICENSE.
 
-from ome_types import to_xml, OME
+from ome_types import to_xml, OME, from_xml
 from ome_types.model import Project, ProjectRef
 from ome_types.model import Screen
 from ome_types.model.screen import PlateRef
@@ -468,29 +468,98 @@ def create_objects(folder):
     for path, subdirs, files in os.walk(folder):
         for f in files:
             img_files.append(os.path.abspath(os.path.join(path, f)))
-    print(img_files)
     targets = copy.deepcopy(img_files)
     cli = CLI()
     cli.loadplugins()
     for img in img_files:
-        print(img)
         if img not in (targets):
             continue
         cmd = ["omero", 'import', '-f', img, "\n"]
         res = cli.popen(cmd, stdout=PIPE, stderr=DEVNULL)
         std = res.communicate()
-        files = parse_files_import(std)
+        files = parse_files_import(std[0].decode('UTF-8'))
         if len(files) > 1:
             for f in files:
                 targets.remove(f)
             targets.append(img)
-    print(targets)
-    objects = []
-    return objects
+        if len(files) == 0:
+            targets.remove(img)
+    images = []
+    plates = []
+    annotations = []
+    counter_imgs = 1
+    counter_pls = 1
+    for target in targets:
+        cmd = ["showinf", target, '-nopix', '-omexml-only',
+               '-no-sas', '-noflat']
+        res = cli.popen(cmd, stdout=PIPE, stderr=DEVNULL)
+        std = res.communicate()
+        imgs, pls, anns = parse_showinf(std[0].decode('UTF-8'),
+                                        counter_imgs, counter_pls, target)
+        images.extend(imgs)
+        counter_imgs = counter_imgs + len(imgs)
+        plates.extend(pls)
+        counter_pls = counter_pls + len(pls)
+        annotations.extend(anns)
+    print(images)
+    return images, plates, annotations
 
 
 def parse_files_import(text):
-    return []
+    lines = text.split("\n")
+    targets = [line for line in lines if not line.startswith("#")
+               and len(line) > 0]
+    return targets
+
+
+def parse_showinf(text, counter_imgs, counter_plates, target):
+    ome = from_xml(text)
+    images = []
+    plates = []
+    annotations = []
+    img_id = counter_imgs
+    pl_id = counter_plates
+    for image in ome.images:
+        img_id_str = f"Image:{str(img_id)}"
+        pix = create_empty_pixels(image, img_id)
+        if len(ome.images) > 1:  # differentiating names
+            filename = Path(target).name
+            img = Image(id=img_id_str, name=filename + " [" + image.name + "]",
+                        pixels=pix)
+        else:
+            img = Image(id=img_id_str, name=image.name, pixels=pix)
+        img_id += 1
+        uid = (-1) * uuid4().int
+        an = CommentAnnotation(id=uid,
+                               namespace=img_id_str,
+                               value=target
+                               )
+        annotations.append(an)
+        anref = AnnotationRef(id=an.id)
+        img.annotation_ref.append(anref)
+        images.append(img)
+    for plate in ome.plates:
+        pl_id_str = f"Plate:{str(pl_id)}"
+        pl = Plate(id=pl_id_str, name="test")
+        pl_id += 1
+        plates.append(pl)
+    return images, plates, annotations
+
+
+def create_empty_pixels(image, id):
+    pix_id = f"Pixels:{str(id)}"
+    pixels = Pixels(
+        id=pix_id,
+        dimension_order=image.pixels.dimension_order,
+        size_c=image.pixels.size_c,
+        size_t=image.pixels.size_t,
+        size_x=image.pixels.size_x,
+        size_y=image.pixels.size_y,
+        size_z=image.pixels.size_z,
+        type=image.pixels.type,
+        metadata_only=True)
+    return pixels
+
 
 
 def populate_roi(obj: RoiI, roi_obj: IObject, ome: OME, conn: BlitzGateway
@@ -771,13 +840,11 @@ def populate_xml(datatype: str, id: int, filepath: str, conn: BlitzGateway,
 def populate_xml_folder(folder: str, conn: BlitzGateway, session: str
                         ) -> Tuple[OME, dict]:
     ome = OME()
-    objects = create_objects(folder)
+    images, plates, annotations = create_objects(folder)
+    ome.images = images
+    ome.plates = plates
+    ome.structured_annotations = annotations
     filepath = str(Path(folder) / "transfer.xml")
-    for obj in objects:
-        if type(obj) == Image:
-            populate_image(obj, ome, conn)
-        elif type(obj) == Plate:
-            populate_plate(obj, ome, conn)
     with open(filepath, 'w') as fp:
         print(to_xml(ome), file=fp)
         fp.close()

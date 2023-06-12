@@ -1,2 +1,32 @@
-<OME xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openmicroscopy.org/Schemas/OME/2016-06 http://www.openmicroscopy.org/Schemas/OME/2016-06/ome.xsd" />
+<OME xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openmicroscopy.org/Schemas/OME/2016-06 http://www.openmicroscopy.org/Schemas/OME/2016-06/ome.xsd">
+    <Image ID="Image:1" Name="test_pyramidaaaa.tiff">
+        <Pixels DimensionOrder="XYCZT" ID="Pixels:1" SizeC="1" SizeT="1" SizeX="16" SizeY="16" SizeZ="1" Type="uint8">
+            <MetadataOnly />
+        </Pixels>
+        <AnnotationRef ID="Annotation:-203217500430289815714993406815247355448" />
+    </Image>
+    <Image ID="Image:2" Name="vsi-ets-test-jpg2k.aasvsi [001 C405, C488]">
+        <Pixels DimensionOrder="XYCZT" ID="Pixels:2" SizeC="2" SizeT="1" SizeX="1645" SizeY="1682" SizeZ="11" Type="uint16">
+            <MetadataOnly />
+        </Pixels>
+        <AnnotationRef ID="Annotation:-327071719309681510384318502360446425284" />
+    </Image>
+    <Image ID="Image:3" Name="vsi-ets-test-jpg2k.vsi [macro image]">
+        <Pixels DimensionOrder="XYCZT" ID="Pixels:3" SizeC="3" SizeT="1" SizeX="501" SizeY="512" SizeZ="1" Type="uint8">
+            <MetadataOnly />
+        </Pixels>
+        <AnnotationRef ID="Annotation:-220172128886276440932721947483954196841" />
+    </Image>
+    <StructuredAnnotations>
+        <CommentAnnotation ID="Annotation:-203217500430289815714993406815247355448" Namespace="Image:1">
+            <Value>/mnt/c/Users/erick/Documents/GitHub/omero-cli-transfer/test/data/prepare/test_pyramid.ome.tif</Value>
+        </CommentAnnotation>
+        <CommentAnnotation ID="Annotation:-327071719309681510384318502360446425284" Namespace="Image:2">
+            <Value>/mnt/c/Users/erick/Documents/GitHub/omero-cli-transfer/test/data/prepare/vsi-ets-test-jpg2k.vsi</Value>
+        </CommentAnnotation>
+        <CommentAnnotation ID="Annotation:-220172128886276440932721947483954196841" Namespace="Image:3">
+            <Value>/mnt/c/Users/erick/Documents/GitHub/omero-cli-transfer/test/data/prepare/vsi-ets-test-jpg2k.vsi</Value>
+        </CommentAnnotation>
+    </StructuredAnnotations>
+</OME>
 
