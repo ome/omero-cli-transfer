@@ -501,7 +501,6 @@ def create_objects(folder):
         plates.extend(pls)
         counter_pls = counter_pls + len(pls)
         annotations.extend(anns)
-    print(images)
     return images, plates, annotations
 
 
@@ -513,14 +512,16 @@ def parse_files_import(text):
 
 
 def parse_showinf(text, counter_imgs, counter_plates, target):
-    ome = from_xml(text)
+    ome = from_xml(text, parser='lxml')
     images = []
     plates = []
     annotations = []
     img_id = counter_imgs
     pl_id = counter_plates
+    img_ref = {}
     for image in ome.images:
         img_id_str = f"Image:{str(img_id)}"
+        img_ref[image.id] = img_id_str
         pix = create_empty_pixels(image, img_id)
         if len(ome.images) > 1:  # differentiating names
             filename = Path(target).name
@@ -540,8 +541,19 @@ def parse_showinf(text, counter_imgs, counter_plates, target):
         images.append(img)
     for plate in ome.plates:
         pl_id_str = f"Plate:{str(pl_id)}"
-        pl = Plate(id=pl_id_str, name="test")
+        pl = Plate(id=pl_id_str, name=plate.name, wells=plate.wells)
+        for w in pl.wells:
+            for ws in w.well_samples:
+                ws.image_ref.id = img_ref[ws.image_ref.id]
         pl_id += 1
+        uid = (-1) * uuid4().int
+        an = CommentAnnotation(id=uid,
+                               namespace=pl_id_str,
+                               value=target
+                               )
+        annotations.append(an)
+        anref = AnnotationRef(id=an.id)
+        pl.annotation_ref.append(anref)
         plates.append(pl)
     return images, plates, annotations
 

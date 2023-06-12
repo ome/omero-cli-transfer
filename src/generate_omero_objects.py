@@ -468,13 +468,26 @@ def rename_images(imgs: List[Image], img_map: dict, conn: BlitzGateway):
     return
 
 
+def rename_plates(pls: List[Plate], pl_map: dict, conn: BlitzGateway):
+    for pl in pls:
+        try:
+            pl_id = pl_map[pl.id]
+            pl_obj = conn.getObject("Plate", pl_id)
+            pl_obj.setName(pl.name)
+            pl_obj.save()
+        except KeyError:
+            print(f"Plate corresponding to {pl.id} not found. Skipping.")
+    return
+
+
 def populate_omero(ome: OME, img_map: dict, conn: BlitzGateway, hash: str,
                    folder: str, metadata: List[str]):
+    plate_map, ome = create_plate_map(ome, img_map, conn)
     rename_images(ome.images, img_map, conn)
+    rename_plates(ome.plates, plate_map, conn)
     proj_map = create_projects(ome.projects, conn)
     ds_map = create_datasets(ome.datasets, conn)
     screen_map = create_screens(ome.screens, conn)
-    plate_map, ome = create_plate_map(ome, img_map, conn)
     ann_map = create_annotations(ome.structured_annotations, conn,
                                  hash, folder, metadata)
     create_rois(ome.rois, ome.images, img_map, conn)
