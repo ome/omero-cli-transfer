@@ -35,7 +35,6 @@ from omero.cli import ProxyStringType
 from omero.gateway import BlitzGateway
 from omero.model import Image, Dataset, Project, Plate, Screen
 from omero.grid import ManagedRepositoryPrx as MRepo
-from subprocess import PIPE
 
 DIR_PERM = 0o755
 MD5_BUF_SIZE = 65536

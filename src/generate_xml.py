@@ -573,7 +573,6 @@ def create_empty_pixels(image, id):
     return pixels
 
 
-
 def populate_roi(obj: RoiI, roi_obj: IObject, ome: OME, conn: BlitzGateway
                  ) -> Union[ROIRef, None]:
     id = obj.getId().getValue()
