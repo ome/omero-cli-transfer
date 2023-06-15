@@ -490,6 +490,7 @@ def create_objects(folder):
     counter_imgs = 1
     counter_pls = 1
     for target in targets:
+        print(f"Processing file {target}\n")
         cmd = ["showinf", target, '-nopix', '-omexml-only',
                '-no-sas', '-noflat']
         res = cli.popen(cmd, stdout=PIPE, stderr=DEVNULL)
@@ -512,7 +513,7 @@ def parse_files_import(text):
 
 
 def parse_showinf(text, counter_imgs, counter_plates, target):
-    ome = from_xml(text, parser='lxml')
+    ome = from_xml(text, parser='xmlschema')
     images = []
     plates = []
     annotations = []
@@ -856,9 +857,12 @@ def populate_xml_folder(folder: str, conn: BlitzGateway, session: str
     ome.plates = plates
     ome.structured_annotations = annotations
     filepath = str(Path(folder) / "transfer.xml")
-    with open(filepath, 'w') as fp:
-        print(to_xml(ome), file=fp)
-        fp.close()
+    if Path(folder).exists():
+        with open(filepath, 'w') as fp:
+            print(to_xml(ome), file=fp)
+            fp.close()
+    else:
+        raise ValueError("Folder cannot be found!")
     path_id_dict = list_file_ids(ome)
     return ome, path_id_dict
 

@@ -368,7 +368,7 @@ class TransferControl(GraphControl):
                                                      args.output)
         else:
             folder = Path(args.filepath)
-            ome = from_xml(folder / "transfer.xml", parser='lxml')
+            ome = from_xml(folder / "transfer.xml", parser='xmlschema')
             hash = "imported from folder"
         print("Generating Image mapping and import filelist...")
         ome, src_img_map, filelist = self._create_image_map(ome)
@@ -417,7 +417,7 @@ class TransferControl(GraphControl):
                 raise ValueError("File is not a zip or tar file")
         else:
             raise FileNotFoundError("filepath is not a zip file")
-        ome = from_xml(folder / "transfer.xml", parser='lxml')
+        ome = from_xml(folder / "transfer.xml", parser='xmlschema')
         return hash, ome, folder
 
     def _create_image_map(self, ome: OME

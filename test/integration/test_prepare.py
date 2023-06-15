@@ -15,13 +15,14 @@ from ome_types.model import TagAnnotation, MapAnnotation
 from ome_types.model import AnnotationRef, ROI, ROIRef, Rectangle
 from ome_types.model.screen import PlateRef
 from ome_types.model.map import M
+from generate_xml import populate_xml_folder
 
 import ezomero
 import pytest
 import os
 
 TEST_FOLDERS = [
-        "./test/data/prepare/",
+        "test/data/prepare/",
 ]
 
 
@@ -32,6 +33,7 @@ class TestPrepare(CLITest):
         self.cli.register("transfer", TransferControl, "TEST")
         self.args += ["transfer"]
         self.gw = BlitzGateway(client_obj=self.client)
+        self.session = self.client.getSessionId()
 
     def delete_all(self):
         pjs = self.gw.getObjects("Project")
@@ -75,22 +77,28 @@ class TestPrepare(CLITest):
     @pytest.mark.parametrize('folder', sorted(TEST_FOLDERS))
     def test_prepare_clean(self, folder):
         folder = Path(folder)
-        os.remove(str(folder / 'transfer.xml'))
-        args = self.args + ["prepare", folder]
-        self.cli.invoke(args, strict=True)
-        assert os.path.exists(str(folder / 'transfer.xml'))
+        if Path(folder / 'transfer.xml').exists():
+            print('transfer.xml exists! deleting.')
+            os.remove(str(folder / 'transfer.xml'))
+        if Path(folder / 'transfer.xml').exists():
+            print('transfer.xml still exists???')
+        _, _ = populate_xml_folder(str(folder),
+                                   self.gw, self.session)
+        assert Path(folder / 'transfer.xml').exists()
         assert os.path.getsize(str(folder / 'transfer.xml')) > 0
         args = self.args + ["unpack", "--folder", folder]
         self.cli.invoke(args, strict=True)
         self.run_asserts_clean()
         self.delete_all()
-        os.remove(str(folder / 'transfer.xml'))
+        if Path(folder / 'transfer.xml').exists():
+            os.remove(str(folder / 'transfer.xml'))
 
     @pytest.mark.parametrize('folder', sorted(TEST_FOLDERS))
     def test_prepare_edited(self, folder):
         folder = Path(folder)
-        os.remove(str(folder / 'transfer.xml'))
-        args = self.args + ["prepare", folder]
+        if Path(folder / 'transfer.xml').exists():
+            os.remove(str(folder / 'transfer.xml'))
+        args = self.args + ["prepare", str(folder)]
         self.cli.invoke(args, strict=True)
         assert os.path.exists(str(folder / 'transfer.xml'))
         assert os.path.getsize(str(folder / 'transfer.xml')) > 0
@@ -99,7 +107,8 @@ class TestPrepare(CLITest):
         self.cli.invoke(args, strict=True)
         self.run_asserts_edited()
         self.delete_all()
-        os.remove(str(folder / 'transfer.xml'))
+        if Path(folder / 'transfer.xml').exists():
+            os.remove(str(folder / 'transfer.xml'))
 
     def run_asserts_clean(self):
         img_ids = ezomero.get_image_ids(self.gw)
