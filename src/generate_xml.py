@@ -491,11 +491,8 @@ def create_objects(folder):
     counter_pls = 1
     for target in targets:
         print(f"Processing file {target}\n")
-        cmd = ["showinf", target, '-nopix', '-omexml-only',
-               '-no-sas', '-noflat']
-        res = cli.popen(cmd, stdout=PIPE, stderr=DEVNULL)
-        std = res.communicate()
-        imgs, pls, anns = parse_showinf(std[0].decode('UTF-8'),
+        res = run_showinf(target, cli)
+        imgs, pls, anns = parse_showinf(res,
                                         counter_imgs, counter_pls, target)
         images.extend(imgs)
         counter_imgs = counter_imgs + len(imgs)
@@ -503,6 +500,14 @@ def create_objects(folder):
         counter_pls = counter_pls + len(pls)
         annotations.extend(anns)
     return images, plates, annotations
+
+
+def run_showinf(target, cli):
+    cmd = ["showinf", target, '-nopix', '-omexml-only',
+           '-no-sas', '-noflat']
+    res = cli.popen(cmd, stdout=PIPE, stderr=DEVNULL)
+    std = res.communicate()
+    return std[0].decode('UTF-8')
 
 
 def parse_files_import(text):

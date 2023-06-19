@@ -18,6 +18,7 @@ services:
       - CONFIG_omero_upgrades_url=
       - CONFIG_Ice_IPv6=0
       - CONFIG_omero_policy_binary__access=+read,+write,+image,+plate
+      - JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8
     ports:
       - "${OMERO_SERVER_TCP}4063"
       - "${OMERO_SERVER_SSL}4064"

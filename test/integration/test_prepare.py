@@ -86,7 +86,7 @@ class TestPrepare(CLITest):
                                    self.gw, self.session)
         assert Path(folder / 'transfer.xml').exists()
         assert os.path.getsize(str(folder / 'transfer.xml')) > 0
-        args = self.args + ["unpack", "--folder", folder]
+        args = self.args + ["unpack", "--folder", str(folder)]
         self.cli.invoke(args, strict=True)
         self.run_asserts_clean()
         self.delete_all()
@@ -103,7 +103,7 @@ class TestPrepare(CLITest):
         assert os.path.exists(str(folder / 'transfer.xml'))
         assert os.path.getsize(str(folder / 'transfer.xml')) > 0
         self.edit_xml(str(folder / 'transfer.xml'))
-        args = self.args + ["unpack", "--folder", folder]
+        args = self.args + ["unpack", "--folder", str(folder)]
         self.cli.invoke(args, strict=True)
         self.run_asserts_edited()
         self.delete_all()
