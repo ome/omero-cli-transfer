@@ -9,12 +9,12 @@ from omero_cli_transfer import TransferControl
 from cli import CLITest
 from omero.gateway import BlitzGateway
 from pathlib import Path
-from ome_types import from_xml
+from ome_types import from_xml, to_xml
 from ome_types.model import Project, Dataset, Screen, ImageRef, DatasetRef
 from ome_types.model import TagAnnotation, MapAnnotation
 from ome_types.model import AnnotationRef, ROI, ROIRef, Rectangle
 from ome_types.model.screen import PlateRef
-from ome_types.model.map import M
+from ome_types.model.map import M, Map
 from generate_xml import populate_xml_folder
 
 import ezomero
@@ -144,13 +144,15 @@ class TestPrepare(CLITest):
                 kv = ezomero.get_map_annotation(self.gw, kvs[0])
                 assert len(kv) == 2
                 assert kv['key1'] == "value1"
-                assert kv['key2'] == 2
+                assert kv['key2'] == "2"
             elif img_name == "vsi-ets-test-jpg2k.vsi [macro image]":
                 rois = ezomero.get_roi_ids(self.gw, img.getId())
                 assert len(rois) == 1
                 shapes = ezomero.get_shape_ids(self.gw, rois[0])
                 assert len(shapes) == 1
                 shape = ezomero.get_shape(self.gw, shapes[0])
+                # will need to be changed when new ezomero releases
+                shape = shape[0]
                 assert type(shape) == ezomero.rois.Rectangle
                 assert shape.x == 1
                 assert shape.y == 2
@@ -167,7 +169,7 @@ class TestPrepare(CLITest):
         assert len(pl_ids) == 1
 
     def edit_xml(self, filename):
-        ome = from_xml(filename)
+        ome = from_xml(filename, parser='xmlschema')
         new_proj = Project(id="Project:1", name="edited project")
         new_ds = Dataset(id="Dataset:1", name="edited dataset")
         newtag1 = TagAnnotation(id="Annotation:1", value="tag for proj")
@@ -180,7 +182,7 @@ class TestPrepare(CLITest):
                 mmap.append(M(k=_key, value=str(_value)))
             else:
                 mmap.append(M(k=_key, value=''))
-        mapann = MapAnnotation(id="Annotation:3", value=mmap)
+        mapann = MapAnnotation(id="Annotation:3", value=Map(m=mmap))
         rect = Rectangle(id="Shape:1", x=1, y=2, width=3, height=4)
         roi = ROI(id="ROI:1", union=[rect])
         ome.rois.append(roi)
@@ -190,7 +192,7 @@ class TestPrepare(CLITest):
                 img.annotation_ref.append(AnnotationRef(id=newtag2.id))
                 imref = ImageRef(id=img.id)
                 new_ds.image_ref.append(imref)
-            elif img.name == "vsi-ets-test-jpg2k.vsi [001 Caaaaa405, C488]":
+            elif img.name == "vsi-ets-test-jpg2k.vsi [001 C405, C488]":
                 img.name = "edited image name"
                 img.annotation_ref.append(AnnotationRef(id=mapann.id))
                 imref = ImageRef(id=img.id)
@@ -206,4 +208,7 @@ class TestPrepare(CLITest):
         new_scr = Screen(id="Screen:1", name="edited screen")
         new_scr.plate_ref.append(PlateRef(id=ome.plates[0].id))
         ome.screens.append(new_scr)
-        ome.to_xml(filename)
+        print(to_xml(ome))
+        with open(filename, 'w') as fp:
+            print(to_xml(ome), file=fp)
+            fp.close()
