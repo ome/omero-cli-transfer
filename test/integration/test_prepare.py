@@ -151,8 +151,6 @@ class TestPrepare(CLITest):
                 shapes = ezomero.get_shape_ids(self.gw, rois[0])
                 assert len(shapes) == 1
                 shape = ezomero.get_shape(self.gw, shapes[0])
-                # will need to be changed when new ezomero releases
-                shape = shape[0]
                 assert type(shape) == ezomero.rois.Rectangle
                 assert shape.x == 1
                 assert shape.y == 2
@@ -208,7 +206,6 @@ class TestPrepare(CLITest):
         new_scr = Screen(id="Screen:1", name="edited screen")
         new_scr.plate_ref.append(PlateRef(id=ome.plates[0].id))
         ome.screens.append(new_scr)
-        print(to_xml(ome))
         with open(filename, 'w') as fp:
             print(to_xml(ome), file=fp)
             fp.close()
