@@ -80,6 +80,22 @@ omero transfer unpack --output /home/user/optional_folder --ln_s
 omero transfer unpack --folder /home/user/unpacked_folder/
 ```
 
+## `omero transfer prepare`
+
+Creates an XML from a folder with images.
+
+Creates an XML file appropriate for usage with `omero transfer unpack` from
+a folder that contains image files, rather than a source OMERO server. This
+is intended as a first step on a bulk-import workflow, followed by using
+`omero transfer unpack` to complete an import.
+
+Examples:
+```
+omero transfer prepare /home/user/folder_with_files
+```
+
+NOTE: please refer to optional requirement instructions below and consider that this feature is experimental!
+
 ### Bioimage Archive submission contents
 
 - Folder structure in the generated zip/tar follows project/dataset structure rather than original ManagedRepository folder structure, and instead of a `transfer.xml` file, a `submission.tsv` file is generated.
@@ -96,3 +112,10 @@ omero transfer unpack --folder /home/user/unpacked_folder/
 
 - This requires an optional dependency on `ro-crate-py` that can be installed with `pip install omero-cli-transfer[rocrate]`.
 - Largely due to library limitations, current exports create a flat structure inside a zip file. For each image, `name` and `mimetype` are recorded. A `ro-crate-metadata.json` is added to the zip file.
+
+
+### `omero transfer prepare` optional requirements
+
+- `prepare` requires [bftools](https://bio-formats.readthedocs.io/en/stable/users/comlinetools/index.html) to work (in particular, we need to be able to run `showinf`). The easiest way to install this is by using conda; A simple `conda install -c bioconda bftools` on your conda environment should suffice.
+- Note that this is a Java application. The conda package will install a JDK for you if necessary, but if you're installing it for yourself you'll need to make sure Java is available.
+- This tool runs `showinf` in a subprocess and needs to be able to parse the output. This can be problematic if your `stdout` is not set to UTF-8; it can mess up special characters is e.g. measurement units and lead to XML validation errors. In addition to that, Java itself might output data in non-UTF-8 encodings, in which case it might be necessary to set `JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8`.
