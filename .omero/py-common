@@ -10,4 +10,4 @@ dir=$(cd -P -- "$(dirname -- "$0")" && pwd -P)
 cd $TARGET
 
 pip install --upgrade setuptools wheel
-pip install -r $dir/requirements.txt
+pip install --upgrade -r $dir/requirements.txt

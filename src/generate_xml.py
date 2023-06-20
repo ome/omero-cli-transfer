@@ -3,7 +3,7 @@
 #
 # Use is subject to license terms supplied in LICENSE.
 
-from ome_types import to_xml, OME
+from ome_types import to_xml, OME, from_xml
 from ome_types.model import Project, ProjectRef
 from ome_types.model import Screen
 from ome_types.model.screen import PlateRef
@@ -24,7 +24,9 @@ from omero.model import CommentAnnotationI, LongAnnotationI, Fileset
 from omero.model import PointI, LineI, RectangleI, EllipseI, PolygonI
 from omero.model import PolylineI, LabelI, ImageI, RoiI, IObject
 from omero.model import DatasetI, ProjectI, ScreenI, PlateI, WellI, Annotation
+from omero.cli import CLI
 from typing import Tuple, List, Optional, Union, Any, Dict, TextIO
+from subprocess import PIPE, DEVNULL
 from os import PathLike
 import pkg_resources
 import ezomero
@@ -35,6 +37,7 @@ from uuid import uuid4
 from datetime import datetime
 from pathlib import Path
 import shutil
+import copy
 
 
 def create_proj_and_ref(**kwargs) -> Tuple[Project, ProjectRef]:
@@ -460,6 +463,122 @@ def create_provenance_metadata(conn: BlitzGateway, img_id: int,
     return kv, ref
 
 
+def create_objects(folder):
+    img_files = []
+    for path, subdirs, files in os.walk(folder):
+        for f in files:
+            img_files.append(os.path.abspath(os.path.join(path, f)))
+    targets = copy.deepcopy(img_files)
+    cli = CLI()
+    cli.loadplugins()
+    for img in img_files:
+        if img not in (targets):
+            continue
+        cmd = ["omero", 'import', '-f', img, "\n"]
+        res = cli.popen(cmd, stdout=PIPE, stderr=DEVNULL)
+        std = res.communicate()
+        files = parse_files_import(std[0].decode('UTF-8'))
+        if len(files) > 1:
+            for f in files:
+                targets.remove(f)
+            targets.append(img)
+        if len(files) == 0:
+            targets.remove(img)
+    images = []
+    plates = []
+    annotations = []
+    counter_imgs = 1
+    counter_pls = 1
+    for target in targets:
+        print(f"Processing file {target}\n")
+        res = run_showinf(target, cli)
+        imgs, pls, anns = parse_showinf(res,
+                                        counter_imgs, counter_pls, target)
+        images.extend(imgs)
+        counter_imgs = counter_imgs + len(imgs)
+        plates.extend(pls)
+        counter_pls = counter_pls + len(pls)
+        annotations.extend(anns)
+    return images, plates, annotations
+
+
+def run_showinf(target, cli):
+    cmd = ["showinf", target, '-nopix', '-omexml-only',
+           '-no-sas', '-noflat']
+    res = cli.popen(cmd, stdout=PIPE, stderr=DEVNULL)
+    std = res.communicate()
+    return std[0].decode('UTF-8')
+
+
+def parse_files_import(text):
+    lines = text.split("\n")
+    targets = [line for line in lines if not line.startswith("#")
+               and len(line) > 0]
+    return targets
+
+
+def parse_showinf(text, counter_imgs, counter_plates, target):
+    ome = from_xml(text, parser='xmlschema')
+    images = []
+    plates = []
+    annotations = []
+    img_id = counter_imgs
+    pl_id = counter_plates
+    img_ref = {}
+    for image in ome.images:
+        img_id_str = f"Image:{str(img_id)}"
+        img_ref[image.id] = img_id_str
+        pix = create_empty_pixels(image, img_id)
+        if len(ome.images) > 1:  # differentiating names
+            filename = Path(target).name
+            img = Image(id=img_id_str, name=filename + " [" + image.name + "]",
+                        pixels=pix)
+        else:
+            img = Image(id=img_id_str, name=image.name, pixels=pix)
+        img_id += 1
+        uid = (-1) * uuid4().int
+        an = CommentAnnotation(id=uid,
+                               namespace=img_id_str,
+                               value=target
+                               )
+        annotations.append(an)
+        anref = AnnotationRef(id=an.id)
+        img.annotation_ref.append(anref)
+        images.append(img)
+    for plate in ome.plates:
+        pl_id_str = f"Plate:{str(pl_id)}"
+        pl = Plate(id=pl_id_str, name=plate.name, wells=plate.wells)
+        for w in pl.wells:
+            for ws in w.well_samples:
+                ws.image_ref.id = img_ref[ws.image_ref.id]
+        pl_id += 1
+        uid = (-1) * uuid4().int
+        an = CommentAnnotation(id=uid,
+                               namespace=pl_id_str,
+                               value=target
+                               )
+        annotations.append(an)
+        anref = AnnotationRef(id=an.id)
+        pl.annotation_ref.append(anref)
+        plates.append(pl)
+    return images, plates, annotations
+
+
+def create_empty_pixels(image, id):
+    pix_id = f"Pixels:{str(id)}"
+    pixels = Pixels(
+        id=pix_id,
+        dimension_order=image.pixels.dimension_order,
+        size_c=image.pixels.size_c,
+        size_t=image.pixels.size_t,
+        size_x=image.pixels.size_x,
+        size_y=image.pixels.size_y,
+        size_z=image.pixels.size_z,
+        type=image.pixels.type,
+        metadata_only=True)
+    return pixels
+
+
 def populate_roi(obj: RoiI, roi_obj: IObject, ome: OME, conn: BlitzGateway
                  ) -> Union[ROIRef, None]:
     id = obj.getId().getValue()
@@ -731,6 +850,24 @@ def populate_xml(datatype: str, id: int, filepath: str, conn: BlitzGateway,
         with open(filepath, 'w') as fp:
             print(to_xml(ome), file=fp)
             fp.close()
+    path_id_dict = list_file_ids(ome)
+    return ome, path_id_dict
+
+
+def populate_xml_folder(folder: str, conn: BlitzGateway, session: str
+                        ) -> Tuple[OME, dict]:
+    ome = OME()
+    images, plates, annotations = create_objects(folder)
+    ome.images = images
+    ome.plates = plates
+    ome.structured_annotations = annotations
+    filepath = str(Path(folder) / "transfer.xml")
+    if Path(folder).exists():
+        with open(filepath, 'w') as fp:
+            print(to_xml(ome), file=fp)
+            fp.close()
+    else:
+        raise ValueError("Folder cannot be found!")
     path_id_dict = list_file_ids(ome)
     return ome, path_id_dict
 

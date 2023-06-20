@@ -250,9 +250,32 @@ def add_image_to_plate(image_ids: List[int], plate_id: int, column: int,
 def create_shapes(roi: ROI) -> List[Shape]:
     shapes = []
     for shape in roi.union:
+        if shape.fill_color:
+            fc = shape.fill_color.as_rgb_tuple()
+            if len(fc) == 3:
+                fill_color = fc + (255,)
+            else:
+                alpha = fc[3] * 255
+                fill_color = fc[0:3] + (int(alpha),)
+        else:
+            fill_color = (0, 0, 0, 0)
+        if shape.stroke_color:
+            sc = shape.stroke_color.as_rgb_tuple()
+            if len(sc) == 3:
+                stroke_color = sc + (255,)
+            else:
+                stroke_color = sc
+        else:
+            stroke_color = (255, 255, 255, 255)
+        if shape.stroke_width:
+            stroke_width = int(shape.stroke_width)
+        else:
+            stroke_width = 1
         if isinstance(shape, Point):
             sh = rois.Point(shape.x, shape.y, z=shape.the_z, c=shape.the_c,
-                            t=shape.the_t, label=shape.text)
+                            t=shape.the_t, label=shape.text,
+                            fill_color=fill_color, stroke_color=stroke_color,
+                            stroke_width=stroke_width)
         elif isinstance(shape, Line):
             if shape.marker_start == Marker.ARROW:
                 mk_start = "Arrow"
@@ -318,32 +341,9 @@ def create_rois(rois: List[ROI], imgs: List[Image], img_map: dict,
         for roiref in img.roi_ref:
             roi = next(filter(lambda x: x.id == roiref.id, rois))
             shapes = create_shapes(roi)
-            if roi.union[0].fill_color:
-                fc = roi.union[0].fill_color.as_rgb_tuple()
-                if len(fc) == 3:
-                    fill_color = fc + (255,)
-                else:
-                    alpha = fc[3] * 255
-                    fill_color = fc[0:3] + (int(alpha),)
-            else:
-                fill_color = (0, 0, 0, 0)
-            if roi.union[0].stroke_color:
-                sc = roi.union[0].stroke_color.as_rgb_tuple()
-                if len(sc) == 3:
-                    stroke_color = sc + (255,)
-                else:
-                    stroke_color = sc
-            else:
-                stroke_color = (255, 255, 255, 255)
-            if roi.union[0].stroke_width:
-                stroke_width = int(roi.union[0].stroke_width)
-            else:
-                stroke_width = 1
             img_id_dest = img_map[img.id]
             ezomero.post_roi(conn, img_id_dest, shapes, name=roi.name,
-                             description=roi.description,
-                             fill_color=fill_color, stroke_color=stroke_color,
-                             stroke_width=stroke_width)
+                             description=roi.description)
     return
 
 
@@ -468,13 +468,26 @@ def rename_images(imgs: List[Image], img_map: dict, conn: BlitzGateway):
     return
 
 
+def rename_plates(pls: List[Plate], pl_map: dict, conn: BlitzGateway):
+    for pl in pls:
+        try:
+            pl_id = pl_map[pl.id]
+            pl_obj = conn.getObject("Plate", pl_id)
+            pl_obj.setName(pl.name)
+            pl_obj.save()
+        except KeyError:
+            print(f"Plate corresponding to {pl.id} not found. Skipping.")
+    return
+
+
 def populate_omero(ome: OME, img_map: dict, conn: BlitzGateway, hash: str,
                    folder: str, metadata: List[str]):
+    plate_map, ome = create_plate_map(ome, img_map, conn)
     rename_images(ome.images, img_map, conn)
+    rename_plates(ome.plates, plate_map, conn)
     proj_map = create_projects(ome.projects, conn)
     ds_map = create_datasets(ome.datasets, conn)
     screen_map = create_screens(ome.screens, conn)
-    plate_map, ome = create_plate_map(ome, img_map, conn)
     ann_map = create_annotations(ome.structured_annotations, conn,
                                  hash, folder, metadata)
     create_rois(ome.rois, ome.images, img_map, conn)

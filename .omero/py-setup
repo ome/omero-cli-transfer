@@ -8,6 +8,10 @@ set -x
 TARGET=${TARGET:-..}
 PLUGIN=${PLUGIN:-}
 
+export JAVA_HOME=$(readlink -f /usr/bin/java | sed "s:/bin/java::")
+export JAVA_LD_LIBRARY_PATH="$JAVA_HOME/lib/:$JAVA_HOME/lib/server"
+export CONDA_BACKUP_JAVA_HOME=$JAVA_HOME
+export CONDA_BACKUP_JAVA_LD_LIBRARY_PATH=$JAVA_LD_LIBRARY_PATH
 wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 sh Miniconda3-latest-Linux-x86_64.sh -b -p /tmp/miniconda
 source /tmp/miniconda/bin/activate
@@ -15,6 +19,7 @@ conda init
 conda create -n omero python=3.8
 conda activate omero
 conda install -c conda-forge zeroc-ice=3.6.5
+conda install -c bioconda bftools
 
 cd $TARGET
 cd $(setup_dir)

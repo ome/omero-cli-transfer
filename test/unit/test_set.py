@@ -88,7 +88,7 @@ class TestUnpackSide():
                                           'data/output_folder')
 
     def test_src_img_map(self):
-        ome = from_xml('test/data/transfer.xml')
+        ome = from_xml('test/data/transfer.xml', parser='xmlschema')
         _, src_img_map, filelist = self.transfer._create_image_map(ome)
         correct_map = {"root_0/2022-01/14/"
                        "18-30-55.264/combined_result.tiff": [1678, 1679]}
