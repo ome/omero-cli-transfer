@@ -463,32 +463,36 @@ def create_provenance_metadata(conn: BlitzGateway, img_id: int,
     return kv, ref
 
 
-def create_objects(folder):
+def create_objects(folder, filelist):
     img_files = []
-    for path, subdirs, files in os.walk(folder):
-        for f in files:
-            img_files.append(os.path.abspath(os.path.join(path, f)))
-    targets = copy.deepcopy(img_files)
-    cli = CLI()
-    cli.loadplugins()
-    for img in img_files:
-        if img not in (targets):
-            continue
-        cmd = ["omero", 'import', '-f', img, "\n"]
-        res = cli.popen(cmd, stdout=PIPE, stderr=DEVNULL)
-        std = res.communicate()
-        files = parse_files_import(std[0].decode('UTF-8'))
-        if len(files) > 1:
+    if not filelist:
+        for path, subdirs, files in os.walk(folder):
             for f in files:
-                targets.remove(f)
-            targets.append(img)
-        if len(files) == 0:
-            targets.remove(img)
-    images = []
-    plates = []
-    annotations = []
-    counter_imgs = 1
-    counter_pls = 1
+                img_files.append(os.path.abspath(os.path.join(path, f)))
+        targets = copy.deepcopy(img_files)
+        cli = CLI()
+        cli.loadplugins()
+        for img in img_files:
+            if img not in (targets):
+                continue
+            cmd = ["omero", 'import', '-f', img, "\n"]
+            res = cli.popen(cmd, stdout=PIPE, stderr=DEVNULL)
+            std = res.communicate()
+            files = parse_files_import(std[0].decode('UTF-8'))
+            if len(files) > 1:
+                for f in files:
+                    targets.remove(f)
+                targets.append(img)
+            if len(files) == 0:
+                targets.remove(img)
+        images = []
+        plates = []
+        annotations = []
+        counter_imgs = 1
+        counter_pls = 1
+    else:
+        with open(folder, "r") as f:
+            targets = f.readlines()
     for target in targets:
         print(f"Processing file {target}\n")
         res = run_showinf(target, cli)
@@ -854,10 +858,10 @@ def populate_xml(datatype: str, id: int, filepath: str, conn: BlitzGateway,
     return ome, path_id_dict
 
 
-def populate_xml_folder(folder: str, conn: BlitzGateway, session: str
-                        ) -> Tuple[OME, dict]:
+def populate_xml_folder(folder: str, filelist: bool, conn: BlitzGateway,
+                        session: str) -> Tuple[OME, dict]:
     ome = OME()
-    images, plates, annotations = create_objects(folder)
+    images, plates, annotations = create_objects(folder, filelist)
     ome.images = images
     ome.plates = plates
     ome.structured_annotations = annotations
