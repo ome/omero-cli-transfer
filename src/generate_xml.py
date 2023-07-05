@@ -485,14 +485,14 @@ def create_objects(folder, filelist):
                 targets.append(img)
             if len(files) == 0:
                 targets.remove(img)
-        images = []
-        plates = []
-        annotations = []
-        counter_imgs = 1
-        counter_pls = 1
     else:
         with open(folder, "r") as f:
-            targets = f.readlines()
+            targets = f.read().splitlines()
+    images = []
+    plates = []
+    annotations = []
+    counter_imgs = 1
+    counter_pls = 1
     for target in targets:
         print(f"Processing file {target}\n")
         res = run_showinf(target, cli)
