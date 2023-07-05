@@ -206,6 +206,9 @@ class TransferControl(GraphControl):
         )
         folder_help = ("Path to folder with image files")
         prepare.add_argument("folder", type=str, help=folder_help)
+        prepare.add_argument(
+            "--filelist", help="Pass path to a filelist rather than a folder",
+            action="store_true")
 
     @gateway_required
     def pack(self, args):
