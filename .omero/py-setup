@@ -23,7 +23,6 @@ conda install -c bioconda bftools
 
 cd $TARGET
 cd $(setup_dir)
-python setup.py sdist
-pip install -U dist/*.tar.gz
+pip install .
 python setup.py clean
 rm -rf dist *egg-info src/*egg-info
