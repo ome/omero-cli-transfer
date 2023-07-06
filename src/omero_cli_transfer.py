@@ -119,8 +119,14 @@ a folder that contains image files, rather than a source OMERO server. This
 is intended as a first step on a bulk-import workflow, followed by using
 `omero transfer unpack` to complete an import.
 
+--filelist allows you to specify a text file containing a list of file paths
+(one per line). The XML file will only take those files into consideration.
+The resulting `transfer.xml` file will be created on the current working
+directory.
+
 Examples:
 omero transfer prepare /home/user/folder_with_files
+omero transfer prepare --filelist /home/user/file_with_paths.txt
 """)
 
 

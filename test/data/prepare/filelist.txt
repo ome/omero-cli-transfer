@@ -1,0 +1,2 @@
+test_pyramid.ome.tif
+default-plate&plates=1.fake

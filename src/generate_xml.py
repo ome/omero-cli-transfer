@@ -465,13 +465,13 @@ def create_provenance_metadata(conn: BlitzGateway, img_id: int,
 
 def create_objects(folder, filelist):
     img_files = []
+    cli = CLI()
+    cli.loadplugins()
     if not filelist:
         for path, subdirs, files in os.walk(folder):
             for f in files:
                 img_files.append(os.path.abspath(os.path.join(path, f)))
         targets = copy.deepcopy(img_files)
-        cli = CLI()
-        cli.loadplugins()
         for img in img_files:
             if img not in (targets):
                 continue
@@ -494,7 +494,8 @@ def create_objects(folder, filelist):
     counter_imgs = 1
     counter_pls = 1
     for target in targets:
-        print(f"Processing file {target}\n")
+        target = str(Path(target).absolute())
+        print(f"Processing file {target}")
         res = run_showinf(target, cli)
         imgs, pls, anns = parse_showinf(res,
                                         counter_imgs, counter_pls, target)
@@ -865,13 +866,16 @@ def populate_xml_folder(folder: str, filelist: bool, conn: BlitzGateway,
     ome.images = images
     ome.plates = plates
     ome.structured_annotations = annotations
-    filepath = str(Path(folder) / "transfer.xml")
-    if Path(folder).exists():
-        with open(filepath, 'w') as fp:
-            print(to_xml(ome), file=fp)
-            fp.close()
+    if filelist:
+        filepath = str(Path.cwd() / "transfer.xml")
     else:
-        raise ValueError("Folder cannot be found!")
+        if Path(folder).exists():
+            filepath = str(Path(folder) / "transfer.xml")
+        else:
+            raise ValueError("Folder cannot be found!")
+    with open(filepath, 'w') as fp:
+        print(to_xml(ome), file=fp)
+        fp.close()
     path_id_dict = list_file_ids(ome)
     return ome, path_id_dict
 
