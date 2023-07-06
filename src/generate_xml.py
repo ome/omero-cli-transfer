@@ -487,7 +487,11 @@ def create_objects(folder, filelist):
                 targets.remove(img)
     else:
         with open(folder, "r") as f:
-            targets = f.read().splitlines()
+            targets_str = f.read().splitlines()
+        targets = []
+        par_folder = Path(folder).parent
+        for target in targets_str:
+            targets.append(str((par_folder / target).resolve()))
     images = []
     plates = []
     annotations = []
@@ -867,7 +871,7 @@ def populate_xml_folder(folder: str, filelist: bool, conn: BlitzGateway,
     ome.plates = plates
     ome.structured_annotations = annotations
     if filelist:
-        filepath = str(Path.cwd() / "transfer.xml")
+        filepath = str(Path(folder).parent.resolve() / "transfer.xml")
     else:
         if Path(folder).exists():
             filepath = str(Path(folder) / "transfer.xml")
