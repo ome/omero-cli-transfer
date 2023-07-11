@@ -150,6 +150,7 @@ def create_plate_map(ome: OME, img_map: dict, conn: BlitzGateway
     map_ref_ids = []
     for plate in ome.plates:
         ann_ids = [i.id for i in plate.annotation_ref]
+        file_path = ""
         for ann in ome.structured_annotations:
             if (ann.id in ann_ids and
                     type(ann) == CommentAnnotation and
@@ -159,6 +160,9 @@ def create_plate_map(ome: OME, img_map: dict, conn: BlitzGateway
                 file_path = ann.value
         q = conn.getQueryService()
         params = Parameters()
+        if not file_path:
+            raise ValueError(f"Plate ID {plate.id} does not have a \
+                             CommentAnnotation with a file path!")
         path_query = str(file_path).strip('/')
         if path_query.endswith('mock_folder'):
             path_query = path_query.rstrip("mock_folder")
