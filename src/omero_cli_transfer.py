@@ -119,8 +119,21 @@ a folder that contains image files, rather than a source OMERO server. This
 is intended as a first step on a bulk-import workflow, followed by using
 `omero transfer unpack` to complete an import.
 
+Note: images imported from an XML generated with this tool will have whichever
+names `showinf` reports them to have; that is, the names on their internal
+metadata, which might be different from filenames. For multi-image files,
+image names follow the pattern "filename [imagename]", where 'imagename' is
+the one reported by `showinf`.
+
+--filelist allows you to specify a text file containing a list of file paths
+(one per line). Relative paths should be relative to the location of the file
+list. The XML file will only take those files into consideration.
+The resulting `transfer.xml` file will be created on the same directory of
+your file list.
+
 Examples:
 omero transfer prepare /home/user/folder_with_files
+omero transfer prepare --filelist /home/user/file_with_paths.txt
 """)
 
 
@@ -206,6 +219,9 @@ class TransferControl(GraphControl):
         )
         folder_help = ("Path to folder with image files")
         prepare.add_argument("folder", type=str, help=folder_help)
+        prepare.add_argument(
+            "--filelist", help="Pass path to a filelist rather than a folder",
+            action="store_true")
 
     @gateway_required
     def pack(self, args):
@@ -546,7 +562,8 @@ class TransferControl(GraphControl):
         return imgmap
 
     def __prepare(self, args):
-        populate_xml_folder(args.folder, self.gateway, self.session)
+        populate_xml_folder(args.folder, args.filelist, self.gateway,
+                            self.session)
         return
 
 

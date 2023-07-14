@@ -6,7 +6,6 @@ set -u
 set -x
 
 TARGET=${TARGET:-..}
-
 cd $TARGET
 if [ -f .pre-commit-config.yaml ]; then
     pre-commit run -a
