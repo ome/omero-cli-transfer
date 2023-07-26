@@ -195,12 +195,12 @@ class TestPrepare(CLITest):
         assert len(pl_ids) == 1
 
     def edit_xml(self, filename):
-        ome = from_xml(filename, parser='xmlschema')
+        ome = from_xml(filename)
         new_proj = Project(id="Project:1", name="edited project")
         new_ds = Dataset(id="Dataset:1", name="edited dataset")
         newtag1 = TagAnnotation(id="Annotation:1", value="tag for proj")
         newtag2 = TagAnnotation(id="Annotation:2", value="tag for img")
-        new_proj.annotation_ref.append(AnnotationRef(id=newtag1.id))
+        new_proj.annotation_refs.append(AnnotationRef(id=newtag1.id))
         md_dict = {"key1": "value1", "key2": 2}
         mmap = []
         for _key, _value in md_dict.items():
@@ -208,31 +208,31 @@ class TestPrepare(CLITest):
                 mmap.append(M(k=_key, value=str(_value)))
             else:
                 mmap.append(M(k=_key, value=''))
-        mapann = MapAnnotation(id="Annotation:3", value=Map(m=mmap))
+        mapann = MapAnnotation(id="Annotation:3", value=Map(ms=mmap))
         rect = Rectangle(id="Shape:1", x=1, y=2, width=3, height=4)
         roi = ROI(id="ROI:1", union=[rect])
         ome.rois.append(roi)
         ome.structured_annotations.extend([newtag1, newtag2, mapann])
         for img in ome.images:
             if img.name == "test_pyramid.tiff":
-                img.annotation_ref.append(AnnotationRef(id=newtag2.id))
+                img.annotation_refs.append(AnnotationRef(id=newtag2.id))
                 imref = ImageRef(id=img.id)
-                new_ds.image_ref.append(imref)
+                new_ds.image_refs.append(imref)
             elif img.name == "vsi-ets-test-jpg2k.vsi [001 C405, C488]":
                 img.name = "edited image name"
-                img.annotation_ref.append(AnnotationRef(id=mapann.id))
+                img.annotation_refs.append(AnnotationRef(id=mapann.id))
                 imref = ImageRef(id=img.id)
-                new_ds.image_ref.append(imref)
+                new_ds.image_refs.append(imref)
             elif img.name == "vsi-ets-test-jpg2k.vsi [macro image]":
-                img.roi_ref.append(ROIRef(id=roi.id))
+                img.roi_refs.append(ROIRef(id=roi.id))
                 imref = ImageRef(id=img.id)
-                new_ds.image_ref.append(imref)
+                new_ds.image_refs.append(imref)
         dsref = DatasetRef(id=new_ds.id)
-        new_proj.dataset_ref.append(dsref)
+        new_proj.dataset_refs.append(dsref)
         ome.projects.append(new_proj)
         ome.datasets.append(new_ds)
         new_scr = Screen(id="Screen:1", name="edited screen")
-        new_scr.plate_ref.append(PlateRef(id=ome.plates[0].id))
+        new_scr.plate_refs.append(PlateRef(id=ome.plates[0].id))
         ome.screens.append(new_scr)
         with open(filename, 'w') as fp:
             print(to_xml(ome), file=fp)

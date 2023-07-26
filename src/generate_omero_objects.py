@@ -73,7 +73,7 @@ def create_annotations(ans: List[Annotation], conn: BlitzGateway, hash: str,
             namespace = an.namespace
             map_ann.setNs(namespace)
             key_value_data = []
-            for v in an.value.m:
+            for v in an.value.ms:
                 if int(an.id.split(":")[-1]) < 0:
                     if not metadata:
                         key_value_data.append(['empty_metadata', "True"])
@@ -131,7 +131,7 @@ def create_original_file(ann: FileAnnotation, ans: List[Annotation],
                          conn: BlitzGateway, folder: str
                          ) -> OriginalFileWrapper:
     curr_folder = str(Path('.').resolve())
-    for an in ann.annotation_ref:
+    for an in ann.annotation_refs:
         clean_id = int(an.id.split(":")[-1])
         if clean_id < 0:
             cmnt_id = an.id
@@ -149,7 +149,7 @@ def create_plate_map(ome: OME, img_map: dict, conn: BlitzGateway
     plate_map = {}
     map_ref_ids = []
     for plate in ome.plates:
-        ann_ids = [i.id for i in plate.annotation_ref]
+        ann_ids = [i.id for i in plate.annotation_refs]
         file_path = ""
         for ann in ome.structured_annotations:
             if (ann.id in ann_ids and
@@ -201,9 +201,9 @@ def create_plate_map(ome: OME, img_map: dict, conn: BlitzGateway
             plate_id = create_plate_from_images(plate, img_map, conn)
         plate_map[plate.id] = plate_id
     for p in newome.plates:
-        for ref in p.annotation_ref:
+        for ref in p.annotation_refs:
             if ref.id in map_ref_ids:
-                p.annotation_ref.remove(ref)
+                p.annotation_refs.remove(ref)
     return plate_map, newome
 
 
@@ -342,7 +342,7 @@ def _int_to_rgba(omero_val: int) -> Tuple[int, int, int, int]:
 def create_rois(rois: List[ROI], imgs: List[Image], img_map: dict,
                 conn: BlitzGateway):
     for img in imgs:
-        for roiref in img.roi_ref:
+        for roiref in img.roi_refs:
             roi = next(filter(lambda x: x.id == roiref.id, rois))
             shapes = create_shapes(roi)
             img_id_dest = img_map[img.id]
@@ -355,7 +355,7 @@ def link_datasets(ome: OME, proj_map: dict, ds_map: dict, conn: BlitzGateway):
     for proj in ome.projects:
         proj_id = proj_map[proj.id]
         ds_ids = []
-        for ds in proj.dataset_ref:
+        for ds in proj.dataset_refs:
             ds_id = ds_map[ds.id]
             ds_ids.append(ds_id)
         ezomero.link_datasets_to_project(conn, ds_ids, proj_id)
@@ -367,7 +367,7 @@ def link_plates(ome: OME, screen_map: dict, plate_map: dict,
     for screen in ome.screens:
         screen_id = screen_map[screen.id]
         pl_ids = []
-        for pl in screen.plate_ref:
+        for pl in screen.plate_refs:
             pl_id = plate_map[pl.id]
             pl_ids.append(pl_id)
         ezomero.link_plates_to_screen(conn, pl_ids, screen_id)
@@ -378,7 +378,7 @@ def link_images(ome: OME, ds_map: dict, img_map: dict, conn: BlitzGateway):
     for ds in ome.datasets:
         ds_id = ds_map[ds.id]
         img_ids = []
-        for img in ds.image_ref:
+        for img in ds.image_refs:
             try:
                 img_id = img_map[img.id]
                 img_ids.append(img_id)
@@ -395,14 +395,14 @@ def link_annotations(ome: OME, proj_map: dict, ds_map: dict, img_map: dict,
         proj_id = proj_map[proj.id]
         proj_obj = conn.getObject("Project", proj_id)
         anns = ome.structured_annotations
-        for annref in proj.annotation_ref:
+        for annref in proj.annotation_refs:
             ann = next(filter(lambda x: x.id == annref.id, anns))
             link_one_annotation(proj_obj, ann, ann_map, conn)
     for ds in ome.datasets:
         ds_id = ds_map[ds.id]
         ds_obj = conn.getObject("Dataset", ds_id)
         anns = ome.structured_annotations
-        for annref in ds.annotation_ref:
+        for annref in ds.annotation_refs:
             ann = next(filter(lambda x: x.id == annref.id, anns))
             link_one_annotation(ds_obj, ann, ann_map, conn)
     for img in ome.images:
@@ -410,7 +410,7 @@ def link_annotations(ome: OME, proj_map: dict, ds_map: dict, img_map: dict,
             img_id = img_map[img.id]
             img_obj = conn.getObject("Image", img_id)
             anns = ome.structured_annotations
-            for annref in img.annotation_ref:
+            for annref in img.annotation_refs:
                 ann = next(filter(lambda x: x.id == annref.id, anns))
                 link_one_annotation(img_obj, ann, ann_map, conn)
         except KeyError:
@@ -419,23 +419,23 @@ def link_annotations(ome: OME, proj_map: dict, ds_map: dict, img_map: dict,
         scr_id = scr_map[scr.id]
         scr_obj = conn.getObject("Screen", scr_id)
         anns = ome.structured_annotations
-        for annref in scr.annotation_ref:
+        for annref in scr.annotation_refs:
             ann = next(filter(lambda x: x.id == annref.id, anns))
             link_one_annotation(scr_obj, ann, ann_map, conn)
     for pl in ome.plates:
         pl_id = pl_map[pl.id]
         pl_obj = conn.getObject("Plate", pl_id)
         anns = ome.structured_annotations
-        for annref in pl.annotation_ref:
+        for annref in pl.annotation_refs:
             ann = next(filter(lambda x: x.id == annref.id, anns))
             link_one_annotation(pl_obj, ann, ann_map, conn)
         anns = ome.structured_annotations
         for well in pl.wells:
-            if len(well.annotation_ref) > 0:
+            if len(well.annotation_refs) > 0:
                 row, col = well.row, well.column
                 well_id = ezomero.get_well_id(conn, pl_id, row, col)
                 well_obj = conn.getObject("Well", well_id)
-                for annref in well.annotation_ref:
+                for annref in well.annotation_refs:
                     ann = next(filter(lambda x: x.id == annref.id, anns))
                     link_one_annotation(well_obj, ann, ann_map, conn)
     return

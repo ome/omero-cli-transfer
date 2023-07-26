@@ -384,7 +384,7 @@ class TransferControl(GraphControl):
                                                      args.output)
         else:
             folder = Path(args.filepath)
-            ome = from_xml(folder / "transfer.xml", parser='xmlschema')
+            ome = from_xml(folder / "transfer.xml")
             hash = "imported from folder"
         print("Generating Image mapping and import filelist...")
         ome, src_img_map, filelist = self._create_image_map(ome)
@@ -433,7 +433,7 @@ class TransferControl(GraphControl):
                 raise ValueError("File is not a zip or tar file")
         else:
             raise FileNotFoundError("filepath is not a zip file")
-        ome = from_xml(folder / "transfer.xml", parser='xmlschema')
+        ome = from_xml(folder / "transfer.xml")
         return hash, ome, folder
 
     def _create_image_map(self, ome: OME
@@ -458,9 +458,9 @@ class TransferControl(GraphControl):
                         filelist.append(ann.value)
                     newome.structured_annotations.remove(ann)
         for i in newome.images:
-            for ref in i.annotation_ref:
+            for ref in i.annotation_refs:
                 if ref.id in map_ref_ids:
-                    i.annotation_ref.remove(ref)
+                    i.annotation_refs.remove(ref)
         filelist = list(set(filelist))
         img_map = DefaultDict(list, {x: sorted(img_map[x])
                               for x in img_map.keys()})

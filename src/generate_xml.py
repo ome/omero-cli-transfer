@@ -459,7 +459,7 @@ def create_provenance_metadata(conn: BlitzGateway, img_id: int,
             mmap.append(M(k=_key, value=''))
     kv, ref = create_kv_and_ref(id=id,
                                 namespace=ns,
-                                value=Map(m=mmap))
+                                value=Map(ms=mmap))
     return kv, ref
 
 
@@ -527,7 +527,7 @@ def parse_files_import(text):
 
 
 def parse_showinf(text, counter_imgs, counter_plates, target):
-    ome = from_xml(text, parser='xmlschema')
+    ome = from_xml(text)
     images = []
     plates = []
     annotations = []
@@ -552,7 +552,7 @@ def parse_showinf(text, counter_imgs, counter_plates, target):
                                )
         annotations.append(an)
         anref = AnnotationRef(id=an.id)
-        img.annotation_ref.append(anref)
+        img.annotation_refs.append(anref)
         images.append(img)
     for plate in ome.plates:
         pl_id_str = f"Plate:{str(pl_id)}"
@@ -568,7 +568,7 @@ def parse_showinf(text, counter_imgs, counter_plates, target):
                                )
         annotations.append(an)
         anref = AnnotationRef(id=an.id)
-        pl.annotation_ref.append(anref)
+        pl.annotation_refs.append(anref)
         plates.append(pl)
     return images, plates, annotations
 
@@ -630,11 +630,11 @@ def populate_image(obj: ImageI, ome: OME, conn: BlitzGateway, hostname: str,
         if kv_id not in [i.id for i in ome.structured_annotations]:
             ome.structured_annotations.append(kv)
         if ref:
-            img.annotation_ref.append(ref)
+            img.annotation_refs.append(ref)
     filepath_anns, refs = create_filepath_annotations(img_id, conn)
     for i in range(len(filepath_anns)):
         ome.structured_annotations.append(filepath_anns[i])
-        img.annotation_ref.append(refs[i])
+        img.annotation_refs.append(refs[i])
     roi_service = conn.getRoiService()
     rois = roi_service.findByImage(id, None).rois
     for roi in rois:
@@ -668,7 +668,7 @@ def populate_dataset(obj: DatasetI, ome: OME, conn: BlitzGateway,
     for img in obj.listChildren():
         img_obj = conn.getObject('Image', img.getId())
         img_ref = populate_image(img_obj, ome, conn, hostname, metadata)
-        ds.image_ref.append(img_ref)
+        ds.image_refs.append(img_ref)
     ds_id = f"Dataset:{str(ds.id)}"
     if ds_id not in [i.id for i in ome.datasets]:
         ome.datasets.append(ds)
@@ -686,7 +686,7 @@ def populate_project(obj: ProjectI, ome: OME, conn: BlitzGateway,
     for ds in obj.listChildren():
         ds_obj = conn.getObject('Dataset', ds.getId())
         ds_ref = populate_dataset(ds_obj, ome, conn, hostname, metadata)
-        proj.dataset_ref.append(ds_ref)
+        proj.dataset_refs.append(ds_ref)
     ome.projects.append(proj)
 
 
@@ -701,7 +701,7 @@ def populate_screen(obj: ScreenI, ome: OME, conn: BlitzGateway,
     for pl in obj.listChildren():
         pl_obj = conn.getObject('Plate', pl.getId())
         pl_ref = populate_plate(pl_obj, ome, conn, hostname, metadata)
-        scr.plate_ref.append(pl_ref)
+        scr.plate_refs.append(pl_ref)
     ome.screens.append(scr)
 
 
@@ -720,12 +720,12 @@ def populate_plate(obj: PlateI, ome: OME, conn: BlitzGateway,
         if kv_id not in [i.id for i in ome.structured_annotations]:
             ome.structured_annotations.append(kv)
         if ref:
-            pl.annotation_ref.append(ref)
+            pl.annotation_refs.append(ref)
     for well in obj.listChildren():
         well_obj = conn.getObject('Well', well.getId())
         well_ref = populate_well(well_obj, ome, conn, hostname, metadata)
         pl.wells.append(well_ref)
-    last_image_anns = ome.images[-1].annotation_ref
+    last_image_anns = ome.images[-1].annotation_refs
     last_image_anns_ids = [i.id for i in last_image_anns]
     for ann in ome.structured_annotations:
         if (ann.id in last_image_anns_ids and
@@ -736,7 +736,7 @@ def populate_plate(obj: PlateI, ome: OME, conn: BlitzGateway,
                                                       plate_path=plate_path)
     for i in range(len(filepath_anns)):
         ome.structured_annotations.append(filepath_anns[i])
-        pl.annotation_ref.append(refs[i])
+        pl.annotation_refs.append(refs[i])
     pl_id = f"Plate:{str(pl.id)}"
     if pl_id not in [i.id for i in ome.plates]:
         ome.plates.append(pl)
@@ -784,7 +784,7 @@ def add_annotation(obj: Union[Project, Dataset, Image, Plate, Screen,
         kv, ref = create_kv_and_ref(id=ann.getId(),
                                     namespace=ann.getNs(),
                                     value=Map(
-                                    m=mmap))
+                                    ms=mmap))
         if kv.id not in [i.id for i in ome.structured_annotations]:
             ome.structured_annotations.append(kv)
         obj.annotation_ref.append(ref)
@@ -934,10 +934,10 @@ def generate_columns(ome: OME, ids: dict) -> List[str]:
                 columns.append("comment")
     anns = ome.structured_annotations
     for i in ome.images:
-        for ann_ref in i.annotation_ref:
+        for ann_ref in i.annotation_refs:
             ann = next(filter(lambda x: x.id == ann_ref.id, anns))
             if isinstance(ann, MapAnnotation):
-                for v in ann.value.m:
+                for v in ann.value.ms:
                     if v.k not in columns:
                         columns.append(v.k)
     return columns
@@ -969,7 +969,7 @@ def list_files(ome: OME, ids: dict, top_level: str) -> List[str]:
 def find_dataset(id: str, ome: OME) -> Union[str, None]:
     for d in ome.datasets:
         def lfunc(x): return x.id == id
-        if any(filter(lfunc, d.image_ref)):
+        if any(filter(lfunc, d.image_refs)):
             return d.name
     return None
 
@@ -1029,7 +1029,7 @@ def generate_lines_and_move(img: Image, ome: OME, ids: dict, folder: str,
 
 def get_annotation_vals(cols: List[str], img: Image, ome: OME) -> List[str]:
     anns = []
-    for annref in img.annotation_ref:
+    for annref in img.annotation_refs:
         a = next(filter(lambda x: x.id == annref.id,
                  ome.structured_annotations))
         anns.append(a)
