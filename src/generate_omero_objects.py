@@ -25,6 +25,19 @@ import os
 import copy
 
 
+def create_or_set_projects(pjs: List[Project], conn: BlitzGateway,
+                           merge: bool) -> dict:
+    pj_map = {}
+    if not merge:
+        pj_map = create_projects(pjs, conn)
+    else:
+        for pj in pjs:
+            pj_id = find_project(pj, conn)
+            if not pj_id:
+                pj_id = ezomero.post_project(conn, pj.name, pj.description)
+            pj_map[pj.id] = pj_id
+
+
 def create_projects(pjs: List[Project], conn: BlitzGateway) -> dict:
     pj_map = {}
     for pj in pjs:
@@ -33,12 +46,38 @@ def create_projects(pjs: List[Project], conn: BlitzGateway) -> dict:
     return pj_map
 
 
+def find_project(pj: Project, conn: BlitzGateway) -> int:
+    id = 0
+    my_exp_id = conn.getUser().getId()
+    for p in conn.getObjects("Project", opts={'owner': my_exp_id}):
+        if p.getName() == pj.name:
+            id = p.getId()
+    return id
+
+
+def create_or_set_screens(scrs: List[Screen], conn: BlitzGateway, merge: bool
+                          ) -> dict:
+    
+    return {}
+
+
 def create_screens(scrs: List[Screen], conn: BlitzGateway) -> dict:
     scr_map = {}
     for scr in scrs:
         scr_id = ezomero.post_screen(conn, scr.name, scr.description)
         scr_map[scr.id] = scr_id
     return scr_map
+
+
+def find_screen(sc: Screen, conn: BlitzGateway) -> int:
+
+    return 0
+
+
+def create_or_set_datasets(dss: List[Dataset], conn: BlitzGateway, merge: bool
+                           ) -> dict:
+    
+    return {}
 
 
 def create_datasets(dss: List[Dataset], conn: BlitzGateway) -> dict:
@@ -56,6 +95,11 @@ def create_datasets(dss: List[Dataset], conn: BlitzGateway) -> dict:
         ds_id = dataset.getId()
         ds_map[ds.id] = ds_id
     return ds_map
+
+
+def find_dataset(ds: Dataset, conn: BlitzGateway) -> int:
+
+    return 0
 
 
 def create_annotations(ans: List[Annotation], conn: BlitzGateway, hash: str,
@@ -485,13 +529,13 @@ def rename_plates(pls: List[Plate], pl_map: dict, conn: BlitzGateway):
 
 
 def populate_omero(ome: OME, img_map: dict, conn: BlitzGateway, hash: str,
-                   folder: str, metadata: List[str]):
+                   folder: str, metadata: List[str], merge: bool):
     plate_map, ome = create_plate_map(ome, img_map, conn)
     rename_images(ome.images, img_map, conn)
     rename_plates(ome.plates, plate_map, conn)
-    proj_map = create_projects(ome.projects, conn)
-    ds_map = create_datasets(ome.datasets, conn)
-    screen_map = create_screens(ome.screens, conn)
+    proj_map = create_or_set_projects(ome.projects, conn, merge)
+    ds_map = create_or_set_datasets(ome.datasets, conn, merge)
+    screen_map = create_or_set_screens(ome.screens, conn, merge)
     ann_map = create_annotations(ome.structured_annotations, conn,
                                  hash, folder, metadata)
     create_rois(ome.rois, ome.images, img_map, conn)

@@ -94,6 +94,10 @@ will be unzipped.
 
 --folder allows the user to point to a previously-unpacked folder rather than
 a single file.
+               
+--merge will use existing Projects, Datasets and Screens if the current user 
+already owns entities with the same name as ones defined in `transfer.xml`, 
+effectively merging the "new" unpacked entities with existing ones.
 
 --metadata allows you to specify which transfer metadata will be used from
 `transfer.xml` as MapAnnotation values to the images. Fields that do not
@@ -197,6 +201,9 @@ class TransferControl(GraphControl):
         unpack.add_argument("filepath", type=str, help=file_help)
         unpack.add_argument(
                 "--ln_s_import", help="Use in-place import",
+                action="store_true")
+        unpack.add_argument(
+                "--merge", help="Use existing entities if possible",
                 action="store_true")
         unpack.add_argument(
                 "--folder", help="Pass path to a folder rather than a pack",
