@@ -57,8 +57,16 @@ def find_project(pj: Project, conn: BlitzGateway) -> int:
 
 def create_or_set_screens(scrs: List[Screen], conn: BlitzGateway, merge: bool
                           ) -> dict:
-    
-    return {}
+    scr_map = {}
+    if not merge:
+        scr_map = create_screens(scrs, conn)
+    else:
+        for scr in scrs:
+            scr_id = find_screen(scr, conn)
+            if not scr_id:
+                scr_id = ezomero.post_screen(conn, scr.name, scr.description)
+            scr_map[scr.id] = scr_id
+    return scr_map
 
 
 def create_screens(scrs: List[Screen], conn: BlitzGateway) -> dict:
@@ -70,14 +78,31 @@ def create_screens(scrs: List[Screen], conn: BlitzGateway) -> dict:
 
 
 def find_screen(sc: Screen, conn: BlitzGateway) -> int:
+    id = 0
+    my_exp_id = conn.getUser().getId()
+    for s in conn.getObjects("Screen", opts={'owner': my_exp_id}):
+        if s.getName() == sc.name:
+            id = s.getId()
+    return id
 
-    return 0
 
-
-def create_or_set_datasets(dss: List[Dataset], conn: BlitzGateway, merge: bool
-                           ) -> dict:
-    
-    return {}
+def create_or_set_datasets(dss: List[Dataset], pjs: List[Project],
+                           conn: BlitzGateway, merge: bool) -> dict:
+    ds_map = {}
+    if not merge:
+        ds_map = create_datasets(dss, conn)
+    else:
+        for ds in dss:
+            ds_id = find_dataset(ds, pjs, conn)
+            if not ds_id:
+                dataset = DatasetWrapper(conn, DatasetI())
+                dataset.setName(ds.name)
+                if ds.description is not None:
+                    dataset.setDescription(ds.description)
+                dataset.save()
+                ds_id = dataset.getId()
+            ds_map[ds.id] = ds_id
+    return ds_map
 
 
 def create_datasets(dss: List[Dataset], conn: BlitzGateway) -> dict:
@@ -97,7 +122,7 @@ def create_datasets(dss: List[Dataset], conn: BlitzGateway) -> dict:
     return ds_map
 
 
-def find_dataset(ds: Dataset, conn: BlitzGateway) -> int:
+def find_dataset(ds: Dataset, pjs: List[Project], conn: BlitzGateway) -> int:
 
     return 0
 
