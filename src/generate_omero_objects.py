@@ -123,7 +123,15 @@ def create_datasets(dss: List[Dataset], conn: BlitzGateway) -> dict:
 
 
 def find_dataset(ds: Dataset, pjs: List[Project], conn: BlitzGateway) -> int:
-
+    id = 0
+    for pj in pjs:
+        my_exp_id = conn.getUser().getId()
+        for p in conn.getObjects("Project", opts={'owner': my_exp_id}):
+            if p.getName() == pj.name:
+                for dsref in pj.dataset_refs:
+                    for ds in p.listChildren():
+                        if dsref.value == ds.getName():
+                            id = ds.getId()
     return 0
 
 
