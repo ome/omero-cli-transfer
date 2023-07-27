@@ -124,15 +124,16 @@ def create_datasets(dss: List[Dataset], conn: BlitzGateway) -> dict:
 
 def find_dataset(ds: Dataset, pjs: List[Project], conn: BlitzGateway) -> int:
     id = 0
+    my_exp_id = conn.getUser().getId()
     for pj in pjs:
-        my_exp_id = conn.getUser().getId()
         for p in conn.getObjects("Project", opts={'owner': my_exp_id}):
             if p.getName() == pj.name:
                 for dsref in pj.dataset_refs:
-                    for ds in p.listChildren():
-                        if dsref.value == ds.getName():
-                            id = ds.getId()
-    return 0
+                    if dsref.value == ds.id:
+                        for ds_rem in p.listChildren():
+                            if ds.name == ds_rem.getName():
+                                id = ds_rem.getId()
+    return id
 
 
 def create_annotations(ans: List[Annotation], conn: BlitzGateway, hash: str,
