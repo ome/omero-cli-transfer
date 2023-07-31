@@ -450,11 +450,15 @@ def link_plates(ome: OME, screen_map: dict, plate_map: dict,
                 conn: BlitzGateway):
     for screen in ome.screens:
         screen_id = screen_map[screen.id]
+        scr_obj = conn.getObject("Screen", screen_id)
+        existing_pl = []
+        for pl in scr_obj.listChildren():
+            existing_pl.append(pl.getId())
         pl_ids = []
         for pl in screen.plate_refs:
             pl_id = plate_map[pl.id]
-
-            pl_ids.append(pl_id)
+            if pl_id not in existing_pl:
+                pl_ids.append(pl_id)
         ezomero.link_plates_to_screen(conn, pl_ids, screen_id)
     return
 

@@ -553,6 +553,9 @@ def parse_showinf(text, counter_imgs, counter_plates, target):
         annotations.append(an)
         anref = AnnotationRef(id=an.id)
         img.annotation_refs.append(anref)
+        an, anref = create_prepare_metadata()
+        annotations.append(an)
+        img.annotation_refs.append(anref)
         images.append(img)
     for plate in ome.plates:
         pl_id_str = f"Plate:{str(pl_id)}"
@@ -571,6 +574,27 @@ def parse_showinf(text, counter_imgs, counter_plates, target):
         pl.annotation_refs.append(anref)
         plates.append(pl)
     return images, plates, annotations
+
+
+def create_prepare_metadata():
+    software = "omero-cli-transfer"
+    version = pkg_resources.get_distribution(software).version
+    date_time = datetime.now().strftime("%d/%m/%Y, %H:%M:%S")
+    ns = 'openmicroscopy.org/cli/transfer/prepare'
+    md_dict: Dict[str, Any] = {}
+    md_dict['software'] = software
+    md_dict['version'] = version
+    md_dict['packing_timestamp'] = date_time
+    mmap = []
+    for _key, _value in md_dict.items():
+        if _value:
+            mmap.append(M(k=_key, value=str(_value)))
+        else:
+            mmap.append(M(k=_key, value=''))
+    kv, ref = create_kv_and_ref(id=id,
+                                namespace=ns,
+                                value=Map(ms=mmap))
+    return kv, ref
 
 
 def create_empty_pixels(image, id):
