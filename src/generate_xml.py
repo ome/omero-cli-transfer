@@ -581,6 +581,7 @@ def create_prepare_metadata():
     version = pkg_resources.get_distribution(software).version
     date_time = datetime.now().strftime("%d/%m/%Y, %H:%M:%S")
     ns = 'openmicroscopy.org/cli/transfer/prepare'
+    id = (-1) * uuid4().int
     md_dict: Dict[str, Any] = {}
     md_dict['software'] = software
     md_dict['version'] = version

@@ -404,7 +404,7 @@ class TransferControl(GraphControl):
                                           ln_s, args.skip, self.gateway)
         self._delete_all_rois(dest_img_map, self.gateway)
         print("Matching source and destination images...")
-        img_map = self._make_image_map(src_img_map, dest_img_map)
+        img_map = self._make_image_map(src_img_map, dest_img_map, self.gateway)
         print("Creating and linking OMERO objects...")
         populate_omero(ome, img_map, self.gateway,
                        hash, folder, self.metadata, args.merge)
@@ -539,7 +539,8 @@ class TransferControl(GraphControl):
                     image_ids.append(img_id)
         return image_ids
 
-    def _make_image_map(self, source_map: dict, dest_map: dict) -> dict:
+    def _make_image_map(self, source_map: dict, dest_map: dict,
+                        conn: BlitzGateway) -> dict:
         # using both source and destination file-to-image-id maps,
         # map image IDs between source and destination
         src_dict = DefaultDict(list)
@@ -562,10 +563,20 @@ class TransferControl(GraphControl):
             src_v = src_dict[src_k]
             if src_k in dest_dict.keys():
                 dest_v = dest_dict[src_k]
-                if len(src_v) == len(dest_v):
+                clean_dest = []
+                for i in dest_v:
+                    img_obj = conn.getObject("Image", i)
+                    anns = 0
+                    for j in img_obj.listAnnotations():
+                        ns = j.getNs()
+                        if ns.startswith("openmicroscopy.org/cli/transfer"):
+                            anns += 1
+                    if not anns:
+                        clean_dest.append(i)
+                if len(src_v) == len(clean_dest):
                     for count in range(len(src_v)):
                         map_key = f"Image:{src_v[count]}"
-                        imgmap[map_key] = dest_v[count]
+                        imgmap[map_key] = clean_dest[count]
         return imgmap
 
     def __prepare(self, args):
