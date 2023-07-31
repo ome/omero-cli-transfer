@@ -407,7 +407,7 @@ class TransferControl(GraphControl):
         img_map = self._make_image_map(src_img_map, dest_img_map)
         print("Creating and linking OMERO objects...")
         populate_omero(ome, img_map, self.gateway,
-                       hash, folder, self.metadata)
+                       hash, folder, self.metadata, args.merge)
         return
 
     def _load_from_pack(self, filepath: str, output: Optional[str] = None

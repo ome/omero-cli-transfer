@@ -36,6 +36,7 @@ def create_or_set_projects(pjs: List[Project], conn: BlitzGateway,
             if not pj_id:
                 pj_id = ezomero.post_project(conn, pj.name, pj.description)
             pj_map[pj.id] = pj_id
+    return pj_map
 
 
 def create_projects(pjs: List[Project], conn: BlitzGateway) -> dict:
@@ -129,7 +130,7 @@ def find_dataset(ds: Dataset, pjs: List[Project], conn: BlitzGateway) -> int:
         for p in conn.getObjects("Project", opts={'owner': my_exp_id}):
             if p.getName() == pj.name:
                 for dsref in pj.dataset_refs:
-                    if dsref.value == ds.id:
+                    if dsref.id == ds.id:
                         for ds_rem in p.listChildren():
                             if ds.name == ds_rem.getName():
                                 id = ds_rem.getId()
@@ -432,10 +433,15 @@ def create_rois(rois: List[ROI], imgs: List[Image], img_map: dict,
 def link_datasets(ome: OME, proj_map: dict, ds_map: dict, conn: BlitzGateway):
     for proj in ome.projects:
         proj_id = proj_map[proj.id]
+        proj_obj = conn.getObject("Project", proj_id)
+        existing_ds = []
+        for dataset in proj_obj.listChildren():
+            existing_ds.append(dataset.getId())
         ds_ids = []
         for ds in proj.dataset_refs:
             ds_id = ds_map[ds.id]
-            ds_ids.append(ds_id)
+            if ds_id not in existing_ds:
+                ds_ids.append(ds_id)
         ezomero.link_datasets_to_project(conn, ds_ids, proj_id)
     return
 
@@ -447,6 +453,7 @@ def link_plates(ome: OME, screen_map: dict, plate_map: dict,
         pl_ids = []
         for pl in screen.plate_refs:
             pl_id = plate_map[pl.id]
+
             pl_ids.append(pl_id)
         ezomero.link_plates_to_screen(conn, pl_ids, screen_id)
     return
@@ -568,7 +575,7 @@ def populate_omero(ome: OME, img_map: dict, conn: BlitzGateway, hash: str,
     rename_images(ome.images, img_map, conn)
     rename_plates(ome.plates, plate_map, conn)
     proj_map = create_or_set_projects(ome.projects, conn, merge)
-    ds_map = create_or_set_datasets(ome.datasets, conn, merge)
+    ds_map = create_or_set_datasets(ome.datasets, ome.projects, conn, merge)
     screen_map = create_or_set_screens(ome.screens, conn, merge)
     ann_map = create_annotations(ome.structured_annotations, conn,
                                  hash, folder, metadata)
