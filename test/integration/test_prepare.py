@@ -168,8 +168,8 @@ class TestPrepare(CLITest):
             elif img_name == "edited image name":
                 kvs = ezomero.get_map_annotation_ids(self.gw, "Image",
                                                      img.getId())
-                assert len(kvs) == 1
-                kv = ezomero.get_map_annotation(self.gw, kvs[0])
+                assert len(kvs) == 2
+                kv = ezomero.get_map_annotation(self.gw, kvs[-1])
                 assert len(kv) == 2
                 assert kv['key1'] == "value1"
                 assert kv['key2'] == "2"
@@ -179,7 +179,7 @@ class TestPrepare(CLITest):
                 shapes = ezomero.get_shape_ids(self.gw, rois[0])
                 assert len(shapes) == 1
                 shape = ezomero.get_shape(self.gw, shapes[0])
-                assert type(shape) == ezomero.rois.Rectangle
+                assert type(shape) is ezomero.rois.Rectangle
                 assert shape.x == 1
                 assert shape.y == 2
                 assert shape.width == 3

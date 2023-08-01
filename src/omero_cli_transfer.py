@@ -94,9 +94,9 @@ will be unzipped.
 
 --folder allows the user to point to a previously-unpacked folder rather than
 a single file.
-               
---merge will use existing Projects, Datasets and Screens if the current user 
-already owns entities with the same name as ones defined in `transfer.xml`, 
+
+--merge will use existing Projects, Datasets and Screens if the current user
+already owns entities with the same name as ones defined in `transfer.xml`,
 effectively merging the "new" unpacked entities with existing ones.
 
 --metadata allows you to specify which transfer metadata will be used from
@@ -540,7 +540,7 @@ class TransferControl(GraphControl):
         return image_ids
 
     def _make_image_map(self, source_map: dict, dest_map: dict,
-                        conn: BlitzGateway) -> dict:
+                        conn: Optional[BlitzGateway] = None) -> dict:
         # using both source and destination file-to-image-id maps,
         # map image IDs between source and destination
         src_dict = DefaultDict(list)
@@ -564,15 +564,19 @@ class TransferControl(GraphControl):
             if src_k in dest_dict.keys():
                 dest_v = dest_dict[src_k]
                 clean_dest = []
-                for i in dest_v:
-                    img_obj = conn.getObject("Image", i)
-                    anns = 0
-                    for j in img_obj.listAnnotations():
-                        ns = j.getNs()
-                        if ns.startswith("openmicroscopy.org/cli/transfer"):
-                            anns += 1
-                    if not anns:
-                        clean_dest.append(i)
+                if not conn:
+                    clean_dest = dest_v
+                else:
+                    for i in dest_v:
+                        img_obj = conn.getObject("Image", i)
+                        anns = 0
+                        for j in img_obj.listAnnotations():
+                            ns = j.getNs()
+                            if ns.startswith(
+                                    "openmicroscopy.org/cli/transfer"):
+                                anns += 1
+                        if not anns:
+                            clean_dest.append(i)
                 if len(src_v) == len(clean_dest):
                     for count in range(len(src_v)):
                         map_key = f"Image:{src_v[count]}"
