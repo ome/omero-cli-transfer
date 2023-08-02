@@ -754,7 +754,7 @@ def populate_plate(obj: PlateI, ome: OME, conn: BlitzGateway,
     last_image_anns_ids = [i.id for i in last_image_anns]
     for ann in ome.structured_annotations:
         if (ann.id in last_image_anns_ids and
-                type(ann) == CommentAnnotation and
+                isinstance(ann, CommentAnnotation) and
                 int(ann.id.split(":")[-1]) < 0):
             plate_path = ann.value
     filepath_anns, refs = create_filepath_annotations(pl.id, conn,

@@ -126,14 +126,25 @@ def create_datasets(dss: List[Dataset], conn: BlitzGateway) -> dict:
 def find_dataset(ds: Dataset, pjs: List[Project], conn: BlitzGateway) -> int:
     id = 0
     my_exp_id = conn.getUser().getId()
+    orphan = True
     for pj in pjs:
-        for p in conn.getObjects("Project", opts={'owner': my_exp_id}):
-            if p.getName() == pj.name:
-                for dsref in pj.dataset_refs:
-                    if dsref.id == ds.id:
-                        for ds_rem in p.listChildren():
-                            if ds.name == ds_rem.getName():
-                                id = ds_rem.getId()
+        for dsref in pj.dataset_refs:
+            if dsref.id == ds.id:
+                orphan = False
+    if not orphan:
+        for pj in pjs:
+            for p in conn.getObjects("Project", opts={'owner': my_exp_id}):
+                if p.getName() == pj.name:
+                    for dsref in pj.dataset_refs:
+                        if dsref.id == ds.id:
+                            for ds_rem in p.listChildren():
+                                if ds.name == ds_rem.getName():
+                                    id = ds_rem.getId()
+    else:
+        for d in conn.getObjects("Dataset", opts={'owner': my_exp_id,
+                                                  'orphaned': True}):
+            if d.getName() == ds.name:
+                id = d.getId()
     return id
 
 
