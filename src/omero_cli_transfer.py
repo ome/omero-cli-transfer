@@ -95,6 +95,10 @@ will be unzipped.
 --folder allows the user to point to a previously-unpacked folder rather than
 a single file.
 
+--merge will use existing Projects, Datasets and Screens if the current user
+already owns entities with the same name as ones defined in `transfer.xml`,
+effectively merging the "new" unpacked entities with existing ones.
+
 --metadata allows you to specify which transfer metadata will be used from
 `transfer.xml` as MapAnnotation values to the images. Fields that do not
 exist on `transfer.xml` will be ignored. Default is `all` (equivalent to
@@ -197,6 +201,9 @@ class TransferControl(GraphControl):
         unpack.add_argument("filepath", type=str, help=file_help)
         unpack.add_argument(
                 "--ln_s_import", help="Use in-place import",
+                action="store_true")
+        unpack.add_argument(
+                "--merge", help="Use existing entities if possible",
                 action="store_true")
         unpack.add_argument(
                 "--folder", help="Pass path to a folder rather than a pack",
@@ -384,7 +391,7 @@ class TransferControl(GraphControl):
                                                      args.output)
         else:
             folder = Path(args.filepath)
-            ome = from_xml(folder / "transfer.xml", parser='xmlschema')
+            ome = from_xml(folder / "transfer.xml")
             hash = "imported from folder"
         print("Generating Image mapping and import filelist...")
         ome, src_img_map, filelist = self._create_image_map(ome)
@@ -397,10 +404,10 @@ class TransferControl(GraphControl):
                                           ln_s, args.skip, self.gateway)
         self._delete_all_rois(dest_img_map, self.gateway)
         print("Matching source and destination images...")
-        img_map = self._make_image_map(src_img_map, dest_img_map)
+        img_map = self._make_image_map(src_img_map, dest_img_map, self.gateway)
         print("Creating and linking OMERO objects...")
         populate_omero(ome, img_map, self.gateway,
-                       hash, folder, self.metadata)
+                       hash, folder, self.metadata, args.merge)
         return
 
     def _load_from_pack(self, filepath: str, output: Optional[str] = None
@@ -433,7 +440,7 @@ class TransferControl(GraphControl):
                 raise ValueError("File is not a zip or tar file")
         else:
             raise FileNotFoundError("filepath is not a zip file")
-        ome = from_xml(folder / "transfer.xml", parser='xmlschema')
+        ome = from_xml(folder / "transfer.xml")
         return hash, ome, folder
 
     def _create_image_map(self, ome: OME
@@ -458,9 +465,9 @@ class TransferControl(GraphControl):
                         filelist.append(ann.value)
                     newome.structured_annotations.remove(ann)
         for i in newome.images:
-            for ref in i.annotation_ref:
+            for ref in i.annotation_refs:
                 if ref.id in map_ref_ids:
-                    i.annotation_ref.remove(ref)
+                    i.annotation_refs.remove(ref)
         filelist = list(set(filelist))
         img_map = DefaultDict(list, {x: sorted(img_map[x])
                               for x in img_map.keys()})
@@ -532,7 +539,8 @@ class TransferControl(GraphControl):
                     image_ids.append(img_id)
         return image_ids
 
-    def _make_image_map(self, source_map: dict, dest_map: dict) -> dict:
+    def _make_image_map(self, source_map: dict, dest_map: dict,
+                        conn: Optional[BlitzGateway] = None) -> dict:
         # using both source and destination file-to-image-id maps,
         # map image IDs between source and destination
         src_dict = DefaultDict(list)
@@ -555,10 +563,24 @@ class TransferControl(GraphControl):
             src_v = src_dict[src_k]
             if src_k in dest_dict.keys():
                 dest_v = dest_dict[src_k]
-                if len(src_v) == len(dest_v):
+                clean_dest = []
+                if not conn:
+                    clean_dest = dest_v
+                else:
+                    for i in dest_v:
+                        img_obj = conn.getObject("Image", i)
+                        anns = 0
+                        for j in img_obj.listAnnotations():
+                            ns = j.getNs()
+                            if ns.startswith(
+                                    "openmicroscopy.org/cli/transfer"):
+                                anns += 1
+                        if not anns:
+                            clean_dest.append(i)
+                if len(src_v) == len(clean_dest):
                     for count in range(len(src_v)):
                         map_key = f"Image:{src_v[count]}"
-                        imgmap[map_key] = dest_v[count]
+                        imgmap[map_key] = clean_dest[count]
         return imgmap
 
     def __prepare(self, args):

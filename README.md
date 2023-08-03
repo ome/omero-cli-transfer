@@ -73,6 +73,10 @@ Note that unpack needs to be able to identify the images it imports inequivocall
 
 `--folder` allows the user to point to a previously-unpacked folder rather than a single file.
 
+`--merge` will use existing Projects, Datasets and Screens if the current user
+already owns entities with the same name as ones defined in `transfer.xml`,
+effectively merging the "new" unpacked entities with existing ones.
+
 Examples:
 ```
 omero transfer unpack transfer_pack.zip

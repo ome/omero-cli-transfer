@@ -317,6 +317,40 @@ class TestTransfer(CLITest):
         assert img.getName() == 'combined_result.tiff'
         self.delete_all()
 
+    def test_unpack_merge(self):
+        proj_args = self.args + ["unpack",
+                                 "test/data/valid_single_project.zip"]
+        self.cli.invoke(proj_args, strict=True)
+        proj_args += ['--merge']
+        self.cli.invoke(proj_args, strict=True)
+        pj_ids = ezomero.get_project_ids(self.gw)
+        assert len(pj_ids) == 1
+        ds_ids = ezomero.get_dataset_ids(self.gw, pj_ids[0])
+        assert len(ds_ids) == 2
+        ds_args = self.args + ['unpack', "test/data/valid_single_dataset.zip"]
+        print(ds_args)
+        self.cli.invoke(ds_args, strict=True)
+        orphan = ezomero.get_dataset_ids(self.gw)
+        assert len(orphan) == 1
+        ds_args += ['--merge']
+        self.cli.invoke(ds_args, strict=True)
+        orphan = ezomero.get_dataset_ids(self.gw)
+        assert len(orphan) == 1
+        scr_args = self.args + ['unpack', "test/data/simple_screen.zip"]
+        self.cli.invoke(scr_args, strict=True)
+        scr_args += ['--merge']
+        self.cli.invoke(scr_args, strict=True)
+        scr_ids = []
+        for screen in self.gw.getObjects("Screen"):
+            scr_ids.append(screen.getId())
+        assert len(scr_ids) == 1
+        pl_ids = []
+        screen = self.gw.getObject("Screen", scr_ids[0])
+        for plate in screen.listChildren():
+            pl_ids.append(plate.getId())
+        assert len(pl_ids) == 4
+        self.delete_all()
+
     @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
     def test_pack_unpack(self, target_name, tmpdir):
         if target_name == "datasetid" or target_name == "projectid" or\
