@@ -1,34 +1,84 @@
 <OME xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openmicroscopy.org/Schemas/OME/2016-06 http://www.openmicroscopy.org/Schemas/OME/2016-06/ome.xsd">
-    <Plate ID="Plate:1" Name="Plate Name 0">
-        <Well Column="0" ID="Well:0_0_0_0" Row="0" Color="255" ExternalDescription="External Description" ExternalIdentifier="External Identifier" Type="Transfection: done">
-            <WellSample ID="WellSample:0_0_0_0_0_0" Index="0" PositionX="0.0" PositionY="1.0" Timepoint="2006-05-04T18:13:51">
-                <ImageRef ID="Image:2" />
-            </WellSample>
-        </Well>
-        <AnnotationRef ID="Annotation:-166540319990038501817496698575818747072" />
-    </Plate>
-    <Image ID="Image:1" Name="test_pyramid.tiff">
-        <Pixels DimensionOrder="XYCZT" ID="Pixels:1" SizeC="1" SizeT="1" SizeX="16" SizeY="16" SizeZ="1" Type="uint8">
-            <MetadataOnly />
-        </Pixels>
-        <AnnotationRef ID="Annotation:-86643574848290778120287886298910882783" />
-    </Image>
-    <Image ID="Image:2" Name="default-plate">
-        <Pixels DimensionOrder="XYZCT" ID="Pixels:2" SizeC="1" SizeT="1" SizeX="512" SizeY="512" SizeZ="1" Type="uint8">
-            <MetadataOnly />
-        </Pixels>
-        <AnnotationRef ID="Annotation:-134337008044623056588408027657468159176" />
-    </Image>
-    <StructuredAnnotations>
-        <CommentAnnotation ID="Annotation:-86643574848290778120287886298910882783" Namespace="Image:1">
-            <Value>/mnt/c/Users/erick/Documents/GitHub/omero-cli-transfer/test/data/prepare/test_pyramid.ome.tif</Value>
-        </CommentAnnotation>
-        <CommentAnnotation ID="Annotation:-134337008044623056588408027657468159176" Namespace="Image:2">
-            <Value>/mnt/c/Users/erick/Documents/GitHub/omero-cli-transfer/test/data/prepare/default-plate&amp;plates=1.fake</Value>
-        </CommentAnnotation>
-        <CommentAnnotation ID="Annotation:-166540319990038501817496698575818747072" Namespace="Plate:1">
-            <Value>/mnt/c/Users/erick/Documents/GitHub/omero-cli-transfer/test/data/prepare/default-plate&amp;plates=1.fake</Value>
-        </CommentAnnotation>
-    </StructuredAnnotations>
+  <Plate ID="Plate:1" Name="Plate Name 0">
+    <Well ID="Well:0_0_0_0" Column="0" Row="0" ExternalDescription="External Description" ExternalIdentifier="External Identifier" Type="Transfection: done" Color="255">
+      <WellSample ID="WellSample:0_0_0_0_0_0" PositionX="0.0" PositionXUnit="reference frame" PositionY="1.0" PositionYUnit="reference frame" Timepoint="2006-05-04T18:13:51" Index="0">
+        <ImageRef ID="Image:1"/>
+      </WellSample>
+    </Well>
+    <AnnotationRef ID="Annotation:-302109755386744031474663137255099440619"/>
+  </Plate>
+  <Image ID="Image:1" Name="default-plate">
+    <Pixels ID="Pixels:1" DimensionOrder="XYZCT" Type="uint8" SizeX="512" SizeY="512" SizeZ="1" SizeC="1" SizeT="1">
+      <MetadataOnly/>
+    </Pixels>
+    <AnnotationRef ID="Annotation:-55040966795353415047517454760603713654"/>
+    <AnnotationRef ID="Annotation:-60189972287065119682949125532632336000"/>
+  </Image>
+  <Image ID="Image:2" Name="test_pyramid.tiff">
+    <Pixels ID="Pixels:2" DimensionOrder="XYCZT" Type="uint8" SizeX="16" SizeY="16" SizeZ="1" SizeC="1" SizeT="1">
+      <MetadataOnly/>
+    </Pixels>
+    <AnnotationRef ID="Annotation:-124740294806861926766131915590778711100"/>
+    <AnnotationRef ID="Annotation:-235134109673596436144013343504048608878"/>
+  </Image>
+  <Image ID="Image:3" Name="vsi-ets-test-jpg2k.vsi [001 C405, C488]">
+    <Pixels ID="Pixels:3" DimensionOrder="XYCZT" Type="uint16" SizeX="1645" SizeY="1682" SizeZ="11" SizeC="2" SizeT="1">
+      <MetadataOnly/>
+    </Pixels>
+    <AnnotationRef ID="Annotation:-259343186022718704856275667016466761689"/>
+    <AnnotationRef ID="Annotation:-224780865139240311027116801634970628041"/>
+  </Image>
+  <Image ID="Image:4" Name="vsi-ets-test-jpg2k.vsi [macro image]">
+    <Pixels ID="Pixels:4" DimensionOrder="XYCZT" Type="uint8" SizeX="501" SizeY="512" SizeZ="1" SizeC="3" SizeT="1">
+      <MetadataOnly/>
+    </Pixels>
+    <AnnotationRef ID="Annotation:-63003149123325712739521864873102528314"/>
+    <AnnotationRef ID="Annotation:-180673318620852740990473970358731429779"/>
+  </Image>
+  <StructuredAnnotations>
+    <CommentAnnotation ID="Annotation:-55040966795353415047517454760603713654" Namespace="Image:1">
+      <Value>default-plate&amp;plates=1.fake</Value>
+    </CommentAnnotation>
+    <MapAnnotation ID="Annotation:-60189972287065119682949125532632336000" Namespace="openmicroscopy.org/cli/transfer/prepare">
+      <Value>
+        <M K="software">omero-cli-transfer</M>
+        <M K="version">0.6.0</M>
+        <M K="packing_timestamp">08/08/2023, 13:51:49</M>
+      </Value>
+    </MapAnnotation>
+    <CommentAnnotation ID="Annotation:-302109755386744031474663137255099440619" Namespace="Plate:1">
+      <Value>default-plate&amp;plates=1.fake</Value>
+    </CommentAnnotation>
+    <CommentAnnotation ID="Annotation:-124740294806861926766131915590778711100" Namespace="Image:2">
+      <Value>test_pyramid.ome.tif</Value>
+    </CommentAnnotation>
+    <MapAnnotation ID="Annotation:-235134109673596436144013343504048608878" Namespace="openmicroscopy.org/cli/transfer/prepare">
+      <Value>
+        <M K="software">omero-cli-transfer</M>
+        <M K="version">0.6.0</M>
+        <M K="packing_timestamp">08/08/2023, 13:51:51</M>
+      </Value>
+    </MapAnnotation>
+    <CommentAnnotation ID="Annotation:-259343186022718704856275667016466761689" Namespace="Image:3">
+      <Value>vsi-ets-test-jpg2k.vsi</Value>
+    </CommentAnnotation>
+    <MapAnnotation ID="Annotation:-224780865139240311027116801634970628041" Namespace="openmicroscopy.org/cli/transfer/prepare">
+      <Value>
+        <M K="software">omero-cli-transfer</M>
+        <M K="version">0.6.0</M>
+        <M K="packing_timestamp">08/08/2023, 13:51:53</M>
+      </Value>
+    </MapAnnotation>
+    <CommentAnnotation ID="Annotation:-63003149123325712739521864873102528314" Namespace="Image:4">
+      <Value>vsi-ets-test-jpg2k.vsi</Value>
+    </CommentAnnotation>
+    <MapAnnotation ID="Annotation:-180673318620852740990473970358731429779" Namespace="openmicroscopy.org/cli/transfer/prepare">
+      <Value>
+        <M K="software">omero-cli-transfer</M>
+        <M K="version">0.6.0</M>
+        <M K="packing_timestamp">08/08/2023, 13:51:53</M>
+      </Value>
+    </MapAnnotation>
+  </StructuredAnnotations>
 </OME>
 
