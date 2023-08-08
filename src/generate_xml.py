@@ -470,15 +470,17 @@ def create_objects(folder, filelist):
     if not filelist:
         for path, subdirs, files in os.walk(folder):
             for f in files:
-                img_files.append(os.path.abspath(os.path.join(path, f)))
+                img_files.append(os.path.relpath(
+                                            os.path.join(path, f), folder))
         targets = copy.deepcopy(img_files)
         for img in img_files:
             if img not in (targets):
                 continue
-            cmd = ["omero", 'import', '-f', img, "\n"]
+            img_path = os.path.join(os.getcwd(), folder, img)
+            cmd = ["omero", 'import', '-f', img_path, "\n"]
             res = cli.popen(cmd, stdout=PIPE, stderr=DEVNULL)
             std = res.communicate()
-            files = parse_files_import(std[0].decode('UTF-8'))
+            files = parse_files_import(std[0].decode('UTF-8'), folder)
             if len(files) > 1:
                 for f in files:
                     targets.remove(f)
@@ -498,9 +500,9 @@ def create_objects(folder, filelist):
     counter_imgs = 1
     counter_pls = 1
     for target in targets:
-        target = str(Path(target).absolute())
-        print(f"Processing file {target}")
-        res = run_showinf(target, cli)
+        target_full = os.path.join(os.getcwd(), folder, target)
+        print(f"Processing file {target_full}")
+        res = run_showinf(target_full, cli)
         imgs, pls, anns = parse_showinf(res,
                                         counter_imgs, counter_pls, target)
         images.extend(imgs)
@@ -519,11 +521,15 @@ def run_showinf(target, cli):
     return std[0].decode('UTF-8')
 
 
-def parse_files_import(text):
+def parse_files_import(text, folder):
     lines = text.split("\n")
     targets = [line for line in lines if not line.startswith("#")
                and len(line) > 0]
-    return targets
+    clean_targets = []
+    for target in targets:
+        clean = os.path.relpath(target, folder)
+        clean_targets.append(clean)
+    return clean_targets
 
 
 def parse_showinf(text, counter_imgs, counter_plates, target):
