@@ -84,7 +84,7 @@ setup(
     packages=['', 'omero.plugins'],
     package_dir={"": "src"},
     name="omero-cli-transfer",
-    version='0.7.1',
+    version='0.7.2',
     maintainer="Erick Ratamero",
     maintainer_email="erick.ratamero@jax.org",
     description=("A set of utilities for exporting a transfer"
