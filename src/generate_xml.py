@@ -489,22 +489,31 @@ def create_objects(folder, filelist):
             if len(files) == 0:
                 targets.remove(img)
     else:
+        # should make relative paths here
         with open(folder, "r") as f:
             targets_str = f.read().splitlines()
         targets = []
         for target in targets_str:
-            targets.append(str((par_folder / target).resolve()))
+            if target.startswith("/"):
+                targets.append(os.path.relpath(target, par_folder))
+            else:
+                targets.append(target)
+            # targets.append(str((par_folder / target).resolve()))
     images = []
     plates = []
     annotations = []
     counter_imgs = 1
     counter_pls = 1
     for target in targets:
+        if filelist:
+            folder = par_folder
         target_full = os.path.join(os.getcwd(), folder, target)
-        print(f"Processing file {target_full}")
+        print(f"Processing file {Path(target_full).resolve()}")
         res = run_showinf(target_full, cli)
+        if filelist:
+            folder = par_folder
         imgs, pls, anns = parse_showinf(res, counter_imgs, counter_pls,
-                                        target, par_folder)
+                                        target, folder)
         images.extend(imgs)
         counter_imgs = counter_imgs + len(imgs)
         plates.extend(pls)
@@ -552,10 +561,9 @@ def parse_showinf(text, counter_imgs, counter_plates, target, folder):
             img = Image(id=img_id_str, name=image.name, pixels=pix)
         img_id += 1
         uid = (-1) * uuid4().int
-        rel_target = os.path.relpath(target, folder)
         an = CommentAnnotation(id=uid,
                                namespace=img_id_str,
-                               value=rel_target
+                               value=target
                                )
         annotations.append(an)
         anref = AnnotationRef(id=an.id)
