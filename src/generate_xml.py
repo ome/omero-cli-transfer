@@ -467,6 +467,7 @@ def create_objects(folder, filelist):
     img_files = []
     cli = CLI()
     cli.loadplugins()
+    par_folder = Path(folder).parent
     if not filelist:
         for path, subdirs, files in os.walk(folder):
             for f in files:
@@ -488,23 +489,31 @@ def create_objects(folder, filelist):
             if len(files) == 0:
                 targets.remove(img)
     else:
+        # should make relative paths here
         with open(folder, "r") as f:
             targets_str = f.read().splitlines()
         targets = []
-        par_folder = Path(folder).parent
         for target in targets_str:
-            targets.append(str((par_folder / target).resolve()))
+            if target.startswith("/"):
+                targets.append(os.path.relpath(target, par_folder))
+            else:
+                targets.append(target)
+            # targets.append(str((par_folder / target).resolve()))
     images = []
     plates = []
     annotations = []
     counter_imgs = 1
     counter_pls = 1
     for target in targets:
+        if filelist:
+            folder = par_folder
         target_full = os.path.join(os.getcwd(), folder, target)
-        print(f"Processing file {target_full}")
+        print(f"Processing file {Path(target_full).resolve()}")
         res = run_showinf(target_full, cli)
-        imgs, pls, anns = parse_showinf(res,
-                                        counter_imgs, counter_pls, target)
+        if filelist:
+            folder = par_folder
+        imgs, pls, anns = parse_showinf(res, counter_imgs, counter_pls,
+                                        target, folder)
         images.extend(imgs)
         counter_imgs = counter_imgs + len(imgs)
         plates.extend(pls)
@@ -532,7 +541,7 @@ def parse_files_import(text, folder):
     return clean_targets
 
 
-def parse_showinf(text, counter_imgs, counter_plates, target):
+def parse_showinf(text, counter_imgs, counter_plates, target, folder):
     ome = from_xml(text)
     images = []
     plates = []
