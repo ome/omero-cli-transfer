@@ -96,7 +96,7 @@ setup(
     url="https://github.com/TheJacksonLaboratory/omero-cli-transfer",
     install_requires=[
         'ezomero==2.0.0',
-        'ome-types==0.4.0'
+        'ome-types==0.4.2'
     ],
     extras_require={
         "rocrate": ["rocrate==0.7.0"],
