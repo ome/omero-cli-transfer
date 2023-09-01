@@ -27,7 +27,7 @@ from generate_omero_objects import populate_omero
 
 import ezomero
 from ome_types.model import CommentAnnotation, OME
-from ome_types import from_xml
+from ome_types import from_xml, to_xml
 from omero.sys import Parameters
 from omero.rtypes import rstring
 from omero.cli import CLI, GraphControl
@@ -271,7 +271,7 @@ class TransferControl(GraphControl):
                 mrepos.append(path)
         return mrepos
 
-    def _copy_files(self, id_list: Dict[str, Any], folder: str, simple: bool,
+    def _copy_files(self, id_list: Dict[str, Any], folder: str,
                     conn: BlitzGateway):
         if not isinstance(id_list, dict):
             raise TypeError("id_list must be a dict")
@@ -334,6 +334,36 @@ class TransferControl(GraphControl):
             metadata = list(set(metadata))
         self.metadata = metadata
 
+    def _fix_pixels_image_simple(self, ome: OME, folder: str, filepath: str
+                                 ) -> OME:
+        newome = copy.deepcopy(ome)
+        for ann in ome.structured_annotations:
+            if isinstance(ann.value, str) and\
+               ann.value.startswith("pixel_images"):
+                for img in newome.images:
+                    for ref in img.annotation_refs:
+                        if ref.id == ann.id:
+                            this_img = img
+                            path1 = ann.value
+                            img.annotation_refs.remove(ref)
+                            newome.structured_annotations.remove(ann)
+                for ref in this_img.annotation_refs:
+                    for ann in newome.structured_annotations:
+                        if ref.id == ann.id:
+                            if isinstance(ann.value, str):
+                                path2 = ann.value
+                rel_path = str(Path(path2).parent)
+                subfolder = os.path.join(str(Path(folder)), rel_path)
+                os.makedirs(subfolder, mode=DIR_PERM, exist_ok=True)
+                shutil.move(os.path.join(str(Path(folder)), path1),
+                            os.path.join(str(Path(folder)), path2))
+        if os.path.exists(os.path.join(str(Path(folder)), "pixel_images")):
+            shutil.rmtree(os.path.join(str(Path(folder)), "pixel_images"))
+        with open(filepath, 'w') as fp:
+            print(to_xml(newome), file=fp)
+            fp.close()
+        return newome
+
     def __pack(self, args):
         if isinstance(args.object, Image) or isinstance(args.object, Plate) \
            or isinstance(args.object, Screen):
@@ -347,6 +377,7 @@ class TransferControl(GraphControl):
             if args.simple:
                 raise ValueError("Single plate or screen cannot be "
                                  "packaged in human-readable format")
+        
         if isinstance(args.object, Image):
             src_datatype, src_dataid = "Image", args.object.id
         elif isinstance(args.object, Dataset):
@@ -360,6 +391,11 @@ class TransferControl(GraphControl):
         else:
             print("Object is not a project, dataset, screen, plate or image")
             return
+        export_types = (args.rocrate, args.barchive, args.simple)
+        if sum(1 for ct in export_types if ct) > 1:
+            raise ValueError("Only one special export type (RO-Crate, Bioimage"
+                             " Archive, human-readable) can be specified at "
+                             "once")
         self.metadata = []
         self._process_metadata(args.metadata)
         obj = self.gateway.getObject(src_datatype, src_dataid)
@@ -383,7 +419,9 @@ class TransferControl(GraphControl):
                                          self.metadata)
 
         print("Starting file copy...")
-        self._copy_files(path_id_dict, folder, args.simple, self.gateway)
+        self._copy_files(path_id_dict, folder, self.gateway)
+        if args.simple:
+            self._fix_pixels_image_simple(ome, folder, md_fp)
         if args.barchive:
             print(f"Creating Bioimage Archive TSV at {md_fp}.")
             populate_tsv(src_datatype, ome, md_fp,
