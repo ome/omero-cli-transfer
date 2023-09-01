@@ -64,7 +64,17 @@ and Polygon-type ROIs are packaged.
 --zip packs the object into a compressed zip file rather than a tarball.
 
 --barchive creates a package compliant with Bioimage Archive submission
-standards - see repo README for more detail.
+standards - see repo README for more detail. This package format is not
+compatible with unpack usage.
+
+--rocrate generates a RO-Crate compliant package with flat structure (all image
+files in a single folder). A JSON metadata file is added with basic information
+about the files (name, mimetype).
+
+--simple creates a package that is "human readable" - folders will be created
+for projects/datasets, with files being placed according to where they come
+from in the server. Note this a package generated with this option is NOT
+guaranteed to work with unpack.
 
 --metadata allows you to specify which transfer metadata will be saved in
 `transfer.xml` as possible MapAnnotation values to the images. Default is `all`
@@ -189,6 +199,9 @@ class TransferControl(GraphControl):
                                   "RO-Crate standards",
                 action="store_true")
         pack.add_argument(
+                "--simple", help="Pack into a human-readable package file",
+                action="store_true")
+        pack.add_argument(
             "--metadata",
             choices=['all', 'none', 'img_id', 'timestamp',
                      'software', 'version', 'md5', 'hostname', 'db_id',
@@ -258,7 +271,7 @@ class TransferControl(GraphControl):
                 mrepos.append(path)
         return mrepos
 
-    def _copy_files(self, id_list: Dict[str, Any], folder: str,
+    def _copy_files(self, id_list: Dict[str, Any], folder: str, simple: bool,
                     conn: BlitzGateway):
         if not isinstance(id_list, dict):
             raise TypeError("id_list must be a dict")
@@ -331,6 +344,9 @@ class TransferControl(GraphControl):
             if args.rocrate:
                 raise ValueError("Single image, plate or screen cannot be "
                                  "packaged in a RO-Crate")
+            if args.simple:
+                raise ValueError("Single plate or screen cannot be "
+                                 "packaged in human-readable format")
         if isinstance(args.object, Image):
             src_datatype, src_dataid = "Image", args.object.id
         elif isinstance(args.object, Dataset):
@@ -363,10 +379,11 @@ class TransferControl(GraphControl):
             print(f"Saving metadata at {md_fp}.")
         ome, path_id_dict = populate_xml(src_datatype, src_dataid, md_fp,
                                          self.gateway, self.hostname,
-                                         args.barchive, self.metadata)
+                                         args.barchive, args.simple,
+                                         self.metadata)
 
         print("Starting file copy...")
-        self._copy_files(path_id_dict, folder, self.gateway)
+        self._copy_files(path_id_dict, folder, args.simple, self.gateway)
         if args.barchive:
             print(f"Creating Bioimage Archive TSV at {md_fp}.")
             populate_tsv(src_datatype, ome, md_fp,

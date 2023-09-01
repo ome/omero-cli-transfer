@@ -650,7 +650,8 @@ def populate_roi(obj: RoiI, roi_obj: IObject, ome: OME, conn: BlitzGateway
 
 
 def populate_image(obj: ImageI, ome: OME, conn: BlitzGateway, hostname: str,
-                   metadata: List[str], fset: Union[None, Fileset] = None
+                   metadata: List[str], simple: bool,
+                   fset: Union[None, Fileset] = None,
                    ) -> ImageRef:
     id = obj.getId()
     name = obj.getName()
@@ -692,12 +693,14 @@ def populate_image(obj: ImageI, ome: OME, conn: BlitzGateway, hostname: str,
         for fs_image in fset.copyImages():
             fs_img_id = f"Image:{str(fs_image.getId())}"
             if fs_img_id not in [i.id for i in ome.images]:
-                populate_image(fs_image, ome, conn, hostname, metadata, fset)
+                populate_image(fs_image, ome, conn, hostname, metadata,
+                               simple, fset)
     return img_ref
 
 
 def populate_dataset(obj: DatasetI, ome: OME, conn: BlitzGateway,
-                     hostname: str, metadata: List[str]) -> DatasetRef:
+                     hostname: str, metadata: List[str], simple: bool
+                     ) -> DatasetRef:
     id = obj.getId()
     name = obj.getName()
     desc = obj.getDescription()
@@ -707,7 +710,8 @@ def populate_dataset(obj: DatasetI, ome: OME, conn: BlitzGateway,
         add_annotation(ds, ann, ome, conn)
     for img in obj.listChildren():
         img_obj = conn.getObject('Image', img.getId())
-        img_ref = populate_image(img_obj, ome, conn, hostname, metadata)
+        img_ref = populate_image(img_obj, ome, conn, hostname, metadata,
+                                 simple)
         ds.image_refs.append(img_ref)
     ds_id = f"Dataset:{str(ds.id)}"
     if ds_id not in [i.id for i in ome.datasets]:
@@ -716,7 +720,7 @@ def populate_dataset(obj: DatasetI, ome: OME, conn: BlitzGateway,
 
 
 def populate_project(obj: ProjectI, ome: OME, conn: BlitzGateway,
-                     hostname: str, metadata: List[str]):
+                     hostname: str, metadata: List[str], simple: bool):
     id = obj.getId()
     name = obj.getName()
     desc = obj.getDescription()
@@ -725,7 +729,8 @@ def populate_project(obj: ProjectI, ome: OME, conn: BlitzGateway,
         add_annotation(proj, ann, ome, conn)
     for ds in obj.listChildren():
         ds_obj = conn.getObject('Dataset', ds.getId())
-        ds_ref = populate_dataset(ds_obj, ome, conn, hostname, metadata)
+        ds_ref = populate_dataset(ds_obj, ome, conn, hostname, metadata,
+                                  simple)
         proj.dataset_refs.append(ds_ref)
     ome.projects.append(proj)
 
@@ -794,7 +799,8 @@ def populate_well(obj: WellI, ome: OME, conn: BlitzGateway,
         ws_obj = obj.getWellSample(index)
         ws_id = ws_obj.getId()
         ws_img = ws_obj.getImage()
-        ws_img_ref = populate_image(ws_img, ome, conn, hostname, metadata)
+        ws_img_ref = populate_image(ws_img, ome, conn, hostname, metadata,
+                                    simple=False)
         ws_index = int(ws_img_ref.id.split(":")[-1])
         ws = WellSample(id=ws_id, index=ws_index, image_ref=ws_img_ref)
         samples.append(ws)
@@ -881,16 +887,16 @@ def list_file_ids(ome: OME) -> dict:
 
 
 def populate_xml(datatype: str, id: int, filepath: str, conn: BlitzGateway,
-                 hostname: str, barchive: bool,
+                 hostname: str, barchive: bool, simple: bool,
                  metadata: List[str]) -> Tuple[OME, dict]:
     ome = OME()
     obj = conn.getObject(datatype, id)
     if datatype == 'Project':
-        populate_project(obj, ome, conn, hostname, metadata)
+        populate_project(obj, ome, conn, hostname, metadata, simple)
     elif datatype == 'Dataset':
-        populate_dataset(obj, ome, conn, hostname, metadata)
+        populate_dataset(obj, ome, conn, hostname, metadata, simple)
     elif datatype == 'Image':
-        populate_image(obj, ome, conn, hostname, metadata)
+        populate_image(obj, ome, conn, hostname, metadata, simple)
     elif datatype == 'Screen':
         populate_screen(obj, ome, conn, hostname, metadata)
     elif datatype == 'Plate':
