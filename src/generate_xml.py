@@ -347,7 +347,7 @@ def create_shapes(roi: RoiI) -> List[Shape]:
 
 
 def create_filepath_annotations(id: str, conn: BlitzGateway,
-                                simple: bool, ome: OME,
+                                simple: bool,
                                 filename: Union[str, PathLike] = ".",
                                 plate_path: Optional[str] = None,
                                 ds: Optional[str] = None,
@@ -359,6 +359,10 @@ def create_filepath_annotations(id: str, conn: BlitzGateway,
     anrefs = []
     fp_type = ns.split(":")[0]
     clean_id = int(ns.split(":")[-1])
+    if not ds:
+        ds = ""
+    if not proj:
+        proj = ""
     if fp_type == "Image":
         fpaths = ezomero.get_original_filepaths(conn, clean_id)
         if len(fpaths) > 1:
@@ -704,7 +708,7 @@ def populate_image(obj: ImageI, ome: OME, conn: BlitzGateway, hostname: str,
         if ref:
             img.annotation_refs.append(ref)
     filepath_anns, refs = create_filepath_annotations(img_id, conn,
-                                                      simple, ome, ds=ds,
+                                                      simple, ds=ds,
                                                       proj=proj)
     for i in range(len(filepath_anns)):
         ome.structured_annotations.append(filepath_anns[i])
@@ -813,6 +817,7 @@ def populate_plate(obj: PlateI, ome: OME, conn: BlitzGateway,
                 int(ann.id.split(":")[-1]) < 0):
             plate_path = ann.value
     filepath_anns, refs = create_filepath_annotations(pl.id, conn,
+                                                      simple=False,
                                                       plate_path=plate_path)
     for i in range(len(filepath_anns)):
         ome.structured_annotations.append(filepath_anns[i])
@@ -903,6 +908,7 @@ def add_annotation(obj: Union[Project, Dataset, Image, Plate, Screen,
         filepath_anns, refs = create_filepath_annotations(
                                 f.id,
                                 conn,
+                                simple=False,
                                 filename=ann.getFile().getName())
         for i in range(len(filepath_anns)):
             ome.structured_annotations.append(filepath_anns[i])

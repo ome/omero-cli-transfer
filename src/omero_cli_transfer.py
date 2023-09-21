@@ -377,7 +377,6 @@ class TransferControl(GraphControl):
             if args.simple:
                 raise ValueError("Single plate or screen cannot be "
                                  "packaged in human-readable format")
-        
         if isinstance(args.object, Image):
             src_datatype, src_dataid = "Image", args.object.id
         elif isinstance(args.object, Dataset):

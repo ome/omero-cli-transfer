@@ -148,6 +148,35 @@ class TestTransfer(CLITest):
                 self.cli.invoke(args, strict=True)
         self.delete_all()
 
+    @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
+    def test_pack_special(self, target_name, tmpdir):
+        if target_name == "datasetid" or target_name == "projectid" or\
+           target_name == "idonly" or target_name == "imageid":
+            self.create_image(target_name=target_name)
+        elif target_name == "plateid" or target_name == "screenid":
+            self.create_plate(target_name=target_name)
+        target = getattr(self, target_name)
+        args = self.args + ["pack", target, "--barchive",
+                            str(tmpdir / 'testba.tar')]
+        if target_name == "datasetid" or target_name == "projectid" \
+           or target_name == "idonly":
+            self.cli.invoke(args, strict=True)
+            assert os.path.exists(str(tmpdir / 'testba.tar'))
+            assert os.path.getsize(str(tmpdir / 'testba.tar')) > 0
+        else:
+            with pytest.raises(ValueError):
+                self.cli.invoke(args, strict=True)
+        args = self.args + ["pack", target, "--simple",
+                            str(tmpdir / 'testsimple.tar')]
+        if target_name == "plateid" or target_name == "screenid":
+            with pytest.raises(ValueError):
+                self.cli.invoke(args, strict=True)
+        else:
+            self.cli.invoke(args, strict=True)
+            assert os.path.exists(str(tmpdir / 'testsimple.tar'))
+            assert os.path.getsize(str(tmpdir / 'testsimple.tar')) > 0
+        self.delete_all()
+
     @pytest.mark.parametrize('folder_name', TEST_FOLDERS)
     def test_unpack_folder(self, folder_name):
         self.args += ["unpack", "--folder", folder_name]
