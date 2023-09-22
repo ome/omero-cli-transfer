@@ -12,6 +12,7 @@ from omero.gateway import BlitzGateway
 import ezomero
 import pytest
 import os
+import tarfile
 
 SUPPORTED = [
     "idonly", "imageid", "datasetid", "projectid", "plateid", "screenid"]
@@ -175,6 +176,17 @@ class TestTransfer(CLITest):
             self.cli.invoke(args, strict=True)
             assert os.path.exists(str(tmpdir / 'testsimple.tar'))
             assert os.path.getsize(str(tmpdir / 'testsimple.tar')) > 0
+            f = tarfile.open(str(tmpdir / 'testsimple.tar'), "r")
+            print(f.getmembers())
+            if target_name == "datasetid":
+                # `./`, ds folder, 2 files, transfer.xml
+                assert len(f.getmembers()) == 5
+            elif target_name == "imageid":
+                # `./`, 1 file, transfer.xml
+                assert len(f.getmembers()) == 3
+            else:
+                # `./`, proj folder, ds folder, 2 files, transfer.xml
+                assert len(f.getmembers()) == 6
         self.delete_all()
 
     @pytest.mark.parametrize('folder_name', TEST_FOLDERS)
