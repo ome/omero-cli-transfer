@@ -766,11 +766,11 @@ def populate_project(obj: ProjectI, ome: OME, conn: BlitzGateway,
     proj, _ = create_proj_and_ref(id=id, name=name, description=desc)
     for ann in obj.listAnnotations():
         add_annotation(proj, ann, ome, conn)
-    
+
     for ds in obj.listChildren():
         ds_obj = conn.getObject('Dataset', ds.getId())
         ds_ref = populate_dataset(ds_obj, ome, conn, hostname, metadata,
-                                      simple, proj=str(id) + "_" + name)
+                                  simple, proj=str(id) + "_" + name)
 
         proj.dataset_refs.append(ds_ref)
     ome.projects.append(proj)
