@@ -738,13 +738,9 @@ def populate_image(obj: ImageI, ome: OME, conn: BlitzGateway, hostname: str,
 def populate_dataset(obj: DatasetI, ome: OME, conn: BlitzGateway,
                      hostname: str, metadata: List[str], simple: bool,
                      proj: Optional[str] = None,
-                     duplicate: Optional[bool] = False
                      ) -> DatasetRef:
     id = obj.getId()
-    if duplicate:
-        name = str(id) + "_" + obj.getName()
-    else:
-        name = obj.getName()
+    name = obj.getName()
     desc = obj.getDescription()
     ds, ds_ref = create_dataset_and_ref(id=id, name=name,
                                         description=desc)
@@ -770,18 +766,10 @@ def populate_project(obj: ProjectI, ome: OME, conn: BlitzGateway,
     proj, _ = create_proj_and_ref(id=id, name=name, description=desc)
     for ann in obj.listAnnotations():
         add_annotation(proj, ann, ome, conn)
-    ds_names = []
-    for ds in obj.listChildren():
-        ds_names.append(ds.getName())
-    duplicate_names = [x for x in ds_names if ds_names.count(x) > 1]
+    
     for ds in obj.listChildren():
         ds_obj = conn.getObject('Dataset', ds.getId())
-        if ds.getName() in duplicate_names:
-            ds_ref = populate_dataset(ds_obj, ome, conn, hostname, metadata,
-                                      simple, proj=str(id) + "_" + name,
-                                      duplicate=True)
-        else:
-            ds_ref = populate_dataset(ds_obj, ome, conn, hostname, metadata,
+        ds_ref = populate_dataset(ds_obj, ome, conn, hostname, metadata,
                                       simple, proj=str(id) + "_" + name)
 
         proj.dataset_refs.append(ds_ref)
