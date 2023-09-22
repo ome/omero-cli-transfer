@@ -177,7 +177,6 @@ class TestTransfer(CLITest):
             assert os.path.exists(str(tmpdir / 'testsimple.tar'))
             assert os.path.getsize(str(tmpdir / 'testsimple.tar')) > 0
             f = tarfile.open(str(tmpdir / 'testsimple.tar'), "r")
-            print(f.getmembers())
             if target_name == "datasetid":
                 # `./`, ds folder, 2 files, transfer.xml
                 assert len(f.getmembers()) == 5
