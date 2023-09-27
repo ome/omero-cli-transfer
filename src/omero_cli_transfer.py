@@ -27,7 +27,7 @@ from generate_omero_objects import populate_omero
 
 import ezomero
 from ome_types.model import CommentAnnotation, OME
-from ome_types import from_xml
+from ome_types import from_xml, to_xml
 from omero.sys import Parameters
 from omero.rtypes import rstring
 from omero.cli import CLI, GraphControl
@@ -64,7 +64,17 @@ and Polygon-type ROIs are packaged.
 --zip packs the object into a compressed zip file rather than a tarball.
 
 --barchive creates a package compliant with Bioimage Archive submission
-standards - see repo README for more detail.
+standards - see repo README for more detail. This package format is not
+compatible with unpack usage.
+
+--rocrate generates a RO-Crate compliant package with flat structure (all image
+files in a single folder). A JSON metadata file is added with basic information
+about the files (name, mimetype).
+
+--simple creates a package that is "human readable" - folders will be created
+for projects/datasets, with files being placed according to where they come
+from in the server. Note this a package generated with this option is NOT
+guaranteed to work with unpack.
 
 --metadata allows you to specify which transfer metadata will be saved in
 `transfer.xml` as possible MapAnnotation values to the images. Default is `all`
@@ -187,6 +197,9 @@ class TransferControl(GraphControl):
         pack.add_argument(
                 "--rocrate", help="Pack into a file compliant with "
                                   "RO-Crate standards",
+                action="store_true")
+        pack.add_argument(
+                "--simple", help="Pack into a human-readable package file",
                 action="store_true")
         pack.add_argument(
             "--metadata",
@@ -321,6 +334,36 @@ class TransferControl(GraphControl):
             metadata = list(set(metadata))
         self.metadata = metadata
 
+    def _fix_pixels_image_simple(self, ome: OME, folder: str, filepath: str
+                                 ) -> OME:
+        newome = copy.deepcopy(ome)
+        for ann in ome.structured_annotations:
+            if isinstance(ann.value, str) and\
+               ann.value.startswith("pixel_images"):
+                for img in newome.images:
+                    for ref in img.annotation_refs:
+                        if ref.id == ann.id:
+                            this_img = img
+                            path1 = ann.value
+                            img.annotation_refs.remove(ref)
+                            newome.structured_annotations.remove(ann)
+                for ref in this_img.annotation_refs:
+                    for ann in newome.structured_annotations:
+                        if ref.id == ann.id:
+                            if isinstance(ann.value, str):
+                                path2 = ann.value
+                rel_path = str(Path(path2).parent)
+                subfolder = os.path.join(str(Path(folder)), rel_path)
+                os.makedirs(subfolder, mode=DIR_PERM, exist_ok=True)
+                shutil.move(os.path.join(str(Path(folder)), path1),
+                            os.path.join(str(Path(folder)), path2))
+        if os.path.exists(os.path.join(str(Path(folder)), "pixel_images")):
+            shutil.rmtree(os.path.join(str(Path(folder)), "pixel_images"))
+        with open(filepath, 'w') as fp:
+            print(to_xml(newome), file=fp)
+            fp.close()
+        return newome
+
     def __pack(self, args):
         if isinstance(args.object, Image) or isinstance(args.object, Plate) \
            or isinstance(args.object, Screen):
@@ -331,6 +374,9 @@ class TransferControl(GraphControl):
             if args.rocrate:
                 raise ValueError("Single image, plate or screen cannot be "
                                  "packaged in a RO-Crate")
+            if args.simple:
+                raise ValueError("Single plate or screen cannot be "
+                                 "packaged in human-readable format")
         if isinstance(args.object, Image):
             src_datatype, src_dataid = "Image", args.object.id
         elif isinstance(args.object, Dataset):
@@ -344,6 +390,11 @@ class TransferControl(GraphControl):
         else:
             print("Object is not a project, dataset, screen, plate or image")
             return
+        export_types = (args.rocrate, args.barchive, args.simple)
+        if sum(1 for ct in export_types if ct) > 1:
+            raise ValueError("Only one special export type (RO-Crate, Bioimage"
+                             " Archive, human-readable) can be specified at "
+                             "once")
         self.metadata = []
         self._process_metadata(args.metadata)
         obj = self.gateway.getObject(src_datatype, src_dataid)
@@ -363,10 +414,13 @@ class TransferControl(GraphControl):
             print(f"Saving metadata at {md_fp}.")
         ome, path_id_dict = populate_xml(src_datatype, src_dataid, md_fp,
                                          self.gateway, self.hostname,
-                                         args.barchive, self.metadata)
+                                         args.barchive, args.simple,
+                                         self.metadata)
 
         print("Starting file copy...")
         self._copy_files(path_id_dict, folder, self.gateway)
+        if args.simple:
+            self._fix_pixels_image_simple(ome, folder, md_fp)
         if args.barchive:
             print(f"Creating Bioimage Archive TSV at {md_fp}.")
             populate_tsv(src_datatype, ome, md_fp,

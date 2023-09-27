@@ -347,9 +347,11 @@ def create_shapes(roi: RoiI) -> List[Shape]:
 
 
 def create_filepath_annotations(id: str, conn: BlitzGateway,
-                                filename: Union[str,
-                                                PathLike] = ".",
-                                plate_path: Optional[str] = None
+                                simple: bool,
+                                filename: Union[str, PathLike] = ".",
+                                plate_path: Optional[str] = None,
+                                ds: Optional[str] = None,
+                                proj: Optional[str] = None,
                                 ) -> Tuple[List[CommentAnnotation],
                                            List[AnnotationRef]]:
     ns = id
@@ -357,14 +359,22 @@ def create_filepath_annotations(id: str, conn: BlitzGateway,
     anrefs = []
     fp_type = ns.split(":")[0]
     clean_id = int(ns.split(":")[-1])
+    if not ds:
+        ds = ""
+    if not proj:
+        proj = ""
     if fp_type == "Image":
         fpaths = ezomero.get_original_filepaths(conn, clean_id)
         if len(fpaths) > 1:
-            allpaths = []
-            for f in fpaths:
-                f = Path(f)
-                allpaths.append(f.parts)
-            common_root = Path(*os.path.commonprefix(allpaths))
+            if not simple:
+                allpaths = []
+                for f in fpaths:
+                    f = Path(f)
+                    allpaths.append(f.parts)
+                common_root = Path(*os.path.commonprefix(allpaths))
+            else:
+                common_root = "./"
+                common_root = Path(common_root) / proj / ds
             path = os.path.join(common_root, 'mock_folder')
             uid = (-1) * uuid4().int
             an = CommentAnnotation(id=uid,
@@ -375,19 +385,43 @@ def create_filepath_annotations(id: str, conn: BlitzGateway,
             anref = AnnotationRef(id=an.id)
             anrefs.append(anref)
         else:
+            if simple:
+                common_root = "./"
             if fpaths:
                 f = fpaths[0]
+                if simple:
+                    filename = Path(f).name
+                    f = Path(common_root) / proj / ds / filename
+                uid = (-1) * uuid4().int
+                an = CommentAnnotation(id=uid,
+                                       namespace=ns,
+                                       value=str(f)
+                                       )
+                anns.append(an)
+                anref = AnnotationRef(id=an.id)
+                anrefs.append(anref)
             else:
+                if simple:
+                    f = f'{clean_id}.tiff'
+                    f = Path(common_root) / proj / ds / f
+                    uid = (-1) * uuid4().int
+                    an = CommentAnnotation(id=uid,
+                                           namespace=ns,
+                                           value=str(f)
+                                           )
+                    anns.append(an)
+                    anref = AnnotationRef(id=an.id)
+                    anrefs.append(anref)
                 f = f'pixel_images/{clean_id}.tiff'
+                uid = (-1) * uuid4().int
+                an = CommentAnnotation(id=uid,
+                                       namespace=ns,
+                                       value=str(f)
+                                       )
+                anns.append(an)
+                anref = AnnotationRef(id=an.id)
+                anrefs.append(anref)
 
-            uid = (-1) * uuid4().int
-            an = CommentAnnotation(id=uid,
-                                   namespace=ns,
-                                   value=f
-                                   )
-            anns.append(an)
-            anref = AnnotationRef(id=an.id)
-            anrefs.append(anref)
     elif fp_type == "Annotation":
         filename = str(Path(filename).name)
         f = f'file_annotations/{clean_id}/{filename}'
@@ -650,7 +684,9 @@ def populate_roi(obj: RoiI, roi_obj: IObject, ome: OME, conn: BlitzGateway
 
 
 def populate_image(obj: ImageI, ome: OME, conn: BlitzGateway, hostname: str,
-                   metadata: List[str], fset: Union[None, Fileset] = None
+                   metadata: List[str], simple: bool,
+                   fset: Union[None, Fileset] = None,
+                   ds: Optional[str] = None, proj: Optional[str] = None,
                    ) -> ImageRef:
     id = obj.getId()
     name = obj.getName()
@@ -671,7 +707,9 @@ def populate_image(obj: ImageI, ome: OME, conn: BlitzGateway, hostname: str,
             ome.structured_annotations.append(kv)
         if ref:
             img.annotation_refs.append(ref)
-    filepath_anns, refs = create_filepath_annotations(img_id, conn)
+    filepath_anns, refs = create_filepath_annotations(img_id, conn,
+                                                      simple, ds=ds,
+                                                      proj=proj)
     for i in range(len(filepath_anns)):
         ome.structured_annotations.append(filepath_anns[i])
         img.annotation_refs.append(refs[i])
@@ -692,12 +730,15 @@ def populate_image(obj: ImageI, ome: OME, conn: BlitzGateway, hostname: str,
         for fs_image in fset.copyImages():
             fs_img_id = f"Image:{str(fs_image.getId())}"
             if fs_img_id not in [i.id for i in ome.images]:
-                populate_image(fs_image, ome, conn, hostname, metadata, fset)
+                populate_image(fs_image, ome, conn, hostname, metadata,
+                               simple, fset)
     return img_ref
 
 
 def populate_dataset(obj: DatasetI, ome: OME, conn: BlitzGateway,
-                     hostname: str, metadata: List[str]) -> DatasetRef:
+                     hostname: str, metadata: List[str], simple: bool,
+                     proj: Optional[str] = None,
+                     ) -> DatasetRef:
     id = obj.getId()
     name = obj.getName()
     desc = obj.getDescription()
@@ -707,7 +748,9 @@ def populate_dataset(obj: DatasetI, ome: OME, conn: BlitzGateway,
         add_annotation(ds, ann, ome, conn)
     for img in obj.listChildren():
         img_obj = conn.getObject('Image', img.getId())
-        img_ref = populate_image(img_obj, ome, conn, hostname, metadata)
+        img_ref = populate_image(img_obj, ome, conn, hostname, metadata,
+                                 simple, ds=str(id) + "_" + name,
+                                 proj=proj)
         ds.image_refs.append(img_ref)
     ds_id = f"Dataset:{str(ds.id)}"
     if ds_id not in [i.id for i in ome.datasets]:
@@ -716,16 +759,19 @@ def populate_dataset(obj: DatasetI, ome: OME, conn: BlitzGateway,
 
 
 def populate_project(obj: ProjectI, ome: OME, conn: BlitzGateway,
-                     hostname: str, metadata: List[str]):
+                     hostname: str, metadata: List[str], simple: bool):
     id = obj.getId()
     name = obj.getName()
     desc = obj.getDescription()
     proj, _ = create_proj_and_ref(id=id, name=name, description=desc)
     for ann in obj.listAnnotations():
         add_annotation(proj, ann, ome, conn)
+
     for ds in obj.listChildren():
         ds_obj = conn.getObject('Dataset', ds.getId())
-        ds_ref = populate_dataset(ds_obj, ome, conn, hostname, metadata)
+        ds_ref = populate_dataset(ds_obj, ome, conn, hostname, metadata,
+                                  simple, proj=str(id) + "_" + name)
+
         proj.dataset_refs.append(ds_ref)
     ome.projects.append(proj)
 
@@ -773,6 +819,7 @@ def populate_plate(obj: PlateI, ome: OME, conn: BlitzGateway,
                 int(ann.id.split(":")[-1]) < 0):
             plate_path = ann.value
     filepath_anns, refs = create_filepath_annotations(pl.id, conn,
+                                                      simple=False,
                                                       plate_path=plate_path)
     for i in range(len(filepath_anns)):
         ome.structured_annotations.append(filepath_anns[i])
@@ -794,7 +841,8 @@ def populate_well(obj: WellI, ome: OME, conn: BlitzGateway,
         ws_obj = obj.getWellSample(index)
         ws_id = ws_obj.getId()
         ws_img = ws_obj.getImage()
-        ws_img_ref = populate_image(ws_img, ome, conn, hostname, metadata)
+        ws_img_ref = populate_image(ws_img, ome, conn, hostname, metadata,
+                                    simple=False)
         ws_index = int(ws_img_ref.id.split(":")[-1])
         ws = WellSample(id=ws_id, index=ws_index, image_ref=ws_img_ref)
         samples.append(ws)
@@ -862,6 +910,7 @@ def add_annotation(obj: Union[Project, Dataset, Image, Plate, Screen,
         filepath_anns, refs = create_filepath_annotations(
                                 f.id,
                                 conn,
+                                simple=False,
                                 filename=ann.getFile().getName())
         for i in range(len(filepath_anns)):
             ome.structured_annotations.append(filepath_anns[i])
@@ -881,16 +930,16 @@ def list_file_ids(ome: OME) -> dict:
 
 
 def populate_xml(datatype: str, id: int, filepath: str, conn: BlitzGateway,
-                 hostname: str, barchive: bool,
+                 hostname: str, barchive: bool, simple: bool,
                  metadata: List[str]) -> Tuple[OME, dict]:
     ome = OME()
     obj = conn.getObject(datatype, id)
     if datatype == 'Project':
-        populate_project(obj, ome, conn, hostname, metadata)
+        populate_project(obj, ome, conn, hostname, metadata, simple)
     elif datatype == 'Dataset':
-        populate_dataset(obj, ome, conn, hostname, metadata)
+        populate_dataset(obj, ome, conn, hostname, metadata, simple)
     elif datatype == 'Image':
-        populate_image(obj, ome, conn, hostname, metadata)
+        populate_image(obj, ome, conn, hostname, metadata, simple)
     elif datatype == 'Screen':
         populate_screen(obj, ome, conn, hostname, metadata)
     elif datatype == 'Plate':

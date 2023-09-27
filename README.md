@@ -53,6 +53,14 @@ Note that, if you are packing a `Plate` or `Screen`, default OMERO settings prev
 
 `--barchive` creates a package compliant with Bioimage Archive submission standards - see below for more detail.
 
+`--rocrate` generates a RO-Crate compliant package with flat structure (all image
+files in a single folder). A JSON metadata file is added with basic information
+about the files (name, mimetype).
+
+`--simple` creates a "human-readable" package; one folder per project or dataset is created and image files are placed according to where they came from in the OMERO server. Note that a package generated with this option is not guaranteed to work with `unpack`, though it often will.
+
+`--metadata` allows you to specify which transfer metadata will be saved in `transfer.xml` as possible MapAnnotation values to the images. Defaults to image ID, timestamp, software version, source hostname, md5, source username, source group. 
+
 Examples:
 ```
 omero transfer pack Image:123 transfer_pack.tar
@@ -76,6 +84,8 @@ Note that unpack needs to be able to identify the images it imports inequivocall
 `--merge` will use existing Projects, Datasets and Screens if the current user
 already owns entities with the same name as ones defined in `transfer.xml`,
 effectively merging the "new" unpacked entities with existing ones.
+
+`--metadata` allows you to specify which transfer metadata will be used from `transfer.xml` as MapAnnotation values to the images. Fields that do not exist on `transfer.xml` will be ignored. Defaults to image ID, timestamp, software version, source hostname, md5, source username, source group. 
 
 Examples:
 ```
