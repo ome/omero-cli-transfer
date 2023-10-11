@@ -62,6 +62,9 @@ are packaged into the transfer pack, and only Point, Line, Ellipse, Rectangle
 and Polygon-type ROIs are packaged.
 
 --zip packs the object into a compressed zip file rather than a tarball.
+             
+--figure includes OMERO.Figures; note that this can lead to a performance
+hit and that Figures can reference images that are not included in your pack!
 
 --barchive creates a package compliant with Bioimage Archive submission
 standards - see repo README for more detail. This package format is not
@@ -108,6 +111,11 @@ a single file.
 --merge will use existing Projects, Datasets and Screens if the current user
 already owns entities with the same name as ones defined in `transfer.xml`,
 effectively merging the "new" unpacked entities with existing ones.
+               
+--figure unpacks and updates Figures, if your pack contains those. Note that
+there's no guaranteed behavior for images referenced on Figures that were not
+included in a pack. You can just have an image missing, a completely unrelated
+image, a permission error. Use at your own risk!
 
 --metadata allows you to specify which transfer metadata will be used from
 `transfer.xml` as MapAnnotation values to the images. Fields that do not
