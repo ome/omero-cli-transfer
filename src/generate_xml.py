@@ -930,7 +930,7 @@ def list_file_ids(ome: OME) -> dict:
 
 
 def populate_xml(datatype: str, id: int, filepath: str, conn: BlitzGateway,
-                 hostname: str, barchive: bool, simple: bool,
+                 hostname: str, barchive: bool, simple: bool, figure: bool,
                  metadata: List[str]) -> Tuple[OME, dict]:
     ome = OME()
     obj = conn.getObject(datatype, id)
@@ -948,6 +948,8 @@ def populate_xml(datatype: str, id: int, filepath: str, conn: BlitzGateway,
         with open(filepath, 'w') as fp:
             print(to_xml(ome), file=fp)
             fp.close()
+    if (not (barchive or simple)) and figure:
+        populate_figures(ome, conn)
     path_id_dict = list_file_ids(ome)
     return ome, path_id_dict
 
@@ -1009,6 +1011,10 @@ def populate_rocrate(datatype: str, ome: OME, filepath: str,
                         "encodingFormat": format
                     })
     rc.write_zip(filepath)
+    return
+
+
+def populate_figures(ome: OME, conn: BlitzGateway):
     return
 
 

@@ -431,6 +431,7 @@ class TransferControl(GraphControl):
         ome, path_id_dict = populate_xml(src_datatype, src_dataid, md_fp,
                                          self.gateway, self.hostname,
                                          args.barchive, args.simple,
+                                         args.figure,
                                          self.metadata)
 
         print("Starting file copy...")
