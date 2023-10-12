@@ -111,7 +111,7 @@ a single file.
 --merge will use existing Projects, Datasets and Screens if the current user
 already owns entities with the same name as ones defined in `transfer.xml`,
 effectively merging the "new" unpacked entities with existing ones.
-               
+
 --figure unpacks and updates Figures, if your pack contains those. Note that
 there's no guaranteed behavior for images referenced on Figures that were not
 included in a pack. You can just have an image missing, a completely unrelated
@@ -199,6 +199,10 @@ class TransferControl(GraphControl):
                 "--zip", help="Pack into a zip file rather than a tarball",
                 action="store_true")
         pack.add_argument(
+                "--figure", help="Include OMERO.Figures into the pack"
+                                 " (caveats apply)",
+                action="store_true")
+        pack.add_argument(
                 "--barchive", help="Pack into a file compliant with Bioimage"
                                    " Archive submission standards",
                 action="store_true")
@@ -225,6 +229,10 @@ class TransferControl(GraphControl):
                 action="store_true")
         unpack.add_argument(
                 "--merge", help="Use existing entities if possible",
+                action="store_true")
+        unpack.add_argument(
+                "--figure", help="Use OMERO.Figures if present"
+                                 " (caveats apply)",
                 action="store_true")
         unpack.add_argument(
                 "--folder", help="Pass path to a folder rather than a pack",
