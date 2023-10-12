@@ -18,6 +18,7 @@ from ome_types.model import CommentAnnotation, LongAnnotation
 from ome_types.model import Point, Line, Rectangle, Ellipse, Polygon
 from ome_types.model import Polyline, Label, Shape
 from ome_types.model.map import M
+from omero.sys import Parameters
 from omero.gateway import BlitzGateway
 from omero.model import TagAnnotationI, MapAnnotationI, FileAnnotationI
 from omero.model import CommentAnnotationI, LongAnnotationI, Fileset
@@ -949,7 +950,7 @@ def populate_xml(datatype: str, id: int, filepath: str, conn: BlitzGateway,
             print(to_xml(ome), file=fp)
             fp.close()
     if (not (barchive or simple)) and figure:
-        populate_figures(ome, conn)
+        populate_figures(ome, conn, filepath)
     path_id_dict = list_file_ids(ome)
     return ome, path_id_dict
 
@@ -1014,7 +1015,42 @@ def populate_rocrate(datatype: str, ome: OME, filepath: str,
     return
 
 
-def populate_figures(ome: OME, conn: BlitzGateway):
+def populate_figures(ome: OME, conn: BlitzGateway, filepath: str):
+    cli = CLI()
+    cli.loadplugins()
+    clean_img_ids = []
+    for img in ome.images:
+        clean_img_ids.append(img.id.split(":")[-1])
+    q = conn.getQueryService()
+    params = Parameters()
+    results = q.projection(
+            "SELECT f.id FROM FileAnnotation f"
+            " WHERE f.ns='omero.web.figure.json'",
+            params,
+            conn.SERVICE_OPTS
+            )
+    figure_ids = [r[0].val for r in results]
+    print(figure_ids)
+    if figure_ids:
+        parent = Path(filepath).parent
+        figure_dir = parent / "figures"
+        print(figure_dir)
+        os.makedirs(figure_dir, exist_ok=True)
+        print(os.path.isdir(figure_dir))
+    for fig in figure_ids:
+        filepath = figure_dir / ("Figure_" + str(fig) + ".json")
+        cmd = ['download', "FileAnnotation:" + str(fig), str(filepath)]
+        cli.invoke(cmd)
+        f = open(filepath, 'r').read()
+        has_images = False
+        for img in clean_img_ids:
+            searchterm = "\"imageId\": " + img
+            if searchterm in f:
+                has_images = True
+        if not has_images:
+            os.remove(filepath)
+    if not os.listdir(figure_dir):
+        os.rmdir(figure_dir)
     return
 
 
