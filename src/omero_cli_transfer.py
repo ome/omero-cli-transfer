@@ -62,7 +62,7 @@ are packaged into the transfer pack, and only Point, Line, Ellipse, Rectangle
 and Polygon-type ROIs are packaged.
 
 --zip packs the object into a compressed zip file rather than a tarball.
-             
+
 --figure includes OMERO.Figures; note that this can lead to a performance
 hit and that Figures can reference images that are not included in your pack!
 
