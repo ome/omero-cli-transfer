@@ -433,7 +433,6 @@ class TransferControl(GraphControl):
                                          args.barchive, args.simple,
                                          args.figure,
                                          self.metadata)
-
         print("Starting file copy...")
         self._copy_files(path_id_dict, folder, self.gateway)
         if args.simple:

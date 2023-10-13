@@ -945,12 +945,12 @@ def populate_xml(datatype: str, id: int, filepath: str, conn: BlitzGateway,
         populate_screen(obj, ome, conn, hostname, metadata)
     elif datatype == 'Plate':
         populate_plate(obj, ome, conn, hostname, metadata)
+    if (not (barchive or simple)) and figure:
+        populate_figures(ome, conn, filepath)
     if not barchive:
         with open(filepath, 'w') as fp:
             print(to_xml(ome), file=fp)
             fp.close()
-    if (not (barchive or simple)) and figure:
-        populate_figures(ome, conn, filepath)
     path_id_dict = list_file_ids(ome)
     return ome, path_id_dict
 
@@ -1030,13 +1030,10 @@ def populate_figures(ome: OME, conn: BlitzGateway, filepath: str):
             conn.SERVICE_OPTS
             )
     figure_ids = [r[0].val for r in results]
-    print(figure_ids)
     if figure_ids:
         parent = Path(filepath).parent
         figure_dir = parent / "figures"
-        print(figure_dir)
         os.makedirs(figure_dir, exist_ok=True)
-        print(os.path.isdir(figure_dir))
     for fig in figure_ids:
         filepath = figure_dir / ("Figure_" + str(fig) + ".json")
         cmd = ['download', "FileAnnotation:" + str(fig), str(filepath)]
@@ -1047,7 +1044,25 @@ def populate_figures(ome: OME, conn: BlitzGateway, filepath: str):
             searchterm = "\"imageId\": " + img
             if searchterm in f:
                 has_images = True
-        if not has_images:
+        if has_images:
+            fig_obj = conn.getObject("FileAnnotation", fig)
+            contents = fig_obj.getFile().getPath().encode()
+            b64 = base64.b64encode(contents)
+            length = len(b64)
+            fpath = os.path.join(fig_obj.getFile().getPath(),
+                                 fig_obj.getFile().getName())
+            binaryfile = BinaryFile(file_name=fpath,
+                                    size=fig_obj.getFile().getSize(),
+                                    bin_data=BinData(big_endian=True,
+                                                     length=length,
+                                                     value=b64
+                                                     )
+                                    )
+            f, _ = create_file_ann_and_ref(id=fig_obj.getId(),
+                                           namespace=fig_obj.getNs(),
+                                           binary_file=binaryfile)
+            ome.structured_annotations.append(f)
+        else:
             os.remove(filepath)
     if not os.listdir(figure_dir):
         os.rmdir(figure_dir)
