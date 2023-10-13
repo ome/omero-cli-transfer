@@ -446,6 +446,20 @@ def create_filepath_annotations(id: str, conn: BlitzGateway,
     return anns, anrefs
 
 
+def create_figure_annotations(id: str) -> Tuple[CommentAnnotation,
+                                                AnnotationRef]:
+    ns = id
+    clean_id = int(ns.split(":")[-1])
+    f = f'figures/Figure_{clean_id}.json'
+    uid = (-1) * uuid4().int
+    an = CommentAnnotation(id=uid,
+                           namespace=ns,
+                           value=f
+                           )
+    anref = AnnotationRef(id=an.id)
+    return (an, anref)
+
+
 def create_provenance_metadata(conn: BlitzGateway, img_id: int,
                                hostname: str,
                                metadata: Union[List[str], None], plate: bool
@@ -1061,6 +1075,9 @@ def populate_figures(ome: OME, conn: BlitzGateway, filepath: str):
             f, _ = create_file_ann_and_ref(id=fig_obj.getId(),
                                            namespace=fig_obj.getNs(),
                                            binary_file=binaryfile)
+            filepath_ann, ref = create_figure_annotations(f.id)
+            ome.structured_annotations.append(filepath_ann)
+            f.annotation_ref.append(ref)
             ome.structured_annotations.append(f)
         else:
             os.remove(filepath)
