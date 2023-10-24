@@ -7,10 +7,10 @@ from omero_cli_transfer import TransferControl
 from cli import CLITest
 from omero.gateway import BlitzGateway
 
-import ezomero
-import pytest
-import os
-import tarfile
+# import ezomero
+# import pytest
+# import os
+# import tarfile
 import json
 
 
@@ -87,7 +87,7 @@ class TestFigure(CLITest):
             self.gw.deleteObjects("Image", im_ids, deleteAnns=True,
                                   deleteChildren=True, wait=True)
 
-    def get_panel_json(image, index, page_x):
+    def get_panel_json(self, image, index, page_x):
         """Create a panel."""
         channel = {'emissionWave': "400",
                    'label': "DAPI",
@@ -106,16 +106,17 @@ class TestFigure(CLITest):
         # shapes coordinates are Image coordinates
         # Red Line diagonal from corner to corner
         # Arrow from other corner to centre
-        shapes = [{"type": "Rectangle", "x": size_x/4, "y": size_y/4,
-                   "width": size_x/2, "height": size_y/2,
-                   "strokeWidth": 4, "strokeColor": "#FFFFFF"},
-                  {"type": "Line", "x1": 0, "x2": size_x, "y1": 0,
-                   "y2": size_y, "strokeWidth": 5, "strokeColor": "#FF0000"},
-                  {"type": "Arrow", "x1": 0, "x2": size_x/2, "y1": size_y,
-                   "y2": size_y/2, "strokeWidth": 10, "strokeColor": "#FFFF00"},
-                  {"type": "Ellipse", "x": size_x/2, "y": size_y/2,
-                   "radiusX": size_x/3, "radiusY": size_y/2, "rotation": 45,
-                   "strokeWidth": 10, "strokeColor": "#00FF00"}]
+        shapes = [
+            {"type": "Rectangle", "x": size_x/4, "y": size_y/4,
+             "width": size_x/2, "height": size_y/2,
+             "strokeWidth": 4, "strokeColor": "#FFFFFF"},
+            {"type": "Line", "x1": 0, "x2": size_x, "y1": 0,
+             "y2": size_y, "strokeWidth": 5, "strokeColor": "#FF0000"},
+            {"type": "Arrow", "x1": 0, "x2": size_x/2, "y1": size_y,
+             "y2": size_y/2, "strokeWidth": 10, "strokeColor": "#FFFF00"},
+            {"type": "Ellipse", "x": size_x/2, "y": size_y/2,
+             "radiusX": size_x/3, "radiusY": size_y/2, "rotation": 45,
+             "strokeWidth": 10, "strokeColor": "#00FF00"}]
 
         # This works if we have Units support (OMERO 5.1)
         px = image.getPrimaryPixels().getPhysicalSizeX()
