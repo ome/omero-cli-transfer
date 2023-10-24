@@ -149,6 +149,7 @@ class TestTransfer(CLITest):
                 self.cli.invoke(args, strict=True)
         self.delete_all()
 
+
     @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
     def test_pack_special(self, target_name, tmpdir):
         if target_name == "datasetid" or target_name == "projectid" or\
