@@ -8,10 +8,14 @@ from cli import CLITest
 from omero.gateway import BlitzGateway
 
 # import ezomero
-# import pytest
+import pytest
 # import os
 # import tarfile
 import json
+from pathlib import Path
+
+SUPPORTED = [
+    "idonly", "imageid", "datasetid", "projectid"]
 
 
 class TestFigure(CLITest):
@@ -86,6 +90,14 @@ class TestFigure(CLITest):
         if im_ids:
             self.gw.deleteObjects("Image", im_ids, deleteAnns=True,
                                   deleteChildren=True, wait=True)
+        fas = self.gw.getObjects("FileAnnotation")
+        fa_ids = []
+        for fa in fas:
+            fa_ids.append(fa.id)
+            print(f"deleting file annotation {fa.id}")
+        if fa_ids:
+            self.gw.deleteObjects("FileAnnotation", fa_ids,
+                                  deleteChildren=True, wait=True)
 
     def get_panel_json(self, image, index, page_x):
         """Create a panel."""
@@ -99,10 +111,10 @@ class TestFigure(CLITest):
                               'start': 0,
                               'end': 255},
                    }
-
-        pix = image.getPrimaryPixels()
-        size_x = pix.getSizeX().val
-        size_y = pix.getSizeY().val
+        img = self.gw.getObject("Image", image)
+        pix = img.getPrimaryPixels()
+        size_x = pix.getSizeX()
+        size_y = pix.getSizeY()
         # shapes coordinates are Image coordinates
         # Red Line diagonal from corner to corner
         # Arrow from other corner to centre
@@ -119,17 +131,17 @@ class TestFigure(CLITest):
              "strokeWidth": 10, "strokeColor": "#00FF00"}]
 
         # This works if we have Units support (OMERO 5.1)
-        px = image.getPrimaryPixels().getPhysicalSizeX()
-        py = image.getPrimaryPixels().getPhysicalSizeY()
-        pz = image.getPrimaryPixels().getPhysicalSizeZ()
+        px = pix.getPhysicalSizeX()
+        py = pix.getPhysicalSizeY()
+        pz = pix.getPhysicalSizeZ()
         img_json = {
-            "imageId": image.getId().getValue(),
+            "imageId": image,
             "name": "test_image",  # image.getName().getValue()
             "width": 100 * (index + 1),
             "height": 100 * (index + 1),
-            "sizeZ": pix.getSizeZ().val,
+            "sizeZ": pix.getSizeZ(),
             "theZ": 0,
-            "sizeT": pix.getSizeT().val,
+            "sizeT": pix.getSizeT(),
             "theT": 0,
             # rdef -> used at panel creation then deleted
             "channels": [channel],
@@ -157,7 +169,7 @@ class TestFigure(CLITest):
         }
         return img_json
 
-    def create_figure(self, images):
+    def create_figure(self, image_ids):
         """Create JSON to export figure."""
         figure_json = {"version": 2,
                        "paper_width": 595,
@@ -165,9 +177,149 @@ class TestFigure(CLITest):
                        "page_size": "A4",
                        }
         panels = []
-        for idx, image in enumerate(images):
+        idx = 0
+        for image in image_ids:
             panels.append(self.get_panel_json(image, 0, 50 + (idx * 300)))
             panels.append(self.get_panel_json(image, 1, 50 + (idx * 300)))
+            idx += 1
         figure_json['panels'] = panels
         json_string = json.dumps(figure_json)
         return json_string
+
+    @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
+    def test_pack_unpack_figure(self, target_name, tmpdir):
+
+        # basic case
+        self.create_image(target_name=target_name)
+        clear_img_id = int(self.imageid.split(":")[-1])
+        jsonstr = self.create_figure([clear_img_id])
+        print(jsonstr)
+        with open(Path(tmpdir)/"figure.json", 'w') as f:
+            f.write(jsonstr)
+        # ezomero cannot create orphaned FileAnnotations...
+        namespace = "omero.web.figure.json"
+        self.gw.createFileAnnfromLocalFile(
+            str(Path(tmpdir)/"figure.json"),
+            mimetype="application/json",
+            ns=namespace, desc=None)
+        target = getattr(self, target_name)
+        args = self.args + ["pack", target, '--figure',
+                            str(tmpdir / 'test.tar')]
+        self.cli.invoke(args, strict=True)
+        self.delete_all()
+        args = self.args + ["unpack", '--figure',
+                            str(tmpdir / 'test.tar')]
+        self.cli.invoke(args, strict=True)
+        fas = self.gw.getObjects("FileAnnotation")
+        count = 0
+        for f in fas:
+            count += 1
+        assert count == 1
+        self.delete_all()
+
+        # figure w/multi-images, one in, one out
+        self.create_image(target_name=target_name)
+        clear_img_id = int(self.imageid.split(":")[-1])
+        other_img = int(self.create_test_image(100, 100, 1, 1, 1,
+                        self.client.getSession()).id.val)
+        print(clear_img_id, other_img)
+        jsonstr = self.create_figure([clear_img_id, other_img])
+        print(jsonstr)
+        with open(Path(tmpdir)/"figure.json", 'w') as f:
+            f.write(jsonstr)
+        # ezomero cannot create orphaned FileAnnotations...
+        namespace = "omero.web.figure.json"
+        self.gw.createFileAnnfromLocalFile(
+            str(Path(tmpdir)/"figure.json"),
+            mimetype="application/json",
+            ns=namespace, desc=None)
+        target = getattr(self, target_name)
+        args = self.args + ["pack", target, '--figure',
+                            str(tmpdir / 'test.tar')]
+        self.cli.invoke(args, strict=True)
+        self.delete_all()
+        args = self.args + ["unpack", '--figure',
+                            str(tmpdir / 'test.tar')]
+        self.cli.invoke(args, strict=True)
+        fas = self.gw.getObjects("FileAnnotation")
+        count = 0
+        for f in fas:
+            count += 1
+        assert count == 1
+        self.delete_all()
+
+        # figure w/multi-images, two in, one out
+        self.create_image(target_name=target_name)
+        clear_img_id = int(self.imageid.split(":")[-1])
+        clear_src_id = int(self.source.split(":")[-1])
+        other_img = int(self.create_test_image(100, 100, 1, 1, 1,
+                        self.client.getSession()).id.val)
+        print(clear_img_id, other_img)
+        jsonstr = self.create_figure([clear_img_id, other_img, clear_src_id])
+        print(jsonstr)
+        with open(Path(tmpdir)/"figure.json", 'w') as f:
+            f.write(jsonstr)
+        namespace = "omero.web.figure.json"
+        self.gw.createFileAnnfromLocalFile(
+            str(Path(tmpdir)/"figure.json"),
+            mimetype="application/json",
+            ns=namespace, desc=None)
+        # create another figure with source only
+        jsonstr = self.create_figure([other_img, clear_src_id])
+        print(jsonstr)
+        with open(Path(tmpdir)/"figure.json", 'w') as f:
+            f.write(jsonstr)
+        # ezomero cannot create orphaned FileAnnotations...
+        namespace = "omero.web.figure.json"
+        self.gw.createFileAnnfromLocalFile(
+            str(Path(tmpdir)/"figure.json"),
+            mimetype="application/json",
+            ns=namespace, desc=None)
+        target = getattr(self, target_name)
+        args = self.args + ["pack", target, '--figure',
+                            str(tmpdir / 'test.tar')]
+        self.cli.invoke(args, strict=True)
+        self.delete_all()
+        args = self.args + ["unpack", '--figure',
+                            str(tmpdir / 'test.tar')]
+        self.cli.invoke(args, strict=True)
+        fas = self.gw.getObjects("FileAnnotation")
+        count = 0
+        for f in fas:
+            count += 1
+        if target == "imageid":
+            assert count == 1
+        else:
+            assert count == 2
+        self.delete_all()
+
+        # figure without relevant images
+        self.create_image(target_name=target_name)
+        other_img1 = int(self.create_test_image(100, 100, 1, 1, 1,
+                         self.client.getSession()).id.val)
+        other_img2 = int(self.create_test_image(100, 100, 1, 1, 1,
+                         self.client.getSession()).id.val)
+        print(clear_img_id, other_img)
+        jsonstr = self.create_figure([other_img1, other_img2])
+        print(jsonstr)
+        with open(Path(tmpdir)/"figure.json", 'w') as f:
+            f.write(jsonstr)
+        namespace = "omero.web.figure.json"
+        self.gw.createFileAnnfromLocalFile(
+            str(Path(tmpdir)/"figure.json"),
+            mimetype="application/json",
+            ns=namespace, desc=None)
+        target = getattr(self, target_name)
+        args = self.args + ["pack", target, '--figure',
+                            str(tmpdir / 'test.tar')]
+        self.cli.invoke(args, strict=True)
+        self.delete_all()
+        args = self.args + ["unpack", '--figure',
+                            str(tmpdir / 'test.tar')]
+        self.cli.invoke(args, strict=True)
+        fas = self.gw.getObjects("FileAnnotation")
+        count = 0
+        for f in fas:
+            count += 1
+        assert count == 0
+        self.delete_all()
