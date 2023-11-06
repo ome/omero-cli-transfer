@@ -149,7 +149,8 @@ def find_dataset(ds: Dataset, pjs: List[Project], conn: BlitzGateway) -> int:
 
 
 def create_annotations(ans: List[Annotation], conn: BlitzGateway, hash: str,
-                       folder: str, metadata: List[str]) -> dict:
+                       folder: str, figure: bool, img_map: dict,
+                       metadata: List[str]) -> dict:
     ann_map = {}
     for an in ans:
         if isinstance(an, TagAnnotation):
@@ -207,6 +208,11 @@ def create_annotations(ans: List[Annotation], conn: BlitzGateway, hash: str,
             comm_ann.save()
             ann_map[an.id] = comm_ann.getId()
         elif isinstance(an, FileAnnotation):
+            if an.namespace == "omero.web.figure.json":
+                if not figure:
+                    continue
+                else:
+                    update_figure_refs(an, ans, img_map, folder)
             original_file = create_original_file(an, ans, conn, folder)
             file_ann = FileAnnotationWrapper(conn)
             file_ann.setDescription(an.description)
@@ -215,6 +221,30 @@ def create_annotations(ans: List[Annotation], conn: BlitzGateway, hash: str,
             file_ann.save()
             ann_map[an.id] = file_ann.getId()
     return ann_map
+
+
+def update_figure_refs(ann: FileAnnotation, ans: List[Annotation],
+                       img_map: dict, folder: str):
+    curr_folder = str(Path('.').resolve())
+    for an in ann.annotation_refs:
+        clean_id = int(an.id.split(":")[-1])
+        if clean_id < 0:
+            cmnt_id = an.id
+    for an_loop in ans:
+        if an_loop.id == cmnt_id and isinstance(an_loop, CommentAnnotation):
+            fpath = str(an_loop.value)
+    dest_path = str(os.path.join(curr_folder, folder,  '.', fpath))
+    with open(dest_path, 'r') as file:
+        filedata = file.read()
+    for src_id, dest_id in img_map.items():
+        clean_id = int(src_id.split(":")[-1])
+        src_str = f"\"imageId\": {clean_id}"
+        dest_str = f"\"imageId\": {dest_id}"
+        print(src_str, dest_str)
+        filedata = filedata.replace(src_str, dest_str)
+    with open(dest_path, 'w') as file:
+        file.write(filedata)
+    return
 
 
 def create_original_file(ann: FileAnnotation, ans: List[Annotation],
@@ -243,7 +273,7 @@ def create_plate_map(ome: OME, img_map: dict, conn: BlitzGateway
         file_path = ""
         for ann in ome.structured_annotations:
             if (ann.id in ann_ids and
-                    type(ann) == CommentAnnotation and
+                    isinstance(ann, CommentAnnotation) and
                     int(ann.id.split(":")[-1]) < 0):
                 newome.structured_annotations.remove(ann)
                 map_ref_ids.append(ann.id)
@@ -585,7 +615,8 @@ def rename_plates(pls: List[Plate], pl_map: dict, conn: BlitzGateway):
 
 
 def populate_omero(ome: OME, img_map: dict, conn: BlitzGateway, hash: str,
-                   folder: str, metadata: List[str], merge: bool):
+                   folder: str, metadata: List[str], merge: bool,
+                   figure: bool):
     plate_map, ome = create_plate_map(ome, img_map, conn)
     rename_images(ome.images, img_map, conn)
     rename_plates(ome.plates, plate_map, conn)
@@ -593,7 +624,7 @@ def populate_omero(ome: OME, img_map: dict, conn: BlitzGateway, hash: str,
     ds_map = create_or_set_datasets(ome.datasets, ome.projects, conn, merge)
     screen_map = create_or_set_screens(ome.screens, conn, merge)
     ann_map = create_annotations(ome.structured_annotations, conn,
-                                 hash, folder, metadata)
+                                 hash, folder, figure, img_map, metadata)
     create_rois(ome.rois, ome.images, img_map, conn)
     link_plates(ome, screen_map, plate_map, conn)
     link_datasets(ome, proj_map, ds_map, conn)

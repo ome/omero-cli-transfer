@@ -63,6 +63,9 @@ and Polygon-type ROIs are packaged.
 
 --zip packs the object into a compressed zip file rather than a tarball.
 
+--figure includes OMERO.Figures; note that this can lead to a performance
+hit and that Figures can reference images that are not included in your pack!
+
 --barchive creates a package compliant with Bioimage Archive submission
 standards - see repo README for more detail. This package format is not
 compatible with unpack usage.
@@ -108,6 +111,11 @@ a single file.
 --merge will use existing Projects, Datasets and Screens if the current user
 already owns entities with the same name as ones defined in `transfer.xml`,
 effectively merging the "new" unpacked entities with existing ones.
+
+--figure unpacks and updates Figures, if your pack contains those. Note that
+there's no guaranteed behavior for images referenced on Figures that were not
+included in a pack. You can just have an image missing, a completely unrelated
+image, a permission error. Use at your own risk!
 
 --metadata allows you to specify which transfer metadata will be used from
 `transfer.xml` as MapAnnotation values to the images. Fields that do not
@@ -191,6 +199,10 @@ class TransferControl(GraphControl):
                 "--zip", help="Pack into a zip file rather than a tarball",
                 action="store_true")
         pack.add_argument(
+                "--figure", help="Include OMERO.Figures into the pack"
+                                 " (caveats apply)",
+                action="store_true")
+        pack.add_argument(
                 "--barchive", help="Pack into a file compliant with Bioimage"
                                    " Archive submission standards",
                 action="store_true")
@@ -217,6 +229,10 @@ class TransferControl(GraphControl):
                 action="store_true")
         unpack.add_argument(
                 "--merge", help="Use existing entities if possible",
+                action="store_true")
+        unpack.add_argument(
+                "--figure", help="Use OMERO.Figures if present"
+                                 " (caveats apply)",
                 action="store_true")
         unpack.add_argument(
                 "--folder", help="Pass path to a folder rather than a pack",
@@ -415,8 +431,8 @@ class TransferControl(GraphControl):
         ome, path_id_dict = populate_xml(src_datatype, src_dataid, md_fp,
                                          self.gateway, self.hostname,
                                          args.barchive, args.simple,
+                                         args.figure,
                                          self.metadata)
-
         print("Starting file copy...")
         self._copy_files(path_id_dict, folder, self.gateway)
         if args.simple:
@@ -461,7 +477,7 @@ class TransferControl(GraphControl):
         img_map = self._make_image_map(src_img_map, dest_img_map, self.gateway)
         print("Creating and linking OMERO objects...")
         populate_omero(ome, img_map, self.gateway,
-                       hash, folder, self.metadata, args.merge)
+                       hash, folder, self.metadata, args.merge, args.figure)
         return
 
     def _load_from_pack(self, filepath: str, output: Optional[str] = None

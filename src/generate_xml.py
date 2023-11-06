@@ -18,6 +18,7 @@ from ome_types.model import CommentAnnotation, LongAnnotation
 from ome_types.model import Point, Line, Rectangle, Ellipse, Polygon
 from ome_types.model import Polyline, Label, Shape
 from ome_types.model.map import M
+from omero.sys import Parameters
 from omero.gateway import BlitzGateway
 from omero.model import TagAnnotationI, MapAnnotationI, FileAnnotationI
 from omero.model import CommentAnnotationI, LongAnnotationI, Fileset
@@ -443,6 +444,20 @@ def create_filepath_annotations(id: str, conn: BlitzGateway,
         anref = AnnotationRef(id=an.id)
         anrefs.append(anref)
     return anns, anrefs
+
+
+def create_figure_annotations(id: str) -> Tuple[CommentAnnotation,
+                                                AnnotationRef]:
+    ns = id
+    clean_id = int(ns.split(":")[-1])
+    f = f'figures/Figure_{clean_id}.json'
+    uid = (-1) * uuid4().int
+    an = CommentAnnotation(id=uid,
+                           namespace=ns,
+                           value=f
+                           )
+    anref = AnnotationRef(id=an.id)
+    return (an, anref)
 
 
 def create_provenance_metadata(conn: BlitzGateway, img_id: int,
@@ -930,7 +945,7 @@ def list_file_ids(ome: OME) -> dict:
 
 
 def populate_xml(datatype: str, id: int, filepath: str, conn: BlitzGateway,
-                 hostname: str, barchive: bool, simple: bool,
+                 hostname: str, barchive: bool, simple: bool, figure: bool,
                  metadata: List[str]) -> Tuple[OME, dict]:
     ome = OME()
     obj = conn.getObject(datatype, id)
@@ -944,6 +959,8 @@ def populate_xml(datatype: str, id: int, filepath: str, conn: BlitzGateway,
         populate_screen(obj, ome, conn, hostname, metadata)
     elif datatype == 'Plate':
         populate_plate(obj, ome, conn, hostname, metadata)
+    if (not (barchive or simple)) and figure:
+        populate_figures(ome, conn, filepath)
     if not barchive:
         with open(filepath, 'w') as fp:
             print(to_xml(ome), file=fp)
@@ -1009,6 +1026,63 @@ def populate_rocrate(datatype: str, ome: OME, filepath: str,
                         "encodingFormat": format
                     })
     rc.write_zip(filepath)
+    return
+
+
+def populate_figures(ome: OME, conn: BlitzGateway, filepath: str):
+    cli = CLI()
+    cli.loadplugins()
+    clean_img_ids = []
+    for img in ome.images:
+        clean_img_ids.append(img.id.split(":")[-1])
+    q = conn.getQueryService()
+    params = Parameters()
+    results = q.projection(
+            "SELECT f.id FROM FileAnnotation f"
+            " WHERE f.ns='omero.web.figure.json'",
+            params,
+            conn.SERVICE_OPTS
+            )
+    figure_ids = [r[0].val for r in results]
+    if figure_ids:
+        parent = Path(filepath).parent
+        figure_dir = parent / "figures"
+        os.makedirs(figure_dir, exist_ok=True)
+    for fig in figure_ids:
+        filepath = figure_dir / ("Figure_" + str(fig) + ".json")
+        cmd = ['download', "FileAnnotation:" + str(fig), str(filepath)]
+        cli.invoke(cmd)
+        f = open(filepath, 'r').read()
+        has_images = False
+        for img in clean_img_ids:
+            searchterm = "\"imageId\": " + img
+            if searchterm in f:
+                has_images = True
+        if has_images:
+            fig_obj = conn.getObject("FileAnnotation", fig)
+            contents = fig_obj.getFile().getPath().encode()
+            b64 = base64.b64encode(contents)
+            length = len(b64)
+            fpath = os.path.join(fig_obj.getFile().getPath(),
+                                 fig_obj.getFile().getName())
+            binaryfile = BinaryFile(file_name=fpath,
+                                    size=fig_obj.getFile().getSize(),
+                                    bin_data=BinData(big_endian=True,
+                                                     length=length,
+                                                     value=b64
+                                                     )
+                                    )
+            f, _ = create_file_ann_and_ref(id=fig_obj.getId(),
+                                           namespace=fig_obj.getNs(),
+                                           binary_file=binaryfile)
+            filepath_ann, ref = create_figure_annotations(f.id)
+            ome.structured_annotations.append(filepath_ann)
+            f.annotation_ref.append(ref)
+            ome.structured_annotations.append(f)
+        else:
+            os.remove(filepath)
+    if not os.listdir(figure_dir):
+        os.rmdir(figure_dir)
     return
 
 
