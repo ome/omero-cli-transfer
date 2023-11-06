@@ -1,8 +1,9 @@
-<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" targetNamespace="https://github.com/ome/omero-cli-transfer" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified"
+  xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:element name="CLITransferPrepareMetadata">
     <xs:complexType>
       <xs:sequence>
-        <xs:element type="xs:string" name="Namespace"/>
+        <xs:element type="xs:string" name="Namespace" />
         <xs:element name="Value">
           <xs:complexType>
             <xs:sequence>
@@ -10,7 +11,7 @@
                 <xs:complexType>
                   <xs:simpleContent>
                     <xs:extension base="xs:string">
-                      <xs:attribute type="xs:string" name="K"/>
+                      <xs:attribute type="xs:string" name="K" />
                     </xs:extension>
                   </xs:simpleContent>
                 </xs:complexType>
