@@ -1,0 +1,10 @@
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" targetNamespace="https://github.com/ome/omero-cli-transfer" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="CLITransferServerPath">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element type="xs:string" name="Path"/>
+        <xs:element type="xs:string" name="ImageId" maxOccurs="unbounded" minOccurs="1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
