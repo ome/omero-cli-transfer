@@ -614,17 +614,19 @@ def parse_showinf(text, counter_imgs, counter_plates, counter_ann,
         img_ref[image.id] = img_id_str
         pix = create_empty_pixels(image, img_id)
         if len(ome.images) > 1:  # differentiating names
+            if image.name == "":
+                image_name = "0"
+            else:
+                image_name = image.name
             filename = Path(target).name
-            img = Image(id=img_id_str, name=filename + " [" + image.name + "]",
+            img = Image(id=img_id_str, name=filename + " [" + image_name + "]",
                         pixels=pix)
         else:
             img = Image(id=img_id_str, name=image.name, pixels=pix)
         img_id += 1
-        uid = (-1) * uuid4().int
-        an = CommentAnnotation(id=ann_id,
-                               namespace=img_id_str,
-                               value=target
-                               )
+        xml = create_path_xml(target)
+        an, anref = create_xml_and_ref(id=ann_id,
+                                       value=xml)
         annotations.append(an)
         ann_id += 1
         anref = AnnotationRef(id=an.id)
@@ -641,16 +643,25 @@ def parse_showinf(text, counter_imgs, counter_plates, counter_ann,
             for ws in w.well_samples:
                 ws.image_ref.id = img_ref[ws.image_ref.id]
         pl_id += 1
-        uid = (-1) * uuid4().int
-        an = CommentAnnotation(id=ann_id,
-                               namespace=pl_id_str,
-                               value=target
-                               )
+        xml = create_path_xml(target)
+        an, anref = create_xml_and_ref(id=ann_id,
+                                       value=xml)
         annotations.append(an)
         anref = AnnotationRef(id=an.id)
         pl.annotation_refs.append(anref)
         plates.append(pl)
     return images, plates, annotations
+
+
+def create_path_xml(target):
+    base = ET.Element("CLITransferServerPath", attrib={
+        "xmlns":"https://github.com/ome/omero-cli-transfer",
+        "xmlns:xsi":"http://www.w3.org/2001/XMLSchema-instance",
+        "xsi:schemaLocation":"https://github.com/ome/omero-cli-transfer \
+        https://raw.githubusercontent.com/ome/omero-cli-transfer/\
+            main/schemas/serverpath.xsd"})
+    _ = ET.SubElement(base, "Path").text = target
+    return ET.dump(base)
 
 
 def create_prepare_metadata():
@@ -666,11 +677,11 @@ def create_prepare_metadata():
     xml_ann, ref = create_xml_and_ref(id=id,
                                 namespace=ns,
                                 value=xml)
-    return kv, ref
+    return xml_ann, ref
 
 
 def create_metadata_xml(ns, metadata):
-    base = ET.Element("CLITransferServerPath", attrib={
+    base = ET.Element("CLITransferPrepareMetadata", attrib={
         "xmlns":"https://github.com/ome/omero-cli-transfer",
         "xmlns:xsi":"http://www.w3.org/2001/XMLSchema-instance",
         "xsi:schemaLocation":"https://github.com/ome/omero-cli-transfer \
