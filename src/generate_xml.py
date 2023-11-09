@@ -11,7 +11,7 @@ from ome_types.model import Well, WellSample
 from ome_types.model import Plate
 from ome_types.model import Dataset, DatasetRef
 from ome_types.model import Image, ImageRef, Pixels
-from ome_types.model import TagAnnotation, MapAnnotation, ROI
+from ome_types.model import TagAnnotation, MapAnnotation, ROI, XMLAnnotation
 from ome_types.model import FileAnnotation, BinaryFile, BinData
 from ome_types.model import AnnotationRef, ROIRef, Map
 from ome_types.model import CommentAnnotation, LongAnnotation
@@ -28,6 +28,7 @@ from omero.model import DatasetI, ProjectI, ScreenI, PlateI, WellI, Annotation
 from omero.cli import CLI
 from typing import Tuple, List, Optional, Union, Any, Dict, TextIO
 from subprocess import PIPE, DEVNULL
+import xml.etree.cElementTree as ET
 from os import PathLike
 import pkg_resources
 import ezomero
@@ -102,6 +103,12 @@ def create_kv_and_ref(**kwargs) -> Tuple[MapAnnotation, AnnotationRef]:
     kv = MapAnnotation(**kwargs)
     kvref = AnnotationRef(id=kv.id)
     return kv, kvref
+
+
+def create_xml_and_ref(**kwargs) -> Tuple[XMLAnnotation, AnnotationRef]:
+    xml = XMLAnnotation(**kwargs)
+    xmlref = AnnotationRef(id=xml.id)
+    return xml, xmlref
 
 
 def create_long_and_ref(**kwargs) -> Tuple[LongAnnotation, AnnotationRef]:
@@ -553,6 +560,7 @@ def create_objects(folder, filelist):
     annotations = []
     counter_imgs = 1
     counter_pls = 1
+    counter_anns = 1
     for target in targets:
         if filelist:
             folder = par_folder
@@ -562,12 +570,13 @@ def create_objects(folder, filelist):
         if filelist:
             folder = par_folder
         imgs, pls, anns = parse_showinf(res, counter_imgs, counter_pls,
-                                        target, folder)
+                                        counter_anns, target, folder)
         images.extend(imgs)
         counter_imgs = counter_imgs + len(imgs)
         plates.extend(pls)
         counter_pls = counter_pls + len(pls)
         annotations.extend(anns)
+        counter_anns = counter_anns + len(annotations)
     return images, plates, annotations
 
 
@@ -590,13 +599,15 @@ def parse_files_import(text, folder):
     return clean_targets
 
 
-def parse_showinf(text, counter_imgs, counter_plates, target, folder):
+def parse_showinf(text, counter_imgs, counter_plates, counter_ann,
+                  target, folder):
     ome = from_xml(text)
     images = []
     plates = []
     annotations = []
     img_id = counter_imgs
     pl_id = counter_plates
+    ann_id = counter_ann
     img_ref = {}
     for image in ome.images:
         img_id_str = f"Image:{str(img_id)}"
@@ -610,15 +621,17 @@ def parse_showinf(text, counter_imgs, counter_plates, target, folder):
             img = Image(id=img_id_str, name=image.name, pixels=pix)
         img_id += 1
         uid = (-1) * uuid4().int
-        an = CommentAnnotation(id=uid,
+        an = CommentAnnotation(id=ann_id,
                                namespace=img_id_str,
                                value=target
                                )
         annotations.append(an)
+        ann_id += 1
         anref = AnnotationRef(id=an.id)
         img.annotation_refs.append(anref)
-        an, anref = create_prepare_metadata()
+        an, anref = create_prepare_metadata(ann_id)
         annotations.append(an)
+        ann_id += 1
         img.annotation_refs.append(anref)
         images.append(img)
     for plate in ome.plates:
@@ -629,7 +642,7 @@ def parse_showinf(text, counter_imgs, counter_plates, target, folder):
                 ws.image_ref.id = img_ref[ws.image_ref.id]
         pl_id += 1
         uid = (-1) * uuid4().int
-        an = CommentAnnotation(id=uid,
+        an = CommentAnnotation(id=ann_id,
                                namespace=pl_id_str,
                                value=target
                                )
@@ -645,21 +658,27 @@ def create_prepare_metadata():
     version = pkg_resources.get_distribution(software).version
     date_time = datetime.now().strftime("%d/%m/%Y, %H:%M:%S")
     ns = 'openmicroscopy.org/cli/transfer/prepare'
-    id = (-1) * uuid4().int
     md_dict: Dict[str, Any] = {}
     md_dict['software'] = software
     md_dict['version'] = version
     md_dict['packing_timestamp'] = date_time
-    mmap = []
-    for _key, _value in md_dict.items():
-        if _value:
-            mmap.append(M(k=_key, value=str(_value)))
-        else:
-            mmap.append(M(k=_key, value=''))
-    kv, ref = create_kv_and_ref(id=id,
+    xml = create_metadata_xml(md_dict)
+    xml_ann, ref = create_xml_and_ref(id=id,
                                 namespace=ns,
-                                value=Map(ms=mmap))
+                                value=xml)
     return kv, ref
+
+
+def create_metadata_xml(ns, metadata):
+    base = ET.Element("CLITransferServerPath", attrib={
+        "xmlns":"https://github.com/ome/omero-cli-transfer",
+        "xmlns:xsi":"http://www.w3.org/2001/XMLSchema-instance",
+        "xsi:schemaLocation":"https://github.com/ome/omero-cli-transfer \
+        https://raw.githubusercontent.com/ome/omero-cli-transfer/\
+            main/schemas/serverpath.xsd"})
+    for _key, _value in metadata.items():
+        _ = ET.SubElement(base, _key).text = _value
+    return ET.dump(base)
 
 
 def create_empty_pixels(image, id):
