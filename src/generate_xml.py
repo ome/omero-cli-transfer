@@ -28,7 +28,7 @@ from omero.model import DatasetI, ProjectI, ScreenI, PlateI, WellI, Annotation
 from omero.cli import CLI
 from typing import Tuple, List, Optional, Union, Any, Dict, TextIO
 from subprocess import PIPE, DEVNULL
-import xml.etree.cElementTree as ET
+import xml.etree.cElementTree as ETree
 from os import PathLike
 import pkg_resources
 import ezomero
@@ -625,7 +625,9 @@ def parse_showinf(text, counter_imgs, counter_plates, counter_ann,
             img = Image(id=img_id_str, name=image.name, pixels=pix)
         img_id += 1
         xml = create_path_xml(target)
+        ns = 'openmicroscopy.org/cli/transfer'
         an, anref = create_xml_and_ref(id=ann_id,
+                                       namespace=ns,
                                        value=xml)
         annotations.append(an)
         ann_id += 1
@@ -645,6 +647,7 @@ def parse_showinf(text, counter_imgs, counter_plates, counter_ann,
         pl_id += 1
         xml = create_path_xml(target)
         an, anref = create_xml_and_ref(id=ann_id,
+                                       namespace=ns,
                                        value=xml)
         annotations.append(an)
         anref = AnnotationRef(id=an.id)
@@ -654,17 +657,17 @@ def parse_showinf(text, counter_imgs, counter_plates, counter_ann,
 
 
 def create_path_xml(target):
-    base = ET.Element("CLITransferServerPath", attrib={
-        "xmlns":"https://github.com/ome/omero-cli-transfer",
-        "xmlns:xsi":"http://www.w3.org/2001/XMLSchema-instance",
-        "xsi:schemaLocation":"https://github.com/ome/omero-cli-transfer \
+    base = ETree.Element("CLITransferServerPath", attrib={
+        "xmlns": "https://github.com/ome/omero-cli-transfer",
+        "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+        "xsi:schemaLocation": "https://github.com/ome/omero-cli-transfer \
         https://raw.githubusercontent.com/ome/omero-cli-transfer/\
             main/schemas/serverpath.xsd"})
-    _ = ET.SubElement(base, "Path").text = target
-    return ET.dump(base)
+    ETree.SubElement(base, "Path").text = target
+    return ETree.tostring(base, encoding='unicode')
 
 
-def create_prepare_metadata():
+def create_prepare_metadata(ann_id):
     software = "omero-cli-transfer"
     version = pkg_resources.get_distribution(software).version
     date_time = datetime.now().strftime("%d/%m/%Y, %H:%M:%S")
@@ -674,22 +677,22 @@ def create_prepare_metadata():
     md_dict['version'] = version
     md_dict['packing_timestamp'] = date_time
     xml = create_metadata_xml(md_dict)
-    xml_ann, ref = create_xml_and_ref(id=id,
-                                namespace=ns,
-                                value=xml)
+    xml_ann, ref = create_xml_and_ref(id=ann_id,
+                                      namespace=ns,
+                                      value=xml)
     return xml_ann, ref
 
 
-def create_metadata_xml(ns, metadata):
-    base = ET.Element("CLITransferPrepareMetadata", attrib={
-        "xmlns":"https://github.com/ome/omero-cli-transfer",
-        "xmlns:xsi":"http://www.w3.org/2001/XMLSchema-instance",
-        "xsi:schemaLocation":"https://github.com/ome/omero-cli-transfer \
+def create_metadata_xml(metadata):
+    base = ETree.Element("CLITransferPrepareMetadata", attrib={
+        "xmlns": "https://github.com/ome/omero-cli-transfer",
+        "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+        "xsi:schemaLocation": "https://github.com/ome/omero-cli-transfer \
         https://raw.githubusercontent.com/ome/omero-cli-transfer/\
             main/schemas/serverpath.xsd"})
     for _key, _value in metadata.items():
-        _ = ET.SubElement(base, _key).text = _value
-    return ET.dump(base)
+        ETree.SubElement(base, _key).text = _value
+    return ETree.tostring(base, encoding='unicode')
 
 
 def create_empty_pixels(image, id):

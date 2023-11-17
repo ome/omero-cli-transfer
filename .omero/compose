@@ -9,4 +9,4 @@ PROJECT=${PROJECT:-$(get_project_name)}
 # making use of COMPOSE_PROJECT_NAME
 
 cd $dir
-exec docker-compose -p ${PROJECT} "$@"
+exec docker compose -p ${PROJECT} "$@"
