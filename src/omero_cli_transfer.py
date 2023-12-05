@@ -40,13 +40,13 @@ DIR_PERM = 0o755
 MD5_BUF_SIZE = 65536
 
 
-HELP = ("""Transfer objects and annotations between servers.
+HELP = """Transfer objects and annotations between servers.
 
 Both subcommands (pack and unpack) will use an existing OMERO session
 created via CLI or prompt the user for parameters to create one.
-""")
+"""
 
-PACK_HELP = ("""Creates transfer packet for moving objects.
+PACK_HELP = """Creates transfer packet for moving objects.
 
 This subcommand creates a transfer packet for moving objects between
 OMERO server instances.
@@ -85,15 +85,20 @@ guaranteed to work with unpack.
 orig_group`), other options are `none`, `img_id`, `timestamp`, `software`,
 `version`, `md5`, `hostname`, `db_id`, `orig_user`, `orig_group`.
 
+--server creates the transfer.xml file but does not copy data
+or generate an archive. The last cli argument is the path where the `transfer.xml`
+file will be written
+
 Examples:
 omero transfer pack Image:123 transfer_pack.tar
 omero transfer pack --zip Image:123 transfer_pack.zip
 omero transfer pack Dataset:1111 /home/user/new_folder/new_pack.tar
 omero transfer pack 999 tarfile.tar  # equivalent to Project:999
 omero transfer pack 1 transfer_pack.tar --metadata img_id version db_id
-""")
+omero transfer pack --server Dataset:1111 /home/user/new_folder
+"""
 
-UNPACK_HELP = ("""Unpacks a transfer packet into an OMERO hierarchy.
+UNPACK_HELP = """Unpacks a transfer packet into an OMERO hierarchy.
 
 Unpacks an existing transfer packet, imports images
 as orphans and uses the XML contained in the transfer packet to re-create
@@ -132,9 +137,9 @@ omero transfer unpack transfer_pack.zip
 omero transfer unpack --output /home/user/optional_folder --ln_s
 omero transfer unpack --folder /home/user/unpacked_folder/ --skip upgrade
 omero transfer unpack pack.tar --metadata db_id orig_user hostname
-""")
+"""
 
-PREPARE_HELP = ("""Creates an XML from a folder with images.
+PREPARE_HELP = """Creates an XML from a folder with images.
 
 Creates an XML file appropriate for usage with `omero transfer unpack` from
 a folder that contains image files, rather than a source OMERO server. This
@@ -156,7 +161,7 @@ your file list.
 Examples:
 omero transfer prepare /home/user/folder_with_files
 omero transfer prepare --filelist /home/user/file_with_paths.txt
-""")
+"""
 
 
 def gateway_required(func: Callable) -> Callable:
@@ -165,13 +170,14 @@ def gateway_required(func: Callable) -> Callable:
     a BlitzGateway (self.gateway), and makes sure that
     all services of the Blitzgateway are closed again.
     """
+
     @wraps(func)
     def _wrapper(self, *args, **kwargs):
         self.client = self.ctx.conn(*args)
         self.session = self.client.getSessionId()
         self.gateway = BlitzGateway(client_obj=self.client)
         router = self.client.getRouter(self.client.getCommunicator())
-        self.hostname = str(router).split('-h ')[-1].split()[0]
+        self.hostname = str(router).split("-h ")[-1].split()[0]
         try:
             return func(self, *args, **kwargs)
         finally:
@@ -179,11 +185,11 @@ def gateway_required(func: Callable) -> Callable:
                 self.gateway.close(hard=False)
                 self.gateway = None
                 self.client = None
+
     return _wrapper
 
 
 class TransferControl(GraphControl):
-
     def _configure(self, parser):
         parser.add_login_arguments()
         sub = parser.sub()
@@ -192,89 +198,133 @@ class TransferControl(GraphControl):
         prepare = parser.add(sub, self.prepare, PREPARE_HELP)
 
         render_type = ProxyStringType("Project")
-        obj_help = ("Object to be packed for transfer")
+        obj_help = "Object to be packed for transfer"
         pack.add_argument("object", type=render_type, help=obj_help)
-        file_help = ("Path to where the packed file will be saved")
+        file_help = "Path to where the packed file will be saved"
         pack.add_argument(
-                "--zip", help="Pack into a zip file rather than a tarball",
-                action="store_true")
+            "--zip",
+            help="Pack into a zip file rather than a tarball",
+            action="store_true",
+        )
         pack.add_argument(
-                "--figure", help="Include OMERO.Figures into the pack"
-                                 " (caveats apply)",
-                action="store_true")
+            "--figure",
+            help="Include OMERO.Figures into the pack" " (caveats apply)",
+            action="store_true",
+        )
         pack.add_argument(
-                "--barchive", help="Pack into a file compliant with Bioimage"
-                                   " Archive submission standards",
-                action="store_true")
+            "--barchive",
+            help="Pack into a file compliant with Bioimage"
+            " Archive submission standards",
+            action="store_true",
+        )
         pack.add_argument(
-                "--rocrate", help="Pack into a file compliant with "
-                                  "RO-Crate standards",
-                action="store_true")
+            "--rocrate",
+            help="Pack into a file compliant with " "RO-Crate standards",
+            action="store_true",
+        )
         pack.add_argument(
-                "--simple", help="Pack into a human-readable package file",
-                action="store_true")
+            "--simple",
+            help="Pack into a human-readable package file",
+            action="store_true",
+        )
         pack.add_argument(
             "--metadata",
-            choices=['all', 'none', 'img_id', 'timestamp',
-                     'software', 'version', 'md5', 'hostname', 'db_id',
-                     'orig_user', 'orig_group'], nargs='+',
-            help="Metadata field to be added to MapAnnotation"
+            choices=[
+                "all",
+                "none",
+                "img_id",
+                "timestamp",
+                "software",
+                "version",
+                "md5",
+                "hostname",
+                "db_id",
+                "orig_user",
+                "orig_group",
+            ],
+            nargs="+",
+            help="Metadata field to be added to MapAnnotation",
+        )
+        pack.add_argument(
+            "--server",
+            help="Only generate the xml file, don't create the archive",
         )
         pack.add_argument(
                 "--plugin", help="Use external plugin for packing.",
                 type=str)
         pack.add_argument("filepath", type=str, help=file_help)
 
-        file_help = ("Path to where the zip file is saved")
+        file_help = (
+            "Path to where the zip file is saved "
+            "(if the --server option is passed, path to the output xml)"
+        )
         unpack.add_argument("filepath", type=str, help=file_help)
         unpack.add_argument(
-                "--ln_s_import", help="Use in-place import",
-                action="store_true")
-        unpack.add_argument(
-                "--merge", help="Use existing entities if possible",
-                action="store_true")
-        unpack.add_argument(
-                "--figure", help="Use OMERO.Figures if present"
-                                 " (caveats apply)",
-                action="store_true")
-        unpack.add_argument(
-                "--folder", help="Pass path to a folder rather than a pack",
-                action="store_true")
-        unpack.add_argument(
-            "--output", type=str, help="Output directory where zip "
-                                       "file will be extracted"
+            "--ln_s_import", help="Use in-place import", action="store_true"
         )
         unpack.add_argument(
-            "--skip", choices=['all', 'checksum', 'thumbnails', 'minmax',
-                               'upgrade'],
-            help="Skip options to be passed to omero import"
+            "--merge", help="Use existing entities if possible", action="store_true"
+        )
+        unpack.add_argument(
+            "--figure",
+            help="Use OMERO.Figures if present" " (caveats apply)",
+            action="store_true",
+        )
+        unpack.add_argument(
+            "--folder",
+            help="Pass path to a folder rather than a pack",
+            action="store_true",
+        )
+        unpack.add_argument(
+            "--output",
+            type=str,
+            help="Output directory where zip " "file will be extracted",
+        )
+        unpack.add_argument(
+            "--skip",
+            choices=["all", "checksum", "thumbnails", "minmax", "upgrade"],
+            help="Skip options to be passed to omero import",
         )
         unpack.add_argument(
             "--metadata",
-            choices=['all', 'none', 'img_id', 'plate_id', 'timestamp',
-                     'software', 'version', 'md5', 'hostname', 'db_id',
-                     'orig_user', 'orig_group'], nargs='+',
-            help="Metadata field to be added to MapAnnotation"
+            choices=[
+                "all",
+                "none",
+                "img_id",
+                "plate_id",
+                "timestamp",
+                "software",
+                "version",
+                "md5",
+                "hostname",
+                "db_id",
+                "orig_user",
+                "orig_group",
+            ],
+            nargs="+",
+            help="Metadata field to be added to MapAnnotation",
         )
-        folder_help = ("Path to folder with image files")
+        folder_help = "Path to folder with image files"
         prepare.add_argument("folder", type=str, help=folder_help)
         prepare.add_argument(
-            "--filelist", help="Pass path to a filelist rather than a folder",
-            action="store_true")
+            "--filelist",
+            help="Pass path to a filelist rather than a folder",
+            action="store_true",
+        )
 
     @gateway_required
     def pack(self, args):
-        """ Implements the 'pack' command """
+        """Implements the 'pack' command"""
         self.__pack(args)
 
     @gateway_required
     def unpack(self, args):
-        """ Implements the 'unpack' command """
+        """Implements the 'unpack' command"""
         self.__unpack(args)
 
     @gateway_required
     def prepare(self, args):
-        """ Implements the 'prepare' command """
+        """Implements the 'prepare' command"""
         self.__prepare(args)
 
     def _get_path_to_repo(self) -> List[str]:
@@ -290,8 +340,7 @@ class TransferControl(GraphControl):
                 mrepos.append(path)
         return mrepos
 
-    def _copy_files(self, id_list: Dict[str, Any], folder: str,
-                    conn: BlitzGateway):
+    def _copy_files(self, id_list: Dict[str, Any], folder: str, conn: BlitzGateway):
         if not isinstance(id_list, dict):
             raise TypeError("id_list must be a dict")
         if not all(isinstance(item, str) for item in id_list.keys()):
@@ -321,10 +370,10 @@ class TransferControl(GraphControl):
                     id = "File" + id
                 if rel_path == "pixel_images":
                     filepath = str(Path(subfolder) / (str(clean_id) + ".tiff"))
-                    cli.invoke(['export', '--file', filepath, id])
+                    cli.invoke(["export", "--file", filepath, id])
                     downloaded_ids.append(id)
                 else:
-                    cli.invoke(['download', id, subfolder])
+                    cli.invoke(["download", id, subfolder])
                     if dtype == "Image":
                         obj = conn.getObject("Image", clean_id)
                         fileset = obj.getFileset()
@@ -334,31 +383,39 @@ class TransferControl(GraphControl):
     def _package_files(self, tar_path: str, zip: bool, folder: str):
         if zip:
             print("Creating zip file...")
-            shutil.make_archive(tar_path, 'zip', folder)
+            shutil.make_archive(tar_path, "zip", folder)
         else:
             print("Creating tar file...")
-            shutil.make_archive(tar_path, 'tar', folder)
+            shutil.make_archive(tar_path, "tar", folder)
 
     def _process_metadata(self, metadata: Union[List[str], None]):
         if not metadata:
-            metadata = ['all']
+            metadata = ["all"]
         if "all" in metadata:
             metadata.remove("all")
-            metadata.extend(["img_id", "plate_id", "timestamp", "software",
-                             "version", "hostname", "md5", "orig_user",
-                             "orig_group"])
+            metadata.extend(
+                [
+                    "img_id",
+                    "plate_id",
+                    "timestamp",
+                    "software",
+                    "version",
+                    "hostname",
+                    "md5",
+                    "orig_user",
+                    "orig_group",
+                ]
+            )
         if "none" in metadata:
             metadata = None
         if metadata:
             metadata = list(set(metadata))
         self.metadata = metadata
 
-    def _fix_pixels_image_simple(self, ome: OME, folder: str, filepath: str
-                                 ) -> OME:
+    def _fix_pixels_image_simple(self, ome: OME, folder: str, filepath: str) -> OME:
         newome = copy.deepcopy(ome)
         for ann in ome.structured_annotations:
-            if isinstance(ann.value, str) and\
-               ann.value.startswith("pixel_images"):
+            if isinstance(ann.value, str) and ann.value.startswith("pixel_images"):
                 for img in newome.images:
                     for ref in img.annotation_refs:
                         if ref.id == ann.id:
@@ -374,28 +431,41 @@ class TransferControl(GraphControl):
                 rel_path = str(Path(path2).parent)
                 subfolder = os.path.join(str(Path(folder)), rel_path)
                 os.makedirs(subfolder, mode=DIR_PERM, exist_ok=True)
-                shutil.move(os.path.join(str(Path(folder)), path1),
-                            os.path.join(str(Path(folder)), path2))
+                shutil.move(
+                    os.path.join(str(Path(folder)), path1),
+                    os.path.join(str(Path(folder)), path2),
+                )
         if os.path.exists(os.path.join(str(Path(folder)), "pixel_images")):
             shutil.rmtree(os.path.join(str(Path(folder)), "pixel_images"))
-        with open(filepath, 'w') as fp:
+        with open(filepath, "w") as fp:
             print(to_xml(newome), file=fp)
             fp.close()
         return newome
 
     def __pack(self, args):
-        if isinstance(args.object, Image) or isinstance(args.object, Plate) \
-           or isinstance(args.object, Screen):
+        if (
+            isinstance(args.object, Image)
+            or isinstance(args.object, Plate)
+            or isinstance(args.object, Screen)
+        ):
             if args.barchive:
-                raise ValueError("Single image, plate or screen cannot be "
-                                 "packaged for Bioimage Archive")
+                raise ValueError(
+                    "Single image, plate or screen cannot be "
+                    "packaged for Bioimage Archive"
+                )
         if isinstance(args.object, Plate) or isinstance(args.object, Screen):
             if args.rocrate:
-                raise ValueError("Single image, plate or screen cannot be "
-                                 "packaged in a RO-Crate")
+                raise ValueError(
+                    "Single image, plate or screen cannot be " "packaged in a RO-Crate"
+                )
             if args.simple:
-                raise ValueError("Single plate or screen cannot be "
-                                 "packaged in human-readable format")
+                raise ValueError(
+                    "Single plate or screen cannot be "
+                    "packaged in human-readable format"
+                )
+        if args.server and args.simple:
+            raise ValueError("The --server and --simple options are incompatible")
+
         if isinstance(args.object, Image):
             src_datatype, src_dataid = "Image", args.object.id
         elif isinstance(args.object, Dataset):
@@ -411,19 +481,31 @@ class TransferControl(GraphControl):
             return
         export_types = (args.rocrate, args.barchive, args.simple)
         if sum(1 for ct in export_types if ct) > 1:
-            raise ValueError("Only one special export type (RO-Crate, Bioimage"
-                             " Archive, human-readable) can be specified at "
-                             "once")
+            raise ValueError(
+                "Only one special export type (RO-Crate, Bioimage"
+                " Archive, human-readable) can be specified at "
+                "once"
+            )
         self.metadata = []
         self._process_metadata(args.metadata)
         obj = self.gateway.getObject(src_datatype, src_dataid)
         if obj is None:
-            raise ValueError("Object not found or outside current"
-                             " permissions for current user.")
+            raise ValueError(
+                "Object not found or outside current" " permissions for current user."
+            )
         print("Populating xml...")
-        tar_path = Path(args.filepath)
-        folder = str(tar_path) + "_folder"
+        if not args.server:
+            tar_path = Path(args.filepath)
+            folder = str(tar_path) + "_folder"
+        else:
+            tar_path = Path(args.filepath)
+            if tar_path.suffix:
+                folder = os.path.splitext(tar_path)[0]
+                print("Output will be written to {folder}")
+            else:
+                folder = tar_path
         os.makedirs(folder, mode=DIR_PERM, exist_ok=True)
+
         if args.barchive:
             md_fp = str(Path(folder) / "submission.tsv")
         elif args.rocrate:
@@ -431,19 +513,26 @@ class TransferControl(GraphControl):
         else:
             md_fp = str(Path(folder) / "transfer.xml")
             print(f"Saving metadata at {md_fp}.")
-        ome, path_id_dict = populate_xml(src_datatype, src_dataid, md_fp,
-                                         self.gateway, self.hostname,
-                                         args.barchive, args.simple,
-                                         args.figure,
-                                         self.metadata)
-        print("Starting file copy...")
-        self._copy_files(path_id_dict, folder, self.gateway)
+        ome, path_id_dict = populate_xml(
+            src_datatype,
+            src_dataid,
+            md_fp,
+            self.gateway,
+            self.hostname,
+            args.barchive,
+            args.simple,
+            args.figure,
+            self.metadata,
+        )
+        if not args.server:
+            print("Starting file copy...")
+            self._copy_files(path_id_dict, folder, self.gateway)
+
         if args.simple:
             self._fix_pixels_image_simple(ome, folder, md_fp)
         if args.barchive:
             print(f"Creating Bioimage Archive TSV at {md_fp}.")
-            populate_tsv(src_datatype, ome, md_fp,
-                         path_id_dict, folder)
+            populate_tsv(src_datatype, ome, md_fp, path_id_dict, folder)
         if args.rocrate:
             print(f"Creating RO-Crate metadata at {md_fp}.")
             populate_rocrate(src_datatype, ome, os.path.splitext(tar_path)[0],
@@ -477,11 +566,12 @@ class TransferControl(GraphControl):
                     tmp_path=Path(folder),
                     image_filenames_mapping=path_id_dict,
                     conn=self.gateway)
-        else:
-            self._package_files(os.path.splitext(tar_path)[0], args.zip,
-                                folder)
-        print("Cleaning up...")
-        shutil.rmtree(folder)
+        elif not args.server:
+            self._package_files(os.path.splitext(tar_path)[0], args.zip, folder)
+
+        if not args.server:
+            print("Cleaning up...")
+            shutil.rmtree(folder)
         return
 
     def __unpack(self, args):
@@ -489,8 +579,7 @@ class TransferControl(GraphControl):
         self._process_metadata(args.metadata)
         if not args.folder:
             print(f"Unzipping {args.filepath}...")
-            hash, ome, folder = self._load_from_pack(args.filepath,
-                                                     args.output)
+            hash, ome, folder = self._load_from_pack(args.filepath, args.output)
         else:
             folder = Path(args.filepath)
             ome = from_xml(folder / "transfer.xml")
@@ -502,18 +591,28 @@ class TransferControl(GraphControl):
             ln_s = True
         else:
             ln_s = False
-        dest_img_map = self._import_files(folder, filelist,
-                                          ln_s, args.skip, self.gateway)
+        dest_img_map = self._import_files(
+            folder, filelist, ln_s, args.skip, self.gateway
+        )
         self._delete_all_rois(dest_img_map, self.gateway)
         print("Matching source and destination images...")
         img_map = self._make_image_map(src_img_map, dest_img_map, self.gateway)
         print("Creating and linking OMERO objects...")
-        populate_omero(ome, img_map, self.gateway,
-                       hash, folder, self.metadata, args.merge, args.figure)
+        populate_omero(
+            ome,
+            img_map,
+            self.gateway,
+            hash,
+            folder,
+            self.metadata,
+            args.merge,
+            args.figure,
+        )
         return
 
-    def _load_from_pack(self, filepath: str, output: Optional[str] = None
-                        ) -> Tuple[str, OME, Path]:
+    def _load_from_pack(
+        self, filepath: str, output: Optional[str] = None
+    ) -> Tuple[str, OME, Path]:
         if (not filepath) or (not isinstance(filepath, str)):
             raise TypeError("filepath must be a string")
         if output and not isinstance(output, str):
@@ -525,7 +624,7 @@ class TransferControl(GraphControl):
         else:
             folder = parent_folder / filename
         if Path(filepath).exists():
-            with open(filepath, 'rb') as file:
+            with open(filepath, "rb") as file:
                 md5 = hashlib.md5()
                 while True:
                     data = file.read(MD5_BUF_SIZE)
@@ -533,11 +632,11 @@ class TransferControl(GraphControl):
                         break
                     md5.update(data)
                 hash = md5.hexdigest()
-            if Path(filepath).suffix == '.zip':
-                with ZipFile(filepath, 'r') as zipobj:
+            if Path(filepath).suffix == ".zip":
+                with ZipFile(filepath, "r") as zipobj:
                     zipobj.extractall(str(folder))
-            elif Path(filepath).suffix == '.tar':
-                shutil.unpack_archive(filepath, str(folder), 'tar')
+            elif Path(filepath).suffix == ".tar":
+                shutil.unpack_archive(filepath, str(folder), "tar")
             else:
                 raise ValueError("File is not a zip or tar file")
         else:
@@ -545,8 +644,7 @@ class TransferControl(GraphControl):
         ome = from_xml(folder / "transfer.xml")
         return hash, ome, folder
 
-    def _create_image_map(self, ome: OME
-                          ) -> Tuple[OME, DefaultDict, List[str]]:
+    def _create_image_map(self, ome: OME) -> Tuple[OME, DefaultDict, List[str]]:
         if not (type(ome) is OME):
             raise TypeError("XML is not valid OME format")
         img_map = DefaultDict(list)
@@ -554,14 +652,15 @@ class TransferControl(GraphControl):
         newome = copy.deepcopy(ome)
         map_ref_ids = []
         for ann in ome.structured_annotations:
-            if int(ann.id.split(":")[-1]) < 0 \
-               and isinstance(ann, CommentAnnotation) \
-               and ann.namespace:
+            if (
+                int(ann.id.split(":")[-1]) < 0
+                and isinstance(ann, CommentAnnotation)
+                and ann.namespace
+            ):
                 if ann.namespace.split(":")[0] == "Image":
                     map_ref_ids.append(ann.id)
-                    img_map[ann.value].append(int(
-                        ann.namespace.split(":")[-1]))
-                    if ann.value.endswith('mock_folder'):
+                    img_map[ann.value].append(int(ann.namespace.split(":")[-1]))
+                    if ann.value.endswith("mock_folder"):
                         filelist.append(ann.value.rstrip("mock_folder"))
                     else:
                         filelist.append(ann.value)
@@ -571,23 +670,28 @@ class TransferControl(GraphControl):
                 if ref.id in map_ref_ids:
                     i.annotation_refs.remove(ref)
         filelist = list(set(filelist))
-        img_map = DefaultDict(list, {x: sorted(img_map[x])
-                              for x in img_map.keys()})
+        img_map = DefaultDict(list, {x: sorted(img_map[x]) for x in img_map.keys()})
         return newome, img_map, filelist
 
-    def _import_files(self, folder: Path, filelist: List[str], ln_s: bool,
-                      skip: str, gateway: BlitzGateway) -> dict:
+    def _import_files(
+        self,
+        folder: Path,
+        filelist: List[str],
+        ln_s: bool,
+        skip: str,
+        gateway: BlitzGateway,
+    ) -> dict:
         cli = CLI()
         cli.loadplugins()
         dest_map = {}
-        curr_folder = str(Path('.').resolve())
+        curr_folder = str(Path(".").resolve())
         for filepath in filelist:
-            dest_path = str(os.path.join(curr_folder, folder,  '.', filepath))
-            command = ['import', dest_path]
+            dest_path = str(os.path.join(curr_folder, folder, ".", filepath))
+            command = ["import", dest_path]
             if ln_s:
-                command.append('--transfer=ln_s')
+                command.append("--transfer=ln_s")
             if skip:
-                command.extend(['--skip', skip])
+                command.extend(["--skip", skip])
             cli.invoke(command)
             img_ids = self._get_image_ids(dest_path, gateway)
             dest_map[dest_path] = img_ids
@@ -614,16 +718,16 @@ class TransferControl(GraphControl):
         """
         q = conn.getQueryService()
         params = Parameters()
-        path_query = str(file_path).strip('/')
-        params.map = {"cpath": rstring('%s%%' % path_query)}
+        path_query = str(file_path).strip("/")
+        params.map = {"cpath": rstring("%s%%" % path_query)}
         results = q.projection(
             "SELECT i.id FROM Image i"
             " JOIN i.fileset fs"
             " JOIN fs.usedFiles u"
             " WHERE u.clientPath LIKE :cpath",
             params,
-            conn.SERVICE_OPTS
-            )
+            conn.SERVICE_OPTS,
+        )
         all_image_ids = list(set(sorted([r[0].val for r in results])))
         image_ids = []
         for img_id in all_image_ids:
@@ -634,15 +738,15 @@ class TransferControl(GraphControl):
                 is_annotated = False
                 for ann in anns:
                     ann_content = conn.getObject("MapAnnotation", ann)
-                    if ann_content.getNs() == \
-                            'openmicroscopy.org/cli/transfer':
+                    if ann_content.getNs() == "openmicroscopy.org/cli/transfer":
                         is_annotated = True
                 if not is_annotated:
                     image_ids.append(img_id)
         return image_ids
 
-    def _make_image_map(self, source_map: dict, dest_map: dict,
-                        conn: Optional[BlitzGateway] = None) -> dict:
+    def _make_image_map(
+        self, source_map: dict, dest_map: dict, conn: Optional[BlitzGateway] = None
+    ) -> dict:
         # using both source and destination file-to-image-id maps,
         # map image IDs between source and destination
         src_dict = DefaultDict(list)
@@ -657,10 +761,10 @@ class TransferControl(GraphControl):
         for k, v in dest_map.items():
             newkey = k.split("/./")[-1]
             dest_dict[newkey].extend(v)
-        src_dict = DefaultDict(list, {x: sorted(src_dict[x])
-                                      for x in src_dict.keys()})
-        dest_dict = DefaultDict(list, {x: sorted(dest_dict[x])
-                                       for x in dest_dict.keys()})
+        src_dict = DefaultDict(list, {x: sorted(src_dict[x]) for x in src_dict.keys()})
+        dest_dict = DefaultDict(
+            list, {x: sorted(dest_dict[x]) for x in dest_dict.keys()}
+        )
         for src_k in src_dict.keys():
             src_v = src_dict[src_k]
             if src_k in dest_dict.keys():
@@ -674,8 +778,7 @@ class TransferControl(GraphControl):
                         anns = 0
                         for j in img_obj.listAnnotations():
                             ns = j.getNs()
-                            if ns.startswith(
-                                    "openmicroscopy.org/cli/transfer"):
+                            if ns.startswith("openmicroscopy.org/cli/transfer"):
                                 anns += 1
                         if not anns:
                             clean_dest.append(i)
@@ -686,8 +789,7 @@ class TransferControl(GraphControl):
         return imgmap
 
     def __prepare(self, args):
-        populate_xml_folder(args.folder, args.filelist, self.gateway,
-                            self.session)
+        populate_xml_folder(args.folder, args.filelist, self.gateway, self.session)
         return
 
 
