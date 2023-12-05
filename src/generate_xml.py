@@ -41,6 +41,8 @@ from pathlib import Path
 import shutil
 import copy
 
+ann_count = 0
+
 
 def create_proj_and_ref(**kwargs) -> Tuple[Project, ProjectRef]:
     proj = Project(**kwargs)
@@ -360,13 +362,14 @@ def create_filepath_annotations(id: str, conn: BlitzGateway,
                                 plate_path: Optional[str] = None,
                                 ds: Optional[str] = None,
                                 proj: Optional[str] = None,
-                                ) -> Tuple[List[CommentAnnotation],
+                                ) -> Tuple[List[XMLAnnotation],
                                            List[AnnotationRef]]:
-    ns = id
+    global ann_count
+    ns = 'openmicroscopy.org/cli/transfer'
     anns = []
     anrefs = []
-    fp_type = ns.split(":")[0]
-    clean_id = int(ns.split(":")[-1])
+    fp_type = id.split(":")[0]
+    clean_id = int(id.split(":")[-1])
     if not ds:
         ds = ""
     if not proj:
@@ -384,12 +387,12 @@ def create_filepath_annotations(id: str, conn: BlitzGateway,
                 common_root = "./"
                 common_root = Path(common_root) / proj / ds
             path = os.path.join(common_root, 'mock_folder')
-            uid = (-1) * uuid4().int
-            an = CommentAnnotation(id=uid,
-                                   namespace=ns,
-                                   value=str(path)
-                                   )
+            xml = create_path_xml(path)
+            an, anref = create_xml_and_ref(id=ann_count,
+                                           namespace=ns,
+                                           value=xml)
             anns.append(an)
+            ann_count += 1
             anref = AnnotationRef(id=an.id)
             anrefs.append(anref)
         else:
@@ -400,70 +403,70 @@ def create_filepath_annotations(id: str, conn: BlitzGateway,
                 if simple:
                     filename = Path(f).name
                     f = Path(common_root) / proj / ds / filename
-                uid = (-1) * uuid4().int
-                an = CommentAnnotation(id=uid,
-                                       namespace=ns,
-                                       value=str(f)
-                                       )
+                xml = create_path_xml(str(f))
+                an, anref = create_xml_and_ref(id=ann_count,
+                                               namespace=ns,
+                                               value=xml)
                 anns.append(an)
+                ann_count += 1
                 anref = AnnotationRef(id=an.id)
                 anrefs.append(anref)
             else:
                 if simple:
                     f = f'{clean_id}.tiff'
                     f = Path(common_root) / proj / ds / f
-                    uid = (-1) * uuid4().int
-                    an = CommentAnnotation(id=uid,
-                                           namespace=ns,
-                                           value=str(f)
-                                           )
+                    xml = create_path_xml(str(f))
+                    an, anref = create_xml_and_ref(id=ann_count,
+                                                   namespace=ns,
+                                                   value=xml)
                     anns.append(an)
+                    ann_count += 1
                     anref = AnnotationRef(id=an.id)
                     anrefs.append(anref)
                 f = f'pixel_images/{clean_id}.tiff'
-                uid = (-1) * uuid4().int
-                an = CommentAnnotation(id=uid,
-                                       namespace=ns,
-                                       value=str(f)
-                                       )
+                xml = create_path_xml(str(f))
+                an, anref = create_xml_and_ref(id=ann_count,
+                                               namespace=ns,
+                                               value=xml)
                 anns.append(an)
+                ann_count += 1
                 anref = AnnotationRef(id=an.id)
                 anrefs.append(anref)
 
     elif fp_type == "Annotation":
         filename = str(Path(filename).name)
         f = f'file_annotations/{clean_id}/{filename}'
-        uid = (-1) * uuid4().int
-        an = CommentAnnotation(id=uid,
-                               namespace=ns,
-                               value=f
-                               )
+        xml = create_path_xml(str(f))
+        an, anref = create_xml_and_ref(id=ann_count,
+                                       namespace=ns,
+                                       value=xml)
         anns.append(an)
+        ann_count += 1
         anref = AnnotationRef(id=an.id)
         anrefs.append(anref)
     elif fp_type == "Plate":
-        uid = (-1) * uuid4().int
-        an = CommentAnnotation(id=uid,
-                               namespace=ns,
-                               value=plate_path
-                               )
+        xml = create_path_xml(plate_path)
+        an, anref = create_xml_and_ref(id=ann_count,
+                                       namespace=ns,
+                                       value=xml)
         anns.append(an)
+        ann_count += 1
         anref = AnnotationRef(id=an.id)
         anrefs.append(anref)
     return anns, anrefs
 
 
-def create_figure_annotations(id: str) -> Tuple[CommentAnnotation,
+def create_figure_annotations(id: str) -> Tuple[XMLAnnotation,
                                                 AnnotationRef]:
     ns = id
+    global ann_count
     clean_id = int(ns.split(":")[-1])
     f = f'figures/Figure_{clean_id}.json'
-    uid = (-1) * uuid4().int
-    an = CommentAnnotation(id=uid,
-                           namespace=ns,
-                           value=f
-                           )
-    anref = AnnotationRef(id=an.id)
+    xml = create_path_xml(str(f))
+    an, anref = create_xml_and_ref(id=ann_count,
+                                   namespace=ns,
+                                   value=xml)
+    ann_count += 1
     return (an, anref)
 
 
@@ -472,6 +475,7 @@ def create_provenance_metadata(conn: BlitzGateway, img_id: int,
                                metadata: Union[List[str], None], plate: bool
                                ) -> Union[Tuple[MapAnnotation, AnnotationRef],
                                           Tuple[None, None]]:
+    global ann_count
     if not metadata:
         return None, None
     software = "omero-cli-transfer"
@@ -480,7 +484,6 @@ def create_provenance_metadata(conn: BlitzGateway, img_id: int,
     ns = 'openmicroscopy.org/cli/transfer'
     curr_user = conn.getUser().getName()
     curr_group = conn.getGroupFromContext().getName()
-    id = (-1) * uuid4().int
     db_id = conn.getConfigService().getDatabaseUuid()
 
     md_dict: Dict[str, Any] = {}
@@ -513,9 +516,10 @@ def create_provenance_metadata(conn: BlitzGateway, img_id: int,
             mmap.append(M(k=_key, value=str(_value)))
         else:
             mmap.append(M(k=_key, value=''))
-    kv, ref = create_kv_and_ref(id=id,
+    kv, ref = create_kv_and_ref(id=ann_count,
                                 namespace=ns,
                                 value=Map(ms=mmap))
+    ann_count += 1
     return kv, ref
 
 
@@ -576,7 +580,7 @@ def create_objects(folder, filelist):
         plates.extend(pls)
         counter_pls = counter_pls + len(pls)
         annotations.extend(anns)
-        counter_anns = counter_anns + len(annotations)
+        counter_anns = counter_anns + len(anns)
     return images, plates, annotations
 
 
@@ -658,11 +662,10 @@ def parse_showinf(text, counter_imgs, counter_plates, counter_ann,
 
 def create_path_xml(target):
     base = ETree.Element("CLITransferServerPath", attrib={
-        "xmlns": "https://github.com/ome/omero-cli-transfer",
         "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
-        "xsi:schemaLocation": "https://github.com/ome/omero-cli-transfer \
-        https://raw.githubusercontent.com/ome/omero-cli-transfer/\
-            main/schemas/serverpath.xsd"})
+        "xsi:schemaLocation":
+        "https://raw.githubusercontent.com/ome/omero-cli-transfer/"
+        "main/schemas/serverpath.xsd"})
     ETree.SubElement(base, "Path").text = target
     return ETree.tostring(base, encoding='unicode')
 
@@ -685,11 +688,10 @@ def create_prepare_metadata(ann_id):
 
 def create_metadata_xml(metadata):
     base = ETree.Element("CLITransferPrepareMetadata", attrib={
-        "xmlns": "https://github.com/ome/omero-cli-transfer",
         "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
-        "xsi:schemaLocation": "https://github.com/ome/omero-cli-transfer \
-        https://raw.githubusercontent.com/ome/omero-cli-transfer/\
-            main/schemas/serverpath.xsd"})
+        "xsi:schemaLocation":
+        "https://raw.githubusercontent.com/ome/omero-cli-transfer/"
+        "main/schemas/preparemetadata.xsd"})
     for _key, _value in metadata.items():
         ETree.SubElement(base, _key).text = _value
     return ETree.tostring(base, encoding='unicode')
@@ -755,7 +757,7 @@ def populate_image(obj: ImageI, ome: OME, conn: BlitzGateway, hostname: str,
             ome.structured_annotations.append(kv)
         if ref:
             img.annotation_refs.append(ref)
-    filepath_anns, refs = create_filepath_annotations(img_id, conn,
+    filepath_anns, refs = create_filepath_annotations(img_id, conn, ann_count,
                                                       simple, ds=ds,
                                                       proj=proj)
     for i in range(len(filepath_anns)):
@@ -981,6 +983,8 @@ def populate_xml(datatype: str, id: int, filepath: str, conn: BlitzGateway,
                  hostname: str, barchive: bool, simple: bool, figure: bool,
                  metadata: List[str]) -> Tuple[OME, dict]:
     ome = OME()
+    global ann_count
+    ann_count = 1
     obj = conn.getObject(datatype, id)
     if datatype == 'Project':
         populate_project(obj, ome, conn, hostname, metadata, simple)
