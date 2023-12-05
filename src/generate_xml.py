@@ -757,7 +757,7 @@ def populate_image(obj: ImageI, ome: OME, conn: BlitzGateway, hostname: str,
             ome.structured_annotations.append(kv)
         if ref:
             img.annotation_refs.append(ref)
-    filepath_anns, refs = create_filepath_annotations(img_id, conn, ann_count,
+    filepath_anns, refs = create_filepath_annotations(img_id, conn,
                                                       simple, ds=ds,
                                                       proj=proj)
     for i in range(len(filepath_anns)):
@@ -972,10 +972,19 @@ def add_annotation(obj: Union[Project, Dataset, Image, Plate, Screen,
 
 def list_file_ids(ome: OME) -> dict:
     id_list = {}
-    for ann in ome.structured_annotations:
-        clean_id = int(ann.id.split(":")[-1])
-        if isinstance(ann, CommentAnnotation) and clean_id < 0:
-            id_list[ann.namespace] = ann.value
+    for img in ome.images:
+        for ref in img.annotation_refs:
+            for ann in ome.structured_annotations:
+                if isinstance(ann, XMLAnnotation) and ref.id == ann.id:
+                    tree = ETree.fromstring(
+                        to_xml(ann.value, canonicalize=True))
+                    for el in tree:
+                        if el.tag.rpartition('}')[2] == \
+                                "CLITransferServerPath":
+                            for el2 in el:
+                                if el2.tag.rpartition('}')[2] == "Path":
+                                    path = el2.text
+        id_list[img.id] = path
     return id_list
 
 
@@ -984,7 +993,7 @@ def populate_xml(datatype: str, id: int, filepath: str, conn: BlitzGateway,
                  metadata: List[str]) -> Tuple[OME, dict]:
     ome = OME()
     global ann_count
-    ann_count = 1
+    ann_count = uuid4().int >> 64
     obj = conn.getObject(datatype, id)
     if datatype == 'Project':
         populate_project(obj, ome, conn, hostname, metadata, simple)
