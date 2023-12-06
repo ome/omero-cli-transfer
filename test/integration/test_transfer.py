@@ -189,20 +189,20 @@ class TestTransfer(CLITest):
         self.delete_all()
 
     @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
-    def test_pack_server(self, target_name, tmpdir):
+    def test_pack_metadata_only(self, target_name, tmpdir):
         if target_name == "datasetid" or target_name == "projectid" or\
            target_name == "idonly" or target_name == "imageid":
             self.create_image(target_name=target_name)
         elif target_name == "plateid" or target_name == "screenid":
             self.create_plate(target_name=target_name)
         target = getattr(self, target_name)
-        args = self.args + ["pack", target, "--server",
+        args = self.args + ["pack", target, "--metadata_only",
                             str(tmpdir)]
         self.cli.invoke(args, strict=True)
         assert os.path.exists(str(tmpdir / 'transfer.xml'))
         assert os.path.getsize(str(tmpdir / 'transfer.xml')) > 0
 
-        args = self.args + ["pack", target, "--server", "--simple",
+        args = self.args + ["pack", target, "--metadata_only", "--simple",
                             str(tmpdir)]
         with pytest.raises(ValueError):
                 self.cli.invoke(args, strict=True)
