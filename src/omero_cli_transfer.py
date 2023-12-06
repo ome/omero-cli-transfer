@@ -230,8 +230,8 @@ class TransferControl(GraphControl):
         pack.add_argument("filepath", type=str, help=file_help)
         pack.add_argument(
             "--metadata_only",
-            help="Only generate the xml file, don't create the archive"
-        )
+            help="Only generate the xml file, don't create the archive",
+            action="store_true")
 
         file_help = ("Path to where the zip file is saved")
         unpack.add_argument("filepath", type=str, help=file_help)
