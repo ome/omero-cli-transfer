@@ -522,6 +522,7 @@ class TransferControl(GraphControl):
         newome = copy.deepcopy(ome)
         map_ref_ids = []
         for ann in ome.structured_annotations:
+            # use XML path annotation instead
             if int(ann.id.split(":")[-1]) < 0 \
                and isinstance(ann, CommentAnnotation) \
                and ann.namespace:

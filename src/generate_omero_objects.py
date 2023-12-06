@@ -11,7 +11,7 @@ from ome_types.model import TagAnnotation, MapAnnotation, FileAnnotation, ROI
 from ome_types.model import CommentAnnotation, LongAnnotation, Annotation
 from ome_types.model import Line, Point, Rectangle, Ellipse, Polygon, Shape
 from ome_types.model import Polyline, Label, Project, Screen, Dataset, OME
-from ome_types.model import Image, Plate
+from ome_types.model import Image, Plate, XMLAnnotation
 from ome_types.model.simple_types import Marker
 from omero.gateway import TagAnnotationWrapper, MapAnnotationWrapper
 from omero.gateway import CommentAnnotationWrapper, LongAnnotationWrapper
@@ -165,32 +165,7 @@ def create_annotations(ans: List[Annotation], conn: BlitzGateway, hash: str,
             map_ann.setNs(namespace)
             key_value_data = []
             for v in an.value.ms:
-                if int(an.id.split(":")[-1]) < 0:
-                    if not metadata:
-                        key_value_data.append(['empty_metadata', "True"])
-                        break
-                    if v.k == "md5" and "md5" in metadata:
-                        key_value_data.append(['zip_file_md5', hash])
-                    if v.k == "origin_image_id" and "img_id" in metadata:
-                        key_value_data.append([v.k, v.value])
-                    if v.k == "origin_plate_id" and "plate_id" in metadata:
-                        key_value_data.append([v.k, v.value])
-                    if v.k == "packing_timestamp" and "timestamp" in metadata:
-                        key_value_data.append([v.k, v.value])
-                    if v.k == "software" and "software" in metadata:
-                        key_value_data.append([v.k, v.value])
-                    if v.k == "version" and "version" in metadata:
-                        key_value_data.append([v.k, v.value])
-                    if v.k == "origin_hostname" and "hostname" in metadata:
-                        key_value_data.append([v.k, v.value])
-                    if v.k == "original_user" and "orig_user" in metadata:
-                        key_value_data.append([v.k, v.value])
-                    if v.k == "original_group" and "orig_group" in metadata:
-                        key_value_data.append([v.k, v.value])
-                    if v.k == "database_id" and "db_id" in metadata:
-                        key_value_data.append([v.k, v.value])
-                else:
-                    key_value_data.append([v.k, v.value])
+                key_value_data.append([v.k, v.value])
             map_ann.setValue(key_value_data)
             map_ann.save()
             ann_map[an.id] = map_ann.getId()
@@ -220,11 +195,15 @@ def create_annotations(ans: List[Annotation], conn: BlitzGateway, hash: str,
             file_ann.setFile(original_file)
             file_ann.save()
             ann_map[an.id] = file_ann.getId()
+        elif isinstance(an, XMLAnnotation):
+            # pass if path, use if provenance metadata
+            pass
     return ann_map
 
 
 def update_figure_refs(ann: FileAnnotation, ans: List[Annotation],
                        img_map: dict, folder: str):
+    # need full rework to use XML path annotations
     curr_folder = str(Path('.').resolve())
     for an in ann.annotation_refs:
         clean_id = int(an.id.split(":")[-1])
@@ -250,6 +229,7 @@ def update_figure_refs(ann: FileAnnotation, ans: List[Annotation],
 def create_original_file(ann: FileAnnotation, ans: List[Annotation],
                          conn: BlitzGateway, folder: str
                          ) -> OriginalFileWrapper:
+    # need full rework to use XML path annotations
     curr_folder = str(Path('.').resolve())
     for an in ann.annotation_refs:
         clean_id = int(an.id.split(":")[-1])
@@ -272,6 +252,7 @@ def create_plate_map(ome: OME, img_map: dict, conn: BlitzGateway
         ann_ids = [i.id for i in plate.annotation_refs]
         file_path = ""
         for ann in ome.structured_annotations:
+            # check for relevant XMLAnnotation instead for path
             if (ann.id in ann_ids and
                     isinstance(ann, CommentAnnotation) and
                     int(ann.id.split(":")[-1]) < 0):
