@@ -188,7 +188,6 @@ class TestTransfer(CLITest):
                 assert len(f.getmembers()) == 6
         self.delete_all()
 
-
     @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
     def test_pack_server(self, target_name, tmpdir):
         if target_name == "datasetid" or target_name == "projectid" or\
@@ -208,8 +207,6 @@ class TestTransfer(CLITest):
         with pytest.raises(ValueError):
                 self.cli.invoke(args, strict=True)
         self.delete_all()
-
-
 
     @pytest.mark.parametrize('folder_name', TEST_FOLDERS)
     def test_unpack_folder(self, folder_name):
