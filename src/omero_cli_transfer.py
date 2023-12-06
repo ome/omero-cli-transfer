@@ -86,8 +86,8 @@ orig_group`), other options are `none`, `img_id`, `timestamp`, `software`,
 `version`, `md5`, `hostname`, `db_id`, `orig_user`, `orig_group`.
 
 --metadata_only creates the transfer.xml file but does not copy data
-or generate an archive. The last cli argument is the path where the `transfer.xml`
-file will be written
+or generate an archive. The last cli argument is the path where
+the `transfer.xml` file will be written
 
 Examples:
 omero transfer pack Image:123 transfer_pack.tar
