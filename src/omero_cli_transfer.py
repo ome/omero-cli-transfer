@@ -220,6 +220,9 @@ class TransferControl(GraphControl):
                      'orig_user', 'orig_group'], nargs='+',
             help="Metadata field to be added to MapAnnotation"
         )
+        pack.add_argument(
+                "--plugin", help="Use external plugin for packing.",
+                type=str)
         pack.add_argument("filepath", type=str, help=file_help)
 
         file_help = ("Path to where the zip file is saved")
@@ -445,6 +448,26 @@ class TransferControl(GraphControl):
             print(f"Creating RO-Crate metadata at {md_fp}.")
             populate_rocrate(src_datatype, ome, os.path.splitext(tar_path)[0],
                              path_id_dict, folder)
+        
+        if args.plugin:
+            from pkg_resources import iter_entry_points
+            entry_points = []
+            for p in iter_entry_points(group="omero_cli_transfer.pack.plugin"):
+                if p.name==args.plugin:
+                    entry_points.append(p.load())
+            if len(entry_points) == 0:
+                raise ValueError(f"Pack plugin {args.plugin} not found")
+            else:
+                assert len(entry_points) == 1
+                pack_plugin_cls = entry_points[0]
+                pack_plugin = pack_plugin_cls(ome_object=obj,
+                                              destination_path=Path(tar_path),
+                                              tmp_path=Path(folder),
+                                              image_filenames_mapping=path_id_dict,
+                                              conn=self.gateway)
+                pack_plugin.pack()
+
+        
         else:
             self._package_files(os.path.splitext(tar_path)[0], args.zip,
                                 folder)
