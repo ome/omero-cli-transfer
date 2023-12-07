@@ -6,8 +6,8 @@
 
 An OMERO CLI plugin for creating and using transfer packets between OMERO servers.
 
-Transfer packets contain objects and annotations. This project creates a zip file from an object 
-(Project, Dataset, Image, Screen, Plate) containing all original files necessary to create the images 
+Transfer packets contain objects and annotations. This project creates a zip file from an object
+(Project, Dataset, Image, Screen, Plate) containing all original files necessary to create the images
 in that object, plus an XML file detailing the links between entities, annotations and ROIs thereof.
 
 The CLI plugin add the subcommand `transfer`, which in its turn has two further subcommands `omero transfer pack` and `omero transfer unpack`. Both subcommands (pack and unpack) will use an existing OMERO session created via CLI or prompt the user for parameters to create one.
@@ -16,7 +16,7 @@ The CLI plugin add the subcommand `transfer`, which in its turn has two further 
 tl;dr: if you have `python>=3.8`, a simple `pip install omero-cli-transfer` _might_ do. We recommend conda, though.
 
 `omero-cli-transfer` requires at least Python 3.8. This is due to `ome-types` requiring that as well;
-this package relies heavily on it, and it is not feasible without it. 
+this package relies heavily on it, and it is not feasible without it.
 
 Of course, this CAN be an issue, especially given `omero-py` _officially_ only supports Python 3.6. However,
 it is possible to run `omero-py` in Python 3.8 or newer as well. Our recommended way to do so it using `conda`.
@@ -28,10 +28,10 @@ pip install omero-cli-transfer
 ```
 It is possible to do the same thing without `conda` as long as your python/pip version is at least 3.8,
 but that will require locally building a wheel for `zeroc-ice` (which pip does automatically) - it is a
-process that can be anything from "completely seamless and without issues" to "I need to install every 
+process that can be anything from "completely seamless and without issues" to "I need to install every
 dependency ever imagined". Try at your own risk.
 
-If you want optional RO-Crate exports, you can do 
+If you want optional RO-Crate exports, you can do
 ```
 pip install omero-cli-transfer[rocrate]
 ```
@@ -59,7 +59,10 @@ about the files (name, mimetype).
 
 `--simple` creates a "human-readable" package; one folder per project or dataset is created and image files are placed according to where they came from in the OMERO server. Note that a package generated with this option is not guaranteed to work with `unpack`, though it often will.
 
-`--metadata` allows you to specify which transfer metadata will be saved in `transfer.xml` as possible MapAnnotation values to the images. Defaults to image ID, timestamp, software version, source hostname, md5, source username, source group. 
+`--metadata` allows you to specify which transfer metadata will be saved in `transfer.xml` as possible MapAnnotation values to the images. Defaults to image ID, timestamp, software version, source hostname, md5, source username, source group.
+
+`--plugin` allows oyu to export omero data to a desired format by using an external plugin. See for example the [arc plugin](https://github.com/cmohl2013/omero-arc), which exports omero
+projects to ARC repositories.
 
 Examples:
 ```
@@ -67,6 +70,7 @@ omero transfer pack Image:123 transfer_pack.tar
 omero transfer pack --zip Image:123 transfer_pack.zip
 omero transfer pack Dataset:1111 /home/user/new_folder/new_pack.tar
 omero transfer pack 999 tarfile.tar  # equivalent to Project:999
+omero transfer pack --plugin arc Dataset:111 path/to/my/arc/repo
 ```
 
 ## `omero transfer unpack`
@@ -85,7 +89,7 @@ Note that unpack needs to be able to identify the images it imports inequivocall
 already owns entities with the same name as ones defined in `transfer.xml`,
 effectively merging the "new" unpacked entities with existing ones.
 
-`--metadata` allows you to specify which transfer metadata will be used from `transfer.xml` as MapAnnotation values to the images. Fields that do not exist on `transfer.xml` will be ignored. Defaults to image ID, timestamp, software version, source hostname, md5, source username, source group. 
+`--metadata` allows you to specify which transfer metadata will be used from `transfer.xml` as MapAnnotation values to the images. Fields that do not exist on `transfer.xml` will be ignored. Defaults to image ID, timestamp, software version, source hostname, md5, source username, source group.
 
 Examples:
 ```
