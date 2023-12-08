@@ -61,7 +61,7 @@ about the files (name, mimetype).
 
 `--metadata` allows you to specify which transfer metadata will be saved in `transfer.xml` as possible MapAnnotation values to the images. Defaults to image ID, timestamp, software version, source hostname, md5, source username, source group.
 
-`--plugin` allows oyu to export omero data to a desired format by using an external plugin. See for example the [arc plugin](https://github.com/cmohl2013/omero-arc), which exports omero
+`--plugin` allows you to export omero data to a desired format by using an external plugin. See for example the [arc plugin](https://github.com/cmohl2013/omero-arc), which exports omero
 projects to ARC repositories.
 
 Examples:
