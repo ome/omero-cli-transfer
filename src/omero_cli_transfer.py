@@ -453,16 +453,13 @@ class TransferControl(GraphControl):
             Plugins for omero-cli-transfer can be created by providing
             an entry point with group name omero_cli_transfer.pack.plugin
 
-            The entry point must be a class with following constructor
+            The entry point must be a function with following
             arguments:
               ome_object:  the omero object wrapper to pack
               destination_path: the path to export to
               tmp_path: the path where downloaded images and transfer.xml
                 are located
               image_filenames_mapping: dict that maps image ids to filenames
-
-            The entry point class must provide the method 'pack()'
-
             """
             from pkg_resources import iter_entry_points
             entry_points = []
@@ -473,14 +470,13 @@ class TransferControl(GraphControl):
                 raise ValueError(f"Pack plugin {args.plugin} not found")
             else:
                 assert len(entry_points) == 1
-                pack_plugin_cls = entry_points[0]
-                pack_plugin = pack_plugin_cls(
+                pack_plugin_func = entry_points[0]
+                pack_plugin_func(
                     ome_object=obj,
                     destination_path=Path(tar_path),
                     tmp_path=Path(folder),
                     image_filenames_mapping=path_id_dict,
                     conn=self.gateway)
-                pack_plugin.pack()
         else:
             self._package_files(os.path.splitext(tar_path)[0], args.zip,
                                 folder)

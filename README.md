@@ -137,3 +137,23 @@ NOTE: please refer to optional requirement instructions below and consider that 
 - `prepare` requires [bftools](https://bio-formats.readthedocs.io/en/stable/users/comlinetools/index.html) to work (in particular, we need to be able to run `showinf`). The easiest way to install this is by using conda; A simple `conda install -c bioconda bftools` on your conda environment should suffice.
 - Note that this is a Java application. The conda package will install a JDK for you if necessary, but if you're installing it for yourself you'll need to make sure Java is available.
 - This tool runs `showinf` in a subprocess and needs to be able to parse the output. This can be problematic if your `stdout` is not set to UTF-8; it can mess up special characters is e.g. measurement units and lead to XML validation errors. In addition to that, Java itself might output data in non-UTF-8 encodings, in which case it might be necessary to set `JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8`.
+
+
+### Plugin interface for external packers
+
+External export formats can be used by omoero-cli-transfer via plugin interface:
+```
+omero transfer pack --plugin my-exporter Dataset:111 path/to/my_export.zip
+```
+
+Plugins for omero-cli-transfer can be created by providing an entry point with group name `omero_cli_transfer.pack.plugin`. Entry points are defined in
+`setup.py` or `pyproject.toml`, see e.g. the [arc plugin](https://github.com/cmohl2013/omero-arc), which transfers omero projects to ARC repositories.
+
+
+The entry point must be a function with following arguments:
+  * `ome_object`:  the omero object wrapper to pack
+  * `destination_path`: the path to export to
+  * `tmp_path`: the path where downloaded images and `transfer.xml` are located
+  * `image_filenames_mapping`: dict that maps image ids to filenames
+
+The entry point must be defined in the setuptools configuration file (`setup.py` or `pyproject.toml`), see e.g. the entrypoint definition of the arc plugin: [pyproject.toml](https://github.com/cmohl2013/omero-arc/blob/main/pyproject.toml)
