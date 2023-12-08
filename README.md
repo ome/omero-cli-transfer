@@ -70,7 +70,7 @@ omero transfer pack Image:123 transfer_pack.tar
 omero transfer pack --zip Image:123 transfer_pack.zip
 omero transfer pack Dataset:1111 /home/user/new_folder/new_pack.tar
 omero transfer pack 999 tarfile.tar  # equivalent to Project:999
-omero transfer pack --plugin arc Dataset:111 path/to/my/arc/repo
+omero transfer pack --plugin arc Project:999 path/to/my/arc/repo
 ```
 
 ## `omero transfer unpack`
@@ -146,14 +146,20 @@ External export formats can be used by omoero-cli-transfer via plugin interface:
 omero transfer pack --plugin my-exporter Dataset:111 path/to/my_export.zip
 ```
 
-Plugins for omero-cli-transfer can be created by providing an entry point with group name `omero_cli_transfer.pack.plugin`. Entry points are defined in
-`setup.py` or `pyproject.toml`, see e.g. the [arc plugin](https://github.com/cmohl2013/omero-arc), which transfers omero projects to ARC repositories.
+#### Example: ARC plugin
+
+With the [arc plugin](https://github.com/cmohl2013/omero-arc), OMERO projects can be transferred to ARC
+repositories.
+```
+omero transfer pack --plugin arc Project:111 path/to/my/arc_repo
+```
+
+
+Plugins for omero-cli-transfer can be created by providing an entry point with group name `omero_cli_transfer.pack.plugin`. Entry points are defined in `setup.py` or `pyproject.toml`, , see e.g. the [entrypoint definition](https://github.com/cmohl2013/omero-arc/blob/main/pyproject.toml) of the arc plugin.
 
 
 The entry point must be a function with following arguments:
-  * `ome_object`:  the omero object wrapper to pack
-  * `destination_path`: the path to export to
-  * `tmp_path`: the path where downloaded images and `transfer.xml` are located
-  * `image_filenames_mapping`: dict that maps image ids to filenames
-
-The entry point must be defined in the setuptools configuration file (`setup.py` or `pyproject.toml`), see e.g. the entrypoint definition of the arc plugin: [pyproject.toml](https://github.com/cmohl2013/omero-arc/blob/main/pyproject.toml)
+  * `ome_object`:  The omero object wrapper to pack.
+  * `destination_path`: The export target path.
+  * `tmp_path`: The temporary path where downloaded images and `transfer.xml` are located.
+  * `image_filenames_mapping`: A dict that maps image ids to filenames.
