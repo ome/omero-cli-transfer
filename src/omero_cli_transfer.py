@@ -20,13 +20,14 @@ from typing import DefaultDict
 import hashlib
 from zipfile import ZipFile
 from typing import Callable, List, Any, Dict, Union, Optional, Tuple
+import xml.etree.cElementTree as ETree
 
 from generate_xml import populate_xml, populate_tsv, populate_rocrate
 from generate_xml import populate_xml_folder
-from generate_omero_objects import populate_omero
+from generate_omero_objects import populate_omero, get_server_path
 
 import ezomero
-from ome_types.model import CommentAnnotation, OME
+from ome_types.model import XMLAnnotation, OME
 from ome_types import from_xml, to_xml
 from omero.sys import Parameters
 from omero.rtypes import rstring
@@ -521,20 +522,25 @@ class TransferControl(GraphControl):
         filelist = []
         newome = copy.deepcopy(ome)
         map_ref_ids = []
-        for ann in ome.structured_annotations:
+        for img in ome.images:
+            fpath = get_server_path(img.annotation_refs,
+                                    ome.structured_annotations)
+            img_map[fpath].append(int(img.id.split(":")[-1]))
             # use XML path annotation instead
-            if int(ann.id.split(":")[-1]) < 0 \
-               and isinstance(ann, CommentAnnotation) \
-               and ann.namespace:
-                if ann.namespace.split(":")[0] == "Image":
-                    map_ref_ids.append(ann.id)
-                    img_map[ann.value].append(int(
-                        ann.namespace.split(":")[-1]))
-                    if ann.value.endswith('mock_folder'):
-                        filelist.append(ann.value.rstrip("mock_folder"))
-                    else:
-                        filelist.append(ann.value)
-                    newome.structured_annotations.remove(ann)
+            if fpath.endswith('mock_folder'):
+                filelist.append(fpath.rstrip("mock_folder"))
+            else:
+                filelist.append(fpath)
+            for anref in img.annotation_refs:
+                for an in ome.structured_annotations:
+                    if anref.id == an.id and isinstance(an, XMLAnnotation):
+                        tree = ETree.fromstring(to_xml(an.value,
+                                                       canonicalize=True))
+                        for el in tree:
+                            if el.tag.rpartition('}')[2] == \
+                                    "CLITransferServerPath":
+                                newome.structured_annotations.remove(an)
+                                map_ref_ids.append(an.id)
         for i in newome.images:
             for ref in i.annotation_refs:
                 if ref.id in map_ref_ids:

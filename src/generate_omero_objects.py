@@ -4,14 +4,15 @@
 # Use is subject to license terms supplied in LICENSE.
 
 import ezomero
-from typing import List, Tuple
+from ome_types import to_xml
+from typing import List, Tuple, Union
 from omero.model import DatasetI, IObject, PlateI, WellI, WellSampleI, ImageI
 from omero.gateway import DatasetWrapper
 from ome_types.model import TagAnnotation, MapAnnotation, FileAnnotation, ROI
 from ome_types.model import CommentAnnotation, LongAnnotation, Annotation
 from ome_types.model import Line, Point, Rectangle, Ellipse, Polygon, Shape
 from ome_types.model import Polyline, Label, Project, Screen, Dataset, OME
-from ome_types.model import Image, Plate, XMLAnnotation
+from ome_types.model import Image, Plate, XMLAnnotation, AnnotationRef
 from ome_types.model.simple_types import Marker
 from omero.gateway import TagAnnotationWrapper, MapAnnotationWrapper
 from omero.gateway import CommentAnnotationWrapper, LongAnnotationWrapper
@@ -21,6 +22,7 @@ from omero.gateway import BlitzGateway
 from omero.rtypes import rstring, RStringI, rint
 from ezomero import rois
 from pathlib import Path
+import xml.etree.cElementTree as ETree
 import os
 import copy
 
@@ -201,43 +203,50 @@ def create_annotations(ans: List[Annotation], conn: BlitzGateway, hash: str,
     return ann_map
 
 
+def get_server_path(anrefs: List[AnnotationRef],
+                    ans: List[Annotation]) -> Union[str, None]:
+    fpath = None
+    for an in anrefs:
+        if isinstance(an, XMLAnnotation):
+            xml_id = an.id
+        else:
+            continue
+    for an_loop in ans:
+        if an_loop.id == xml_id:
+            if not fpath:
+                tree = ETree.fromstring(to_xml(an_loop.value,
+                                               canonicalize=True))
+                for el in tree:
+                    if el.tag.rpartition('}')[2] == "CLITransferServerPath":
+                        for el2 in el:
+                            if el2.tag.rpartition('}')[2] == "Path":
+                                fpath = el2.text
+    return fpath
+
+
 def update_figure_refs(ann: FileAnnotation, ans: List[Annotation],
                        img_map: dict, folder: str):
-    # need full rework to use XML path annotations
     curr_folder = str(Path('.').resolve())
-    for an in ann.annotation_refs:
-        clean_id = int(an.id.split(":")[-1])
-        if clean_id < 0:
-            cmnt_id = an.id
-    for an_loop in ans:
-        if an_loop.id == cmnt_id and isinstance(an_loop, CommentAnnotation):
-            fpath = str(an_loop.value)
-    dest_path = str(os.path.join(curr_folder, folder,  '.', fpath))
-    with open(dest_path, 'r') as file:
-        filedata = file.read()
-    for src_id, dest_id in img_map.items():
-        clean_id = int(src_id.split(":")[-1])
-        src_str = f"\"imageId\": {clean_id}"
-        dest_str = f"\"imageId\": {dest_id}"
-        print(src_str, dest_str)
-        filedata = filedata.replace(src_str, dest_str)
-    with open(dest_path, 'w') as file:
-        file.write(filedata)
+    fpath = get_server_path(ann.annotation_refs, ans)
+    if fpath:
+        dest_path = str(os.path.join(curr_folder, folder,  '.', fpath))
+        with open(dest_path, 'r') as file:
+            filedata = file.read()
+        for src_id, dest_id in img_map.items():
+            clean_id = int(src_id.split(":")[-1])
+            src_str = f"\"imageId\": {clean_id}"
+            dest_str = f"\"imageId\": {dest_id}"
+            filedata = filedata.replace(src_str, dest_str)
+        with open(dest_path, 'w') as file:
+            file.write(filedata)
     return
 
 
 def create_original_file(ann: FileAnnotation, ans: List[Annotation],
                          conn: BlitzGateway, folder: str
                          ) -> OriginalFileWrapper:
-    # need full rework to use XML path annotations
     curr_folder = str(Path('.').resolve())
-    for an in ann.annotation_refs:
-        clean_id = int(an.id.split(":")[-1])
-        if clean_id < 0:
-            cmnt_id = an.id
-    for an_loop in ans:
-        if an_loop.id == cmnt_id and isinstance(an_loop, CommentAnnotation):
-            fpath = str(an_loop.value)
+    fpath = get_server_path(ann.annotation_refs, ans)
     dest_path = str(os.path.join(curr_folder, folder,  '.', fpath))
     ofile = conn.createOriginalFileFromLocalFile(dest_path)
     return ofile
@@ -250,20 +259,18 @@ def create_plate_map(ome: OME, img_map: dict, conn: BlitzGateway
     map_ref_ids = []
     for plate in ome.plates:
         ann_ids = [i.id for i in plate.annotation_refs]
-        file_path = ""
         for ann in ome.structured_annotations:
-            # check for relevant XMLAnnotation instead for path
             if (ann.id in ann_ids and
-                    isinstance(ann, CommentAnnotation) and
-                    int(ann.id.split(":")[-1]) < 0):
+                    isinstance(ann, XMLAnnotation)):
                 newome.structured_annotations.remove(ann)
                 map_ref_ids.append(ann.id)
-                file_path = ann.value
+                file_path = get_server_path(plate.annotation_refs,
+                                            ome.structured_annotations)
         q = conn.getQueryService()
         params = Parameters()
         if not file_path:
             raise ValueError(f"Plate ID {plate.id} does not have a \
-                             CommentAnnotation with a file path!")
+                             XMLAnnotation with a file path!")
         path_query = str(file_path).strip('/')
         if path_query.endswith('mock_folder'):
             path_query = path_query.rstrip("mock_folder")

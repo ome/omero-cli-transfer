@@ -28,6 +28,7 @@ from omero.model import DatasetI, ProjectI, ScreenI, PlateI, WellI, Annotation
 from omero.cli import CLI
 from typing import Tuple, List, Optional, Union, Any, Dict, TextIO
 from subprocess import PIPE, DEVNULL
+from generate_omero_objects import get_server_path
 import xml.etree.cElementTree as ETree
 from os import PathLike
 import pkg_resources
@@ -973,17 +974,7 @@ def add_annotation(obj: Union[Project, Dataset, Image, Plate, Screen,
 def list_file_ids(ome: OME) -> dict:
     id_list = {}
     for img in ome.images:
-        for ref in img.annotation_refs:
-            for ann in ome.structured_annotations:
-                if isinstance(ann, XMLAnnotation) and ref.id == ann.id:
-                    tree = ETree.fromstring(
-                        to_xml(ann.value, canonicalize=True))
-                    for el in tree:
-                        if el.tag.rpartition('}')[2] == \
-                                "CLITransferServerPath":
-                            for el2 in el:
-                                if el2.tag.rpartition('}')[2] == "Path":
-                                    path = el2.text
+        path = get_server_path(img.annotation_refs, ome.structured_annotations)
         id_list[img.id] = path
     return id_list
 
