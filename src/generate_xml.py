@@ -688,7 +688,7 @@ def create_prepare_metadata(ann_id):
 
 
 def create_metadata_xml(metadata):
-    base = ETree.Element("CLITransferPrepareMetadata", attrib={
+    base = ETree.Element("CLITransferMetadata", attrib={
         "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
         "xsi:schemaLocation":
         "https://raw.githubusercontent.com/ome/omero-cli-transfer/"

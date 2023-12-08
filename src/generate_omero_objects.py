@@ -199,8 +199,60 @@ def create_annotations(ans: List[Annotation], conn: BlitzGateway, hash: str,
             ann_map[an.id] = file_ann.getId()
         elif isinstance(an, XMLAnnotation):
             # pass if path, use if provenance metadata
-            pass
+            tree = ETree.fromstring(to_xml(an.value,
+                                           canonicalize=True))
+            is_metadata = False
+            for el in tree:
+                if el.tag.rpartition('}')[2] == "CLITransferMetadata":
+                    is_metadata = True
+            if is_metadata:
+                map_ann = MapAnnotationWrapper(conn)
+                namespace = an.namespace
+                map_ann.setNs(namespace)
+                key_value_data = []
+                if not metadata:
+                    key_value_data.append(['empty_metadata', "True"])
+                else:
+                    key_value_data = parse_xml_metadata(an, metadata, hash)
+                map_ann.setValue(key_value_data)
+                map_ann.save()
+                ann_map[an.id] = map_ann.getId()
     return ann_map
+
+
+def parse_xml_metadata(ann: XMLAnnotation,
+                       metadata: List[str],
+                       hash: str) -> List[List[str, str]]:
+    kv_data = []
+    tree = ETree.fromstring(to_xml(ann.value, canonicalize=True))
+    for el in tree:
+        if el.tag.rpartition('}')[2] == "CLITransferMetadata":
+            for el2 in el:
+                item = el2.tag.rpartition('}')[2]
+                val = el2.text
+                if item == "md5" and "md5" in metadata:
+                    kv_data.append(['zip_file_md5', hash])
+                if item == "origin_image_id" and "img_id" in metadata:
+                    kv_data.append([item, val])
+                if item == "origin_plate_id" and "plate_id" in metadata:
+                    kv_data.append([item, val])
+                if item == "packing_timestamp" and "timestamp" in metadata:
+                    kv_data.append([item, val])
+                if item == "software" and "software" in metadata:
+                    kv_data.append([item, val])
+                if item == "version" and "version" in metadata:
+                    kv_data.append([item, val])
+                if item == "origin_hostname" and "hostname" in metadata:
+                    kv_data.append([item, val])
+                if item == "original_user" and "orig_user" in metadata:
+                    kv_data.append([item, val])
+                if item == "original_group" and "orig_group" in metadata:
+                    kv_data.append([item, val])
+                if item == "database_id" and "db_id" in metadata:
+                    kv_data.append([item, val])
+                else:
+                    kv_data.append([item, val])
+    return kv_data
 
 
 def get_server_path(anrefs: List[AnnotationRef],
