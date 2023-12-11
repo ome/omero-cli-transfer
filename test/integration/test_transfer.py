@@ -196,13 +196,13 @@ class TestTransfer(CLITest):
         elif target_name == "plateid" or target_name == "screenid":
             self.create_plate(target_name=target_name)
         target = getattr(self, target_name)
-        args = self.args + ["pack", target, "--metadata_only",
+        args = self.args + ["pack", target, "--binaries", "none",
                             str(tmpdir)]
         self.cli.invoke(args, strict=True)
         assert os.path.exists(str(tmpdir / 'transfer.xml'))
         assert os.path.getsize(str(tmpdir / 'transfer.xml')) > 0
 
-        args = self.args + ["pack", target, "--metadata_only", "--simple",
+        args = self.args + ["pack", target, "--binaries", "none", "--simple",
                             str(tmpdir)]
         with pytest.raises(ValueError):
                 self.cli.invoke(args, strict=True)

@@ -104,11 +104,19 @@ effectively merging the "new" unpacked entities with existing ones.
 
 `--metadata` allows you to specify which transfer metadata will be used from `transfer.xml` as MapAnnotation values to the images. Fields that do not exist on `transfer.xml` will be ignored. Defaults to image ID, timestamp, software version, source hostname, md5, source username, source group.
 
+`--binaries` allows to specify whether to archive binary data
+(e.g images, ROIs, FileAnnotations) or only create the transfer.xml.
+Default is `all` and will create the archive. With `none`, only the `transfer.xml`
+file is created, in which case the last cli argument is the path where
+the `transfer.xml` file will be written.
+
 Examples:
 ```
 omero transfer unpack transfer_pack.zip
 omero transfer unpack --output /home/user/optional_folder --ln_s
 omero transfer unpack --folder /home/user/unpacked_folder/
+omero transfer pack --binaries none Dataset:1111 /home/user/new_folder/
+omero transfer pack --binaries all Dataset:1111 /home/user/new_folder/new_pack.tar
 ```
 
 ## `omero transfer prepare`

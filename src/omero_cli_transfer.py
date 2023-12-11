@@ -85,9 +85,11 @@ guaranteed to work with unpack.
 orig_group`), other options are `none`, `img_id`, `timestamp`, `software`,
 `version`, `md5`, `hostname`, `db_id`, `orig_user`, `orig_group`.
 
---metadata_only creates the transfer.xml file but does not copy data
-or generate an archive. The last cli argument is the path where
-the `transfer.xml` file will be written
+--binaries allows to specify whether to archive binary data
+(e.g images, ROIs, FileAnnotations) or only create the transfer.xml.
+Default is `all` and will create the archive. WIth `none`, only the `transfer.xml`
+file is created, in which case the last cli argument is the path where
+the `transfer.xml` file will be written.
 
 Examples:
 omero transfer pack Image:123 transfer_pack.tar
@@ -95,6 +97,8 @@ omero transfer pack --zip Image:123 transfer_pack.zip
 omero transfer pack Dataset:1111 /home/user/new_folder/new_pack.tar
 omero transfer pack 999 tarfile.tar  # equivalent to Project:999
 omero transfer pack 1 transfer_pack.tar --metadata img_id version db_id
+omero transfer pack --binaries none Dataset:1111 /home/user/new_folder/
+omero transfer pack --binaries all Dataset:1111 /home/user/new_folder/new_pack.tar
 """)
 
 UNPACK_HELP = ("""Unpacks a transfer packet into an OMERO hierarchy.
@@ -229,8 +233,12 @@ class TransferControl(GraphControl):
                 type=str)
         pack.add_argument("filepath", type=str, help=file_help)
         pack.add_argument(
-            "--metadata_only",
-            help="Only generate the xml file, don't create the archive",
+            "--binaries",
+            choices=["all", "none" ],
+            default="all",
+            help="With `--binaries none`, only generate the metadata file "
+                 "(transfer.xml or ro-crate-metadata.json). "
+                 "With `--binaries all` (the default), pixel data and annotation are saved.",
             action="store_true")
 
         file_help = ("Path to where the zip file is saved")
@@ -405,8 +413,8 @@ class TransferControl(GraphControl):
                 raise ValueError("Single plate or screen cannot be "
                                  "packaged in human-readable format")
 
-        if args.metadata_only and args.simple:
-            raise ValueError("The --metadata_only and --simple options are "
+        if args.binaries == "all" and args.simple:
+            raise ValueError("The `--binaries all` and `--simple` options are "
                              "incompatible")
 
         if isinstance(args.object, Image):
@@ -435,7 +443,7 @@ class TransferControl(GraphControl):
                              " permissions for current user.")
         print("Populating xml...")
         tar_path = Path(args.filepath)
-        if not args.metadata_only:
+        if args.binaries == "all":
             folder = str(tar_path) + "_folder"
         else:
             folder = os.path.splitext(tar_path)[0]
@@ -455,7 +463,7 @@ class TransferControl(GraphControl):
                                          args.figure,
                                          self.metadata)
 
-        if not args.metadata_only:
+        if args.binaries == "all":
             print("Starting file copy...")
             self._copy_files(path_id_dict, folder, self.gateway)
 
@@ -469,6 +477,7 @@ class TransferControl(GraphControl):
             print(f"Creating RO-Crate metadata at {md_fp}.")
             populate_rocrate(src_datatype, ome, os.path.splitext(tar_path)[0],
                              path_id_dict, folder)
+<<<<<<< HEAD
         if args.plugin:
             """
             Plugins for omero-cli-transfer can be created by providing
@@ -499,6 +508,9 @@ class TransferControl(GraphControl):
                     image_filenames_mapping=path_id_dict,
                     conn=self.gateway)
         elif not args.server:
+=======
+        elif args.binaries == "all":
+>>>>>>> 2d1e011 (changes cli argument to)
             self._package_files(os.path.splitext(tar_path)[0], args.zip,
                                 folder)
             print("Cleaning up...")
