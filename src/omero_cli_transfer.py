@@ -414,8 +414,8 @@ class TransferControl(GraphControl):
                 raise ValueError("Single plate or screen cannot be "
                                  "packaged in human-readable format")
 
-        if args.binaries == "all" and args.simple:
-            raise ValueError("The `--binaries all` and `--simple` options are "
+        if (args.binaries == "none") and args.simple:
+            raise ValueError("The `--binaries none` and `--simple` options are "
                              "incompatible")
 
         if isinstance(args.object, Image):
