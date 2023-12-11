@@ -240,8 +240,7 @@ class TransferControl(GraphControl):
             help="With `--binaries none`, only generate the metadata file "
                  "(transfer.xml or ro-crate-metadata.json). "
                  "With `--binaries all` (the default), both pixel data "
-                 "and annotation are saved.",
-            action="store_true")
+                 "and annotation are saved.")
 
         file_help = ("Path to where the zip file is saved")
         unpack.add_argument("filepath", type=str, help=file_help)
