@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# !/usr/bin/env python
 # -*- coding: utf-8 -*-
 # Copyright (C) 2022 The Jackson Laboratory
 # All rights reserved.
@@ -87,9 +87,10 @@ orig_group`), other options are `none`, `img_id`, `timestamp`, `software`,
 
 --binaries allows to specify whether to archive binary data
 (e.g images, ROIs, FileAnnotations) or only create the transfer.xml.
-Default is `all` and will create the archive. WIth `none`, only the `transfer.xml`
-file is created, in which case the last cli argument is the path where
-the `transfer.xml` file will be written.
+Default is `all` and will create the archive.
+With `none`, only the `transfer.xml` file is created, in which case
+the last cli argument is the path where the `transfer.xml` file
+will be written.
 
 Examples:
 omero transfer pack Image:123 transfer_pack.tar
@@ -98,7 +99,7 @@ omero transfer pack Dataset:1111 /home/user/new_folder/new_pack.tar
 omero transfer pack 999 tarfile.tar  # equivalent to Project:999
 omero transfer pack 1 transfer_pack.tar --metadata img_id version db_id
 omero transfer pack --binaries none Dataset:1111 /home/user/new_folder/
-omero transfer pack --binaries all Dataset:1111 /home/user/new_folder/new_pack.tar
+omero transfer pack --binaries all Dataset:1111 /home/user/new_folder/pack.tar
 """)
 
 UNPACK_HELP = ("""Unpacks a transfer packet into an OMERO hierarchy.
@@ -234,11 +235,12 @@ class TransferControl(GraphControl):
         pack.add_argument("filepath", type=str, help=file_help)
         pack.add_argument(
             "--binaries",
-            choices=["all", "none" ],
+            choices=["all", "none"],
             default="all",
             help="With `--binaries none`, only generate the metadata file "
                  "(transfer.xml or ro-crate-metadata.json). "
-                 "With `--binaries all` (the default), pixel data and annotation are saved.",
+                 "With `--binaries all` (the default), both pixel data "
+                 "and annotation are saved.",
             action="store_true")
 
         file_help = ("Path to where the zip file is saved")
