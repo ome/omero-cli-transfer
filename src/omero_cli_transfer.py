@@ -415,8 +415,8 @@ class TransferControl(GraphControl):
                                  "packaged in human-readable format")
 
         if (args.binaries == "none") and args.simple:
-            raise ValueError("The `--binaries none` and `--simple` options are "
-                             "incompatible")
+            raise ValueError("The `--binaries none` and `--simple` options "
+                             "are  incompatible")
 
         if isinstance(args.object, Image):
             src_datatype, src_dataid = "Image", args.object.id
