@@ -141,7 +141,7 @@ NOTE: please refer to optional requirement instructions below and consider that 
 
 ### Plugin interface for external packers
 
-External export formats can be used by omoero-cli-transfer via plugin interface:
+External export formats can be used by omero-cli-transfer via plugin interface:
 ```
 omero transfer pack --plugin my-exporter Dataset:111 path/to/my_export.zip
 ```
