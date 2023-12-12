@@ -222,7 +222,7 @@ def create_annotations(ans: List[Annotation], conn: BlitzGateway, hash: str,
 
 def parse_xml_metadata(ann: XMLAnnotation,
                        metadata: List[str],
-                       hash: str) -> List[List[str, str]]:
+                       hash: str) -> List[List[str]]:
     kv_data = []
     tree = ETree.fromstring(to_xml(ann.value, canonicalize=True))
     for el in tree:
