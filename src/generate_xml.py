@@ -477,6 +477,7 @@ def create_provenance_metadata(conn: BlitzGateway, img_id: int,
                                ) -> Union[Tuple[MapAnnotation, AnnotationRef],
                                           Tuple[None, None]]:
     global ann_count
+    # needs reworking for XML
     if not metadata:
         return None, None
     software = "omero-cli-transfer"

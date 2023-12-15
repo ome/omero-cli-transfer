@@ -259,10 +259,12 @@ def get_server_path(anrefs: List[AnnotationRef],
                     ans: List[Annotation]) -> Union[str, None]:
     fpath = None
     for an in anrefs:
-        if isinstance(an, XMLAnnotation):
-            xml_id = an.id
-        else:
-            continue
+        for an_loop in ans:
+            if an.id == an_loop.id:
+                if isinstance(an_loop, XMLAnnotation):
+                    xml_id = an_loop.id
+                else:
+                    continue
     for an_loop in ans:
         if an_loop.id == xml_id:
             if not fpath:
