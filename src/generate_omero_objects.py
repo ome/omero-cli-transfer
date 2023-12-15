@@ -258,15 +258,16 @@ def parse_xml_metadata(ann: XMLAnnotation,
 def get_server_path(anrefs: List[AnnotationRef],
                     ans: List[Annotation]) -> Union[str, None]:
     fpath = None
+    xml_ids = []
     for an in anrefs:
         for an_loop in ans:
             if an.id == an_loop.id:
                 if isinstance(an_loop, XMLAnnotation):
-                    xml_id = an_loop.id
+                    xml_ids.append(an_loop.id)
                 else:
                     continue
     for an_loop in ans:
-        if an_loop.id == xml_id:
+        if an_loop.id in xml_ids:
             if not fpath:
                 tree = ETree.fromstring(to_xml(an_loop.value,
                                                canonicalize=True))

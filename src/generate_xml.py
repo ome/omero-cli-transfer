@@ -477,7 +477,6 @@ def create_provenance_metadata(conn: BlitzGateway, img_id: int,
                                ) -> Union[Tuple[MapAnnotation, AnnotationRef],
                                           Tuple[None, None]]:
     global ann_count
-    # needs reworking for XML
     if not metadata:
         return None, None
     software = "omero-cli-transfer"
@@ -511,18 +510,12 @@ def create_provenance_metadata(conn: BlitzGateway, img_id: int,
         md_dict['original_group'] = curr_group
     if "db_id" in metadata:
         md_dict['database_id'] = db_id
-
-    mmap = []
-    for _key, _value in md_dict.items():
-        if _value:
-            mmap.append(M(k=_key, value=str(_value)))
-        else:
-            mmap.append(M(k=_key, value=''))
-    kv, ref = create_kv_and_ref(id=ann_count,
-                                namespace=ns,
-                                value=Map(ms=mmap))
+    xml = create_metadata_xml(md_dict)
+    an, anref = create_xml_and_ref(id=ann_count,
+                                   namespace=ns,
+                                   value=xml)
     ann_count += 1
-    return kv, ref
+    return an, anref
 
 
 def create_objects(folder, filelist):
@@ -695,7 +688,7 @@ def create_metadata_xml(metadata):
         "https://raw.githubusercontent.com/ome/omero-cli-transfer/"
         "main/schemas/preparemetadata.xsd"})
     for _key, _value in metadata.items():
-        ETree.SubElement(base, _key).text = _value
+        ETree.SubElement(base, _key).text = str(_value)
     return ETree.tostring(base, encoding='unicode')
 
 
@@ -863,6 +856,8 @@ def populate_plate(obj: PlateI, ome: OME, conn: BlitzGateway,
         well_obj = conn.getObject('Well', well.getId())
         well_ref = populate_well(well_obj, ome, conn, hostname, metadata)
         pl.wells.append(well_ref)
+
+    # this will need some changing to tackle XMLs
     last_image_anns = ome.images[-1].annotation_refs
     last_image_anns_ids = [i.id for i in last_image_anns]
     for ann in ome.structured_annotations:
