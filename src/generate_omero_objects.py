@@ -224,6 +224,7 @@ def parse_xml_metadata(ann: XMLAnnotation,
                        metadata: List[str],
                        hash: str) -> List[List[str]]:
     kv_data = []
+    print("metadata: ", metadata)
     tree = ETree.fromstring(to_xml(ann.value, canonicalize=True))
     for el in tree:
         if el.tag.rpartition('}')[2] == "CLITransferMetadata":
@@ -231,7 +232,7 @@ def parse_xml_metadata(ann: XMLAnnotation,
                 item = el2.tag.rpartition('}')[2]
                 val = el2.text
                 if item == "md5" and "md5" in metadata:
-                    kv_data.append(['zip_file_md5', hash])
+                    kv_data.append(['md5', hash])
                 if item == "origin_image_id" and "img_id" in metadata:
                     kv_data.append([item, val])
                 if item == "origin_plate_id" and "plate_id" in metadata:
@@ -250,8 +251,7 @@ def parse_xml_metadata(ann: XMLAnnotation,
                     kv_data.append([item, val])
                 if item == "database_id" and "db_id" in metadata:
                     kv_data.append([item, val])
-                else:
-                    kv_data.append([item, val])
+    print("kv_data: ", kv_data)
     return kv_data
 
 
@@ -564,6 +564,7 @@ def link_images(ome: OME, ds_map: dict, img_map: dict, conn: BlitzGateway):
 def link_annotations(ome: OME, proj_map: dict, ds_map: dict, img_map: dict,
                      ann_map: dict, scr_map: dict, pl_map: dict,
                      conn: BlitzGateway):
+    print(ann_map)
     for proj in ome.projects:
         proj_id = proj_map[proj.id]
         proj_obj = conn.getObject("Project", proj_id)
@@ -584,7 +585,9 @@ def link_annotations(ome: OME, proj_map: dict, ds_map: dict, img_map: dict,
             img_obj = conn.getObject("Image", img_id)
             anns = ome.structured_annotations
             for annref in img.annotation_refs:
+                print("image annref:", annref)
                 ann = next(filter(lambda x: x.id == annref.id, anns))
+                print("annotation:", ann)
                 link_one_annotation(img_obj, ann, ann_map, conn)
         except KeyError:
             continue
@@ -627,6 +630,8 @@ def link_one_annotation(obj: IObject, ann: Annotation, ann_map: dict,
         ann_obj = conn.getObject("LongAnnotation", ann_id)
     elif isinstance(ann, FileAnnotation):
         ann_obj = conn.getObject("FileAnnotation", ann_id)
+    elif isinstance(ann, XMLAnnotation):
+        ann_obj = conn.getObject("MapAnnotation", ann_id)
     else:
         ann_obj = None
     if ann_obj:

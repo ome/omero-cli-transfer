@@ -475,6 +475,7 @@ class TransferControl(GraphControl):
                                           ln_s, args.skip, self.gateway)
         self._delete_all_rois(dest_img_map, self.gateway)
         print("Matching source and destination images...")
+        print(src_img_map, dest_img_map)
         img_map = self._make_image_map(src_img_map, dest_img_map, self.gateway)
         print("Creating and linking OMERO objects...")
         populate_omero(ome, img_map, self.gateway,

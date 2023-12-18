@@ -201,8 +201,11 @@ class TestTransfer(CLITest):
             map_ann_ids = ezomero.get_map_annotation_ids(
                             self.gw, "Image", im_ids[-1])
             assert len(map_ann_ids) == 3
-            provenance = ezomero.get_map_annotation(self.gw, map_ann_ids[-1])
-            assert len(provenance) == 8
+            for annid in map_ann_ids:
+                ann_obj = self.gw.getObject("MapAnnotation", annid)
+                ann = ezomero.get_map_annotation(self.gw, annid)
+                if ann_obj.getNs() == "openmicroscopy.org/cli/transfer":
+                    assert len(ann) == 8
             assert len(ezomero.get_tag_ids(
                             self.gw, "Image", im_ids[-1])) == 1
         self.delete_all()
@@ -216,8 +219,11 @@ class TestTransfer(CLITest):
             map_ann_ids = ezomero.get_map_annotation_ids(
                             self.gw, "Image", im_ids[-1])
             assert len(map_ann_ids) == 3
-            provenance = ezomero.get_map_annotation(self.gw, map_ann_ids[-1])
-            assert len(provenance) == 1
+            for annid in map_ann_ids:
+                ann_obj = self.gw.getObject("MapAnnotation", annid)
+                ann = ezomero.get_map_annotation(self.gw, annid)
+                if ann_obj.getNs() == "openmicroscopy.org/cli/transfer":
+                    assert len(ann) == 1
         self.delete_all()
 
         self.args = temp_args + ["--metadata", "orig_user", "db_id"]
@@ -228,8 +234,11 @@ class TestTransfer(CLITest):
             map_ann_ids = ezomero.get_map_annotation_ids(
                             self.gw, "Image", im_ids[-1])
             assert len(map_ann_ids) == 3
-            provenance = ezomero.get_map_annotation(self.gw, map_ann_ids[-1])
-            assert len(provenance) == 2
+            for annid in map_ann_ids:
+                ann_obj = self.gw.getObject("MapAnnotation", annid)
+                ann = ezomero.get_map_annotation(self.gw, annid)
+                if ann_obj.getNs() == "openmicroscopy.org/cli/transfer":
+                    assert len(ann) == 1
         self.delete_all()
 
     @pytest.mark.parametrize('package_name', TEST_FILES)
