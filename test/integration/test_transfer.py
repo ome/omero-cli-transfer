@@ -287,24 +287,18 @@ class TestTransfer(CLITest):
 
         if package_name == "test/data/valid_single_project.zip":
             ezomero.print_projects(self.gw)
-            pjs = self.gw.getObjects("Project")
+            pjs = ezomero.get_project_ids(self.gw)
+            assert len(pjs) == 1
             count = 0
-            for p in pjs:
-                pj_id = p.getId()
-                count += 1
-            assert count == 1
-            count = 0
-            proj = self.gw.getObject("Project", pj_id)
-            for d in proj.listChildren():
-                ds_id = d.getId()
-                count += 1
-            assert count == 2
-            im_ids = ezomero.get_image_ids(self.gw, dataset=ds_id)
+            ds_ids = ezomero.get_dataset_ids(self.gw, pjs[-1])
+            ds_ids.sort()
+            assert len(ds_ids) == 2
+            im_ids = ezomero.get_image_ids(self.gw, dataset=ds_ids[0])
             assert len(im_ids) == 1
             assert len(ezomero.get_map_annotation_ids(
-                            self.gw, "Project", pj_id)) == 1
+                            self.gw, "Project", pjs[-1])) == 1
             assert len(ezomero.get_tag_ids(
-                            self.gw, "Project", pj_id)) == 0
+                            self.gw, "Project", pjs[-1])) == 0
             self.delete_all()
 
         if package_name == "test/data/incomplete_project.zip":
