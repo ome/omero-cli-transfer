@@ -1,7 +1,7 @@
-flake8
+flake8<=6.1.0
 pep8-naming
 pre-commit
-pycodestyle
+pycodestyle<=2.11.1
 restructuredtext_lint
 pytest==3.3.2
 attrs==19.1.0
