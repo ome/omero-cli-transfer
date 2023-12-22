@@ -518,7 +518,7 @@ class TransferControl(GraphControl):
 
     def _create_image_map(self, ome: OME
                           ) -> Tuple[OME, DefaultDict, List[str]]:
-        if not (type(ome) is OME):
+        if not (isinstance(ome, OME)):
             raise TypeError("XML is not valid OME format")
         img_map = DefaultDict(list)
         filelist = []
