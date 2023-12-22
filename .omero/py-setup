@@ -8,9 +8,18 @@ set -x
 TARGET=${TARGET:-..}
 PLUGIN=${PLUGIN:-}
 
-python --version
+export JAVA_HOME=$(readlink -f /usr/bin/java | sed "s:/bin/java::")
+export JAVA_LD_LIBRARY_PATH="$JAVA_HOME/lib/:$JAVA_HOME/lib/server"
+export CONDA_BACKUP_JAVA_HOME=$JAVA_HOME
+export CONDA_BACKUP_JAVA_LD_LIBRARY_PATH=$JAVA_LD_LIBRARY_PATH
+wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+sh Miniconda3-latest-Linux-x86_64.sh -b -p /tmp/miniconda
+source /tmp/miniconda/bin/activate
+conda init
+conda create -n omero python=3.8
+conda activate omero
 pip install https://github.com/glencoesoftware/zeroc-ice-py-linux-x86_64/releases/download/20231130/zeroc_ice-3.6.5-cp39-cp39-manylinux_2_28_x86_64.whl
-pip install bftools
+conda install -c bioconda bftools
 
 cd $TARGET
 cd $(setup_dir)
