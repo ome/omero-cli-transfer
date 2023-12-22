@@ -294,6 +294,8 @@ class TestTransfer(CLITest):
             ds_ids.sort()
             assert len(ds_ids) == 2
             im_ids = ezomero.get_image_ids(self.gw, dataset=ds_ids[0])
+            assert len(im_ids) == 2
+            im_ids = ezomero.get_image_ids(self.gw, dataset=ds_ids[1])
             assert len(im_ids) == 1
             assert len(ezomero.get_map_annotation_ids(
                             self.gw, "Project", pjs[-1])) == 1
@@ -381,14 +383,16 @@ class TestTransfer(CLITest):
         assert len(orphan) == 1
         scr_args = self.args + ['unpack', "test/data/simple_screen.zip"]
         self.cli.invoke(scr_args, strict=True)
-        scr_args += ['--merge']
-        self.cli.invoke(scr_args, strict=True)
         scr_ids = []
         for screen in self.gw.getObjects("Screen"):
             scr_ids.append(screen.getId())
+        screen = self.gw.getObject("Screen", scr_ids[0])
+        for plate in screen.listChildren():
+            print(plate.getId())
+        scr_args += ['--merge']
+        self.cli.invoke(scr_args, strict=True)
         assert len(scr_ids) == 1
         pl_ids = []
-        screen = self.gw.getObject("Screen", scr_ids[0])
         for plate in screen.listChildren():
             pl_ids.append(plate.getId())
         assert len(pl_ids) == 4

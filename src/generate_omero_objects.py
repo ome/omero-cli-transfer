@@ -224,7 +224,6 @@ def parse_xml_metadata(ann: XMLAnnotation,
                        metadata: List[str],
                        hash: str) -> List[List[str]]:
     kv_data = []
-    print("metadata: ", metadata)
     tree = ETree.fromstring(to_xml(ann.value, canonicalize=True))
     for el in tree:
         if el.tag.rpartition('}')[2] == "CLITransferMetadata":
@@ -251,7 +250,6 @@ def parse_xml_metadata(ann: XMLAnnotation,
                     kv_data.append([item, val])
                 if item == "database_id" and "db_id" in metadata:
                     kv_data.append([item, val])
-    print("kv_data: ", kv_data)
     return kv_data
 
 
@@ -317,10 +315,22 @@ def create_plate_map(ome: OME, img_map: dict, conn: BlitzGateway
         for ann in ome.structured_annotations:
             if (ann.id in ann_ids and
                     isinstance(ann, XMLAnnotation)):
-                newome.structured_annotations.remove(ann)
-                map_ref_ids.append(ann.id)
-                file_path = get_server_path(plate.annotation_refs,
-                                            ome.structured_annotations)
+                tree = ETree.fromstring(to_xml(ann.value,
+                                               canonicalize=True))
+                is_metadata = False
+                for el in tree:
+                    if el.tag.rpartition('}')[2] == "CLITransferMetadata":
+                        is_metadata = True
+                if not is_metadata:
+                    newome.structured_annotations.remove(ann)
+                    map_ref_ids.append(ann.id)
+                    file_path = get_server_path(plate.annotation_refs,
+                                                ome.structured_annotations)
+                    annref = next(filter(lambda x: x.id == ann.id,
+                                         plate.annotation_refs))
+                    newplate = next(filter(lambda x: x.id == plate.id,
+                                           newome.plates))
+                    newplate.annotation_refs.remove(annref)
         q = conn.getQueryService()
         params = Parameters()
         if not file_path:
@@ -564,7 +574,6 @@ def link_images(ome: OME, ds_map: dict, img_map: dict, conn: BlitzGateway):
 def link_annotations(ome: OME, proj_map: dict, ds_map: dict, img_map: dict,
                      ann_map: dict, scr_map: dict, pl_map: dict,
                      conn: BlitzGateway):
-    print(ann_map)
     for proj in ome.projects:
         proj_id = proj_map[proj.id]
         proj_obj = conn.getObject("Project", proj_id)
@@ -585,9 +594,7 @@ def link_annotations(ome: OME, proj_map: dict, ds_map: dict, img_map: dict,
             img_obj = conn.getObject("Image", img_id)
             anns = ome.structured_annotations
             for annref in img.annotation_refs:
-                print("image annref:", annref)
                 ann = next(filter(lambda x: x.id == annref.id, anns))
-                print("annotation:", ann)
                 link_one_annotation(img_obj, ann, ann_map, conn)
         except KeyError:
             continue

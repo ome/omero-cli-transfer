@@ -413,6 +413,7 @@ def create_filepath_annotations(id: str, conn: BlitzGateway,
                 anref = AnnotationRef(id=an.id)
                 anrefs.append(anref)
             else:
+                f = f'pixel_images/{clean_id}.tiff'
                 if simple:
                     f = f'{clean_id}.tiff'
                     f = Path(common_root) / proj / ds / f
@@ -424,7 +425,6 @@ def create_filepath_annotations(id: str, conn: BlitzGateway,
                     ann_count += 1
                     anref = AnnotationRef(id=an.id)
                     anrefs.append(anref)
-                f = f'pixel_images/{clean_id}.tiff'
                 xml = create_path_xml(str(f))
                 an, anref = create_xml_and_ref(id=ann_count,
                                                namespace=ns,
@@ -859,12 +859,7 @@ def populate_plate(obj: PlateI, ome: OME, conn: BlitzGateway,
 
     # this will need some changing to tackle XMLs
     last_image_anns = ome.images[-1].annotation_refs
-    last_image_anns_ids = [i.id for i in last_image_anns]
-    for ann in ome.structured_annotations:
-        if (ann.id in last_image_anns_ids and
-                isinstance(ann, CommentAnnotation) and
-                int(ann.id.split(":")[-1]) < 0):
-            plate_path = ann.value
+    plate_path = get_server_path(last_image_anns, ome.structured_annotations)
     filepath_anns, refs = create_filepath_annotations(pl.id, conn,
                                                       simple=False,
                                                       plate_path=plate_path)
@@ -972,6 +967,12 @@ def list_file_ids(ome: OME) -> dict:
     for img in ome.images:
         path = get_server_path(img.annotation_refs, ome.structured_annotations)
         id_list[img.id] = path
+    for ann in ome.structured_annotations:
+        if isinstance(ann, FileAnnotation):
+            if ann.namespace != "omero.web.figure.json":
+                path = get_server_path(ann.annotation_refs,
+                                       ome.structured_annotations)
+            id_list[ann.id] = path
     return id_list
 
 

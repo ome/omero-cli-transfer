@@ -74,7 +74,7 @@ class TestUnpackSide():
                 111, 'test/data/output_folder')
         hash, ome, folder = self.transfer._load_from_pack(
             "test/data/valid_single_image.zip", "tmp_folder")
-        assert hash == "ac050c218f01bf189f9b3bdc9cab4f37"
+        assert hash == "6bc8b78eb85f8244f86eded682f95feb"
         assert len(ome.images) == 1
         assert str(folder.resolve()) == "/omero-cli-transfer/tmp_folder"
         hash, ome, folder = self.transfer._load_from_pack(

@@ -304,30 +304,32 @@ class TransferControl(GraphControl):
         for id in id_list:
             clean_id = int(id.split(":")[-1])
             dtype = id.split(":")[0]
-            if clean_id not in downloaded_ids:
-                path = id_list[id]
-                rel_path = path
-                if dtype == "Image":
+            if (dtype == "Image"):
+                if (clean_id not in downloaded_ids):
+                    path = id_list[id]
+                    rel_path = path
                     rel_path = str(Path(rel_path).parent)
-                subfolder = os.path.join(str(Path(folder)), rel_path)
-                if dtype == "Image":
+                    subfolder = os.path.join(str(Path(folder)), rel_path)
                     os.makedirs(subfolder, mode=DIR_PERM, exist_ok=True)
-                else:
-                    ann_folder = str(Path(subfolder).parent)
-                    os.makedirs(ann_folder, mode=DIR_PERM, exist_ok=True)
-                if dtype == "Annotation":
-                    id = "File" + id
-                if rel_path == "pixel_images":
-                    filepath = str(Path(subfolder) / (str(clean_id) + ".tiff"))
-                    cli.invoke(['export', '--file', filepath, id])
-                    downloaded_ids.append(id)
-                else:
-                    cli.invoke(['download', id, subfolder])
-                    if dtype == "Image":
-                        obj = conn.getObject("Image", clean_id)
-                        fileset = obj.getFileset()
+                    obj = conn.getObject("Image", clean_id)
+                    fileset = obj.getFileset()
+                    if rel_path == "pixel_images" or fileset is None:
+                        filepath = str(Path(subfolder) /
+                                       (str(clean_id) + ".tiff"))
+                        cli.invoke(['export', '--file', filepath, id])
+                        downloaded_ids.append(id)
+                    else:
+                        cli.invoke(['download', id, subfolder])
                         for fs_image in fileset.copyImages():
                             downloaded_ids.append(fs_image.getId())
+            else:
+                path = id_list[id]
+                rel_path = path
+                subfolder = os.path.join(str(Path(folder)), rel_path)
+                ann_folder = str(Path(subfolder).parent)
+                os.makedirs(ann_folder, mode=DIR_PERM, exist_ok=True)
+                id = "File" + id
+                cli.invoke(['download', id, subfolder])
 
     def _package_files(self, tar_path: str, zip: bool, folder: str):
         if zip:
@@ -475,7 +477,6 @@ class TransferControl(GraphControl):
                                           ln_s, args.skip, self.gateway)
         self._delete_all_rois(dest_img_map, self.gateway)
         print("Matching source and destination images...")
-        print(src_img_map, dest_img_map)
         img_map = self._make_image_map(src_img_map, dest_img_map, self.gateway)
         print("Creating and linking OMERO objects...")
         populate_omero(ome, img_map, self.gateway,
@@ -533,7 +534,7 @@ class TransferControl(GraphControl):
             else:
                 filelist.append(fpath)
             for anref in img.annotation_refs:
-                for an in ome.structured_annotations:
+                for an in newome.structured_annotations:
                     if anref.id == an.id and isinstance(an, XMLAnnotation):
                         tree = ETree.fromstring(to_xml(an.value,
                                                        canonicalize=True))
