@@ -30,12 +30,11 @@ jobs:
       STAGE: cli
     steps:
       - uses: actions/checkout@v4
-      #- name: Checkout omero-test-infra
-      #  uses: actions/checkout@master
-      #  with:
-      #    repository: ome/omero-test-infra
-      #    path: .omero
-      #    ref: ${{ secrets.OMERO_TEST_INFRA_REF }}
+      - name: Checkout omero-test-infra
+        uses: actions/checkout@master
+        with:
+          repository: jburel/omero-test-infra
+          path: .omero
+          ref: update
       - name: Build and run OMERO tests
-        # run: .omero/docker $STAGE
-        run: sudo chmod +x .omero/* && .omero/docker $STAGE
+        run: .omero/docker $STAGE
