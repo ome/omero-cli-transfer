@@ -392,7 +392,7 @@ class TestTransfer(CLITest):
         self.delete_all()
 
     @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
-    def test_pack_unpack(self, target_name, tmpdir):
+    def test_pack_unpack_tar(self, target_name, tmpdir):
         if target_name == "datasetid" or target_name == "projectid" or\
            target_name == "idonly" or target_name == "imageid":
             self.create_image(target_name=target_name)
@@ -407,6 +407,8 @@ class TestTransfer(CLITest):
         self.run_asserts(target_name)
         self.delete_all()
 
+    @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
+    def test_pack_unpack_zip(self, target_name, tmpdir):
         if target_name == "datasetid" or target_name == "projectid" or\
            target_name == "idonly" or target_name == "imageid":
             self.create_image(target_name=target_name)
