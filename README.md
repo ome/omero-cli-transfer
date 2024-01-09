@@ -61,15 +61,13 @@ about the files (name, mimetype).
 
 `--metadata` allows you to specify which transfer metadata will be saved in `transfer.xml` as possible MapAnnotation values to the images. Defaults to image ID, timestamp, software version, source hostname, md5, source username, source group.
 
-<<<<<<< HEAD
 `--plugin` allows you to export omero data to a desired format by using an external plugin. See for example the [arc plugin](https://github.com/cmohl2013/omero-arc), which exports omero
 projects to ARC repositories.
-`--server` creates the transfer.xml file but does not copy data
-=======
-`--metadata_only` creates the transfer.xml file but does not copy data
->>>>>>> ab2fbd3 (changes cli option to avoid collision)
-or generate an archive. The last cli argument is the path where the `transfer.xml`
-file will be written
+`--binaries` allows to specify whether to archive binary data
+(e.g images, ROIs, FileAnnotations) or only create the transfer.xml.
+Default is `all` and will create the archive. With `none`, only the `transfer.xml`
+file is created, in which case the last cli argument is the path where
+the `transfer.xml` file will be written.
 
 
 Examples:
@@ -78,12 +76,9 @@ omero transfer pack Image:123 transfer_pack.tar
 omero transfer pack --zip Image:123 transfer_pack.zip
 omero transfer pack Dataset:1111 /home/user/new_folder/new_pack.tar
 omero transfer pack 999 tarfile.tar  # equivalent to Project:999
-<<<<<<< HEAD
 omero transfer pack --plugin arc Project:999 path/to/my/arc/repo
-omero transfer pack --server Dataset:1111 /home/user/new_folder
-=======
-omero transfer pack --metadata_only Dataset:1111 /home/user/new_folder
->>>>>>> ab2fbd3 (changes cli option to avoid collision)
+omero transfer pack --binaries none Dataset:1111 /home/user/new_folder/
+omero transfer pack --binaries all Dataset:1111 /home/user/new_folder/new_pack.tar
 ```
 
 ## `omero transfer unpack`
@@ -104,19 +99,11 @@ effectively merging the "new" unpacked entities with existing ones.
 
 `--metadata` allows you to specify which transfer metadata will be used from `transfer.xml` as MapAnnotation values to the images. Fields that do not exist on `transfer.xml` will be ignored. Defaults to image ID, timestamp, software version, source hostname, md5, source username, source group.
 
-`--binaries` allows to specify whether to archive binary data
-(e.g images, ROIs, FileAnnotations) or only create the transfer.xml.
-Default is `all` and will create the archive. With `none`, only the `transfer.xml`
-file is created, in which case the last cli argument is the path where
-the `transfer.xml` file will be written.
-
 Examples:
 ```
 omero transfer unpack transfer_pack.zip
 omero transfer unpack --output /home/user/optional_folder --ln_s
 omero transfer unpack --folder /home/user/unpacked_folder/
-omero transfer pack --binaries none Dataset:1111 /home/user/new_folder/
-omero transfer pack --binaries all Dataset:1111 /home/user/new_folder/new_pack.tar
 ```
 
 ## `omero transfer prepare`
