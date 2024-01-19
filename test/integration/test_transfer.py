@@ -402,8 +402,6 @@ class TestTransfer(CLITest):
         args = self.args + ["pack", target, str(tmpdir / 'test.tar')]
         self.cli.invoke(args, strict=True)
         self.delete_all()
-        if target_name == "plateid" or target_name == "screenid":
-            return
         args = self.args + ["unpack", str(tmpdir / 'test.tar')]
         self.cli.invoke(args, strict=True)
         self.run_asserts(target_name)
@@ -420,8 +418,6 @@ class TestTransfer(CLITest):
         args = self.args + ["pack", target, "--zip", str(tmpdir / 'test.zip')]
         self.cli.invoke(args, strict=True)
         self.delete_all()
-        if target_name == "plateid" or target_name == "screenid":
-            return
         args = self.args + ["unpack", str(tmpdir / 'test.zip')]
         self.cli.invoke(args, strict=True)
         self.run_asserts(target_name)
