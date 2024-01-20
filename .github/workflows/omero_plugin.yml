@@ -38,4 +38,4 @@ jobs:
           ref: docker_compose
           #ref: ${{ secrets.OMERO_TEST_INFRA_REF }}
       - name: Build and run OMERO tests
-        run: .omero/docker $STAGE
+        run: POLICY_BINARY_ACCESS=+read,+write,+image,+plate .omero/docker $STAGE
