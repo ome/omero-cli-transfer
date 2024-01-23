@@ -1,0 +1,3 @@
+[submodule ".omero"]
+	path = .omero
+	url = https://github.com/ome/omero-test-infra
