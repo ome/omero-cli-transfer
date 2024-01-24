@@ -478,7 +478,6 @@ class TransferControl(GraphControl):
             print(f"Creating RO-Crate metadata at {md_fp}.")
             populate_rocrate(src_datatype, ome, os.path.splitext(tar_path)[0],
                              path_id_dict, folder)
-<<<<<<< HEAD
         if args.plugin:
             """
             Plugins for omero-cli-transfer can be created by providing
@@ -508,10 +507,7 @@ class TransferControl(GraphControl):
                     tmp_path=Path(folder),
                     image_filenames_mapping=path_id_dict,
                     conn=self.gateway)
-        elif not args.server:
-=======
         elif args.binaries == "all":
->>>>>>> 2d1e011 (changes cli argument to)
             self._package_files(os.path.splitext(tar_path)[0], args.zip,
                                 folder)
             print("Cleaning up...")
