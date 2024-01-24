@@ -205,7 +205,7 @@ class TestTransfer(CLITest):
         args = self.args + ["pack", target, "--binaries", "none", "--simple",
                             str(tmpdir)]
         with pytest.raises(ValueError):
-                self.cli.invoke(args, strict=True)
+            self.cli.invoke(args, strict=True)
         self.delete_all()
 
     @pytest.mark.parametrize('folder_name', TEST_FOLDERS)

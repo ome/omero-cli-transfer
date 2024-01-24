@@ -8,6 +8,7 @@ set -x
 TARGET=${TARGET:-..}
 PLUGIN=${PLUGIN:-}
 
+<<<<<<< HEAD:.omeroci/py-setup
 export JAVA_HOME=$(readlink -f /usr/bin/java | sed "s:/bin/java::")
 export JAVA_LD_LIBRARY_PATH="$JAVA_HOME/lib/:$JAVA_HOME/lib/server"
 export CONDA_BACKUP_JAVA_HOME=$JAVA_HOME
@@ -21,8 +22,11 @@ conda activate omero
 conda install -c conda-forge zeroc-ice=3.6.5
 conda install -c bioconda bftools
 
+=======
+>>>>>>> be5209a (update .omero, some test failing):.omero/py-setup
 cd $TARGET
 cd $(setup_dir)
-pip install .
+python setup.py sdist
+pip install -U dist/*.tar.gz
 python setup.py clean
 rm -rf dist *egg-info src/*egg-info
