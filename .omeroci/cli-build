@@ -11,6 +11,15 @@ cd $TARGET
 GUESS=${PWD#*omero-cli-*}
 PLUGIN=${PLUGIN:-$GUESS}
 
+export JAVA_HOME=$(readlink -f /usr/bin/java | sed "s:/bin/java::")
+export JAVA_LD_LIBRARY_PATH="$JAVA_HOME/lib/:$JAVA_HOME/lib/server"
+export CONDA_BACKUP_JAVA_HOME=$JAVA_HOME
+export CONDA_BACKUP_JAVA_LD_LIBRARY_PATH=$JAVA_LD_LIBRARY_PATH
+
+source /tmp/miniconda/bin/activate
+conda init
+conda activate omero
+
 export OMERO_DIST=${OMERO_DIST:-/opt/omero/server/OMERO.server}
 omero $PLUGIN -h
 

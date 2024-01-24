@@ -20,3 +20,9 @@ conda create -n omero python=3.9
 conda activate omero
 conda install -c conda-forge zeroc-ice=3.6.5
 conda install -c bioconda bftools
+
+cd $TARGET
+cd $(setup_dir)
+pip install .
+python setup.py clean
+rm -rf dist *egg-info src/*egg-info
