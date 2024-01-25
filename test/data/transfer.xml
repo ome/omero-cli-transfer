@@ -10,7 +10,7 @@
         <AnnotationRef ID="Annotation:2209" />
         <AnnotationRef ID="Annotation:2210" />
         <AnnotationRef ID="Annotation:2551" />
-        <AnnotationRef ID="Annotation:-242965625845933864455559976333404928513" />
+        <AnnotationRef ID="Annotation:18350171370993896932" />
     </Image>
     <Image ID="Image:1679" Name="combined_result.tiff">
         <Description />
@@ -23,7 +23,7 @@
         <AnnotationRef ID="Annotation:2209" />
         <AnnotationRef ID="Annotation:2210" />
         <AnnotationRef ID="Annotation:2551" />
-        <AnnotationRef ID="Annotation:-242965625845933864455559976333404928514" />
+        <AnnotationRef ID="Annotation:18350171370993896933" />
     </Image>
     <StructuredAnnotations>
         <MapAnnotation ID="Annotation:2209" Namespace="openmicroscopy.org/omero/client/mapAnnotation">
@@ -37,12 +37,20 @@
         <TagAnnotation ID="Annotation:2551">
             <Value>simple_tag</Value>
         </TagAnnotation>
-        <CommentAnnotation ID="Annotation:-242965625845933864455559976333404928513" Namespace="Image:1678">
-            <Value>root_0/2022-01/14/18-30-55.264/combined_result.tiff</Value>
-        </CommentAnnotation>
-        <CommentAnnotation ID="Annotation:-242965625845933864455559976333404928514" Namespace="Image:1679">
-            <Value>root_0/2022-01/14/18-30-55.264/combined_result.tiff</Value>
-        </CommentAnnotation>
+        <XMLAnnotation ID="Annotation:18350171370993896932" Namespace="openmicroscopy.org/cli/transfer">
+            <Value>
+              <CLITransferServerPath xsi:schemaLocation="https://raw.githubusercontent.com/ome/omero-cli-transfer/main/schemas/serverpath.xsd">
+                <Path>root_0/2022-01/14/18-30-55.264/combined_result.tiff</Path>
+              </CLITransferServerPath>
+            </Value>
+          </XMLAnnotation>
+          <XMLAnnotation ID="Annotation:18350171370993896933" Namespace="openmicroscopy.org/cli/transfer">
+            <Value>
+              <CLITransferServerPath xsi:schemaLocation="https://raw.githubusercontent.com/ome/omero-cli-transfer/main/schemas/serverpath.xsd">
+                <Path>root_0/2022-01/14/18-30-55.264/combined_result.tiff</Path>
+              </CLITransferServerPath>
+            </Value>
+          </XMLAnnotation>
         <MapAnnotation ID="Annotation:2210" Namespace="jax.org/jax/example/namespace">
             <Value>
                 <M K="species"> </M>

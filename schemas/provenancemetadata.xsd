@@ -1,0 +1,19 @@
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified"
+  xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="CLITransferMetadata">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element type="xs:integer" name="origin_plate_id"/>
+        <xs:element type="xs:integer" name="origin_image_id"/>
+        <xs:element type="xs:string" name="software"/>
+        <xs:element type="xs:string" name="version"/>
+        <xs:element type="xs:string" name="packing_timestamp"/>
+        <xs:element type="xs:string" name="origin_hostname"/>
+        <xs:element type="xs:string" name="md5"/>
+        <xs:element type="xs:string" name="original_user"/>
+        <xs:element type="xs:string" name="original_group"/>
+        <xs:element type="xs:string" name="database_id"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

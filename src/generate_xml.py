@@ -11,7 +11,7 @@ from ome_types.model import Well, WellSample
 from ome_types.model import Plate
 from ome_types.model import Dataset, DatasetRef
 from ome_types.model import Image, ImageRef, Pixels
-from ome_types.model import TagAnnotation, MapAnnotation, ROI
+from ome_types.model import TagAnnotation, MapAnnotation, ROI, XMLAnnotation
 from ome_types.model import FileAnnotation, BinaryFile, BinData
 from ome_types.model import AnnotationRef, ROIRef, Map
 from ome_types.model import CommentAnnotation, LongAnnotation
@@ -28,6 +28,8 @@ from omero.model import DatasetI, ProjectI, ScreenI, PlateI, WellI, Annotation
 from omero.cli import CLI
 from typing import Tuple, List, Optional, Union, Any, Dict, TextIO
 from subprocess import PIPE, DEVNULL
+from generate_omero_objects import get_server_path
+import xml.etree.cElementTree as ETree
 from os import PathLike
 import pkg_resources
 import ezomero
@@ -39,6 +41,8 @@ from datetime import datetime
 from pathlib import Path
 import shutil
 import copy
+
+ann_count = 0
 
 
 def create_proj_and_ref(**kwargs) -> Tuple[Project, ProjectRef]:
@@ -102,6 +106,12 @@ def create_kv_and_ref(**kwargs) -> Tuple[MapAnnotation, AnnotationRef]:
     kv = MapAnnotation(**kwargs)
     kvref = AnnotationRef(id=kv.id)
     return kv, kvref
+
+
+def create_xml_and_ref(**kwargs) -> Tuple[XMLAnnotation, AnnotationRef]:
+    xml = XMLAnnotation(**kwargs)
+    xmlref = AnnotationRef(id=xml.id)
+    return xml, xmlref
 
 
 def create_long_and_ref(**kwargs) -> Tuple[LongAnnotation, AnnotationRef]:
@@ -353,13 +363,14 @@ def create_filepath_annotations(id: str, conn: BlitzGateway,
                                 plate_path: Optional[str] = None,
                                 ds: Optional[str] = None,
                                 proj: Optional[str] = None,
-                                ) -> Tuple[List[CommentAnnotation],
+                                ) -> Tuple[List[XMLAnnotation],
                                            List[AnnotationRef]]:
-    ns = id
+    global ann_count
+    ns = 'openmicroscopy.org/cli/transfer'
     anns = []
     anrefs = []
-    fp_type = ns.split(":")[0]
-    clean_id = int(ns.split(":")[-1])
+    fp_type = id.split(":")[0]
+    clean_id = int(id.split(":")[-1])
     if not ds:
         ds = ""
     if not proj:
@@ -377,12 +388,12 @@ def create_filepath_annotations(id: str, conn: BlitzGateway,
                 common_root = "./"
                 common_root = Path(common_root) / proj / ds
             path = os.path.join(common_root, 'mock_folder')
-            uid = (-1) * uuid4().int
-            an = CommentAnnotation(id=uid,
-                                   namespace=ns,
-                                   value=str(path)
-                                   )
+            xml = create_path_xml(path)
+            an, anref = create_xml_and_ref(id=ann_count,
+                                           namespace=ns,
+                                           value=xml)
             anns.append(an)
+            ann_count += 1
             anref = AnnotationRef(id=an.id)
             anrefs.append(anref)
         else:
@@ -393,70 +404,70 @@ def create_filepath_annotations(id: str, conn: BlitzGateway,
                 if simple:
                     filename = Path(f).name
                     f = Path(common_root) / proj / ds / filename
-                uid = (-1) * uuid4().int
-                an = CommentAnnotation(id=uid,
-                                       namespace=ns,
-                                       value=str(f)
-                                       )
+                xml = create_path_xml(str(f))
+                an, anref = create_xml_and_ref(id=ann_count,
+                                               namespace=ns,
+                                               value=xml)
                 anns.append(an)
+                ann_count += 1
                 anref = AnnotationRef(id=an.id)
                 anrefs.append(anref)
             else:
+                f = f'pixel_images/{clean_id}.tiff'
                 if simple:
                     f = f'{clean_id}.tiff'
                     f = Path(common_root) / proj / ds / f
-                    uid = (-1) * uuid4().int
-                    an = CommentAnnotation(id=uid,
-                                           namespace=ns,
-                                           value=str(f)
-                                           )
+                    xml = create_path_xml(str(f))
+                    an, anref = create_xml_and_ref(id=ann_count,
+                                                   namespace=ns,
+                                                   value=xml)
                     anns.append(an)
+                    ann_count += 1
                     anref = AnnotationRef(id=an.id)
                     anrefs.append(anref)
-                f = f'pixel_images/{clean_id}.tiff'
-                uid = (-1) * uuid4().int
-                an = CommentAnnotation(id=uid,
-                                       namespace=ns,
-                                       value=str(f)
-                                       )
+                xml = create_path_xml(str(f))
+                an, anref = create_xml_and_ref(id=ann_count,
+                                               namespace=ns,
+                                               value=xml)
                 anns.append(an)
+                ann_count += 1
                 anref = AnnotationRef(id=an.id)
                 anrefs.append(anref)
 
     elif fp_type == "Annotation":
         filename = str(Path(filename).name)
         f = f'file_annotations/{clean_id}/{filename}'
-        uid = (-1) * uuid4().int
-        an = CommentAnnotation(id=uid,
-                               namespace=ns,
-                               value=f
-                               )
+        xml = create_path_xml(str(f))
+        an, anref = create_xml_and_ref(id=ann_count,
+                                       namespace=ns,
+                                       value=xml)
         anns.append(an)
+        ann_count += 1
         anref = AnnotationRef(id=an.id)
         anrefs.append(anref)
     elif fp_type == "Plate":
-        uid = (-1) * uuid4().int
-        an = CommentAnnotation(id=uid,
-                               namespace=ns,
-                               value=plate_path
-                               )
+        xml = create_path_xml(plate_path)
+        an, anref = create_xml_and_ref(id=ann_count,
+                                       namespace=ns,
+                                       value=xml)
         anns.append(an)
+        ann_count += 1
         anref = AnnotationRef(id=an.id)
         anrefs.append(anref)
     return anns, anrefs
 
 
-def create_figure_annotations(id: str) -> Tuple[CommentAnnotation,
+def create_figure_annotations(id: str) -> Tuple[XMLAnnotation,
                                                 AnnotationRef]:
     ns = id
+    global ann_count
     clean_id = int(ns.split(":")[-1])
     f = f'figures/Figure_{clean_id}.json'
-    uid = (-1) * uuid4().int
-    an = CommentAnnotation(id=uid,
-                           namespace=ns,
-                           value=f
-                           )
-    anref = AnnotationRef(id=an.id)
+    xml = create_path_xml(str(f))
+    an, anref = create_xml_and_ref(id=ann_count,
+                                   namespace=ns,
+                                   value=xml)
+    ann_count += 1
     return (an, anref)
 
 
@@ -465,6 +476,7 @@ def create_provenance_metadata(conn: BlitzGateway, img_id: int,
                                metadata: Union[List[str], None], plate: bool
                                ) -> Union[Tuple[MapAnnotation, AnnotationRef],
                                           Tuple[None, None]]:
+    global ann_count
     if not metadata:
         return None, None
     software = "omero-cli-transfer"
@@ -473,7 +485,6 @@ def create_provenance_metadata(conn: BlitzGateway, img_id: int,
     ns = 'openmicroscopy.org/cli/transfer'
     curr_user = conn.getUser().getName()
     curr_group = conn.getGroupFromContext().getName()
-    id = (-1) * uuid4().int
     db_id = conn.getConfigService().getDatabaseUuid()
 
     md_dict: Dict[str, Any] = {}
@@ -499,17 +510,12 @@ def create_provenance_metadata(conn: BlitzGateway, img_id: int,
         md_dict['original_group'] = curr_group
     if "db_id" in metadata:
         md_dict['database_id'] = db_id
-
-    mmap = []
-    for _key, _value in md_dict.items():
-        if _value:
-            mmap.append(M(k=_key, value=str(_value)))
-        else:
-            mmap.append(M(k=_key, value=''))
-    kv, ref = create_kv_and_ref(id=id,
-                                namespace=ns,
-                                value=Map(ms=mmap))
-    return kv, ref
+    xml = create_metadata_xml(md_dict)
+    an, anref = create_xml_and_ref(id=ann_count,
+                                   namespace=ns,
+                                   value=xml)
+    ann_count += 1
+    return an, anref
 
 
 def create_objects(folder, filelist):
@@ -553,6 +559,7 @@ def create_objects(folder, filelist):
     annotations = []
     counter_imgs = 1
     counter_pls = 1
+    counter_anns = 1
     for target in targets:
         if filelist:
             folder = par_folder
@@ -562,12 +569,13 @@ def create_objects(folder, filelist):
         if filelist:
             folder = par_folder
         imgs, pls, anns = parse_showinf(res, counter_imgs, counter_pls,
-                                        target, folder)
+                                        counter_anns, target, folder)
         images.extend(imgs)
         counter_imgs = counter_imgs + len(imgs)
         plates.extend(pls)
         counter_pls = counter_pls + len(pls)
         annotations.extend(anns)
+        counter_anns = counter_anns + len(anns)
     return images, plates, annotations
 
 
@@ -590,35 +598,43 @@ def parse_files_import(text, folder):
     return clean_targets
 
 
-def parse_showinf(text, counter_imgs, counter_plates, target, folder):
+def parse_showinf(text, counter_imgs, counter_plates, counter_ann,
+                  target, folder):
     ome = from_xml(text)
     images = []
     plates = []
     annotations = []
     img_id = counter_imgs
     pl_id = counter_plates
+    ann_id = counter_ann
     img_ref = {}
     for image in ome.images:
         img_id_str = f"Image:{str(img_id)}"
         img_ref[image.id] = img_id_str
         pix = create_empty_pixels(image, img_id)
         if len(ome.images) > 1:  # differentiating names
+            if image.name == "":
+                image_name = "0"
+            else:
+                image_name = image.name
             filename = Path(target).name
-            img = Image(id=img_id_str, name=filename + " [" + image.name + "]",
+            img = Image(id=img_id_str, name=filename + " [" + image_name + "]",
                         pixels=pix)
         else:
             img = Image(id=img_id_str, name=image.name, pixels=pix)
         img_id += 1
-        uid = (-1) * uuid4().int
-        an = CommentAnnotation(id=uid,
-                               namespace=img_id_str,
-                               value=target
-                               )
+        xml = create_path_xml(target)
+        ns = 'openmicroscopy.org/cli/transfer'
+        an, anref = create_xml_and_ref(id=ann_id,
+                                       namespace=ns,
+                                       value=xml)
         annotations.append(an)
+        ann_id += 1
         anref = AnnotationRef(id=an.id)
         img.annotation_refs.append(anref)
-        an, anref = create_prepare_metadata()
+        an, anref = create_prepare_metadata(ann_id)
         annotations.append(an)
+        ann_id += 1
         img.annotation_refs.append(anref)
         images.append(img)
     for plate in ome.plates:
@@ -628,11 +644,10 @@ def parse_showinf(text, counter_imgs, counter_plates, target, folder):
             for ws in w.well_samples:
                 ws.image_ref.id = img_ref[ws.image_ref.id]
         pl_id += 1
-        uid = (-1) * uuid4().int
-        an = CommentAnnotation(id=uid,
-                               namespace=pl_id_str,
-                               value=target
-                               )
+        xml = create_path_xml(target)
+        an, anref = create_xml_and_ref(id=ann_id,
+                                       namespace=ns,
+                                       value=xml)
         annotations.append(an)
         anref = AnnotationRef(id=an.id)
         pl.annotation_refs.append(anref)
@@ -640,26 +655,41 @@ def parse_showinf(text, counter_imgs, counter_plates, target, folder):
     return images, plates, annotations
 
 
-def create_prepare_metadata():
+def create_path_xml(target):
+    base = ETree.Element("CLITransferServerPath", attrib={
+        "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+        "xsi:schemaLocation":
+        "https://raw.githubusercontent.com/ome/omero-cli-transfer/"
+        "main/schemas/serverpath.xsd"})
+    ETree.SubElement(base, "Path").text = target
+    return ETree.tostring(base, encoding='unicode')
+
+
+def create_prepare_metadata(ann_id):
     software = "omero-cli-transfer"
     version = pkg_resources.get_distribution(software).version
     date_time = datetime.now().strftime("%d/%m/%Y, %H:%M:%S")
     ns = 'openmicroscopy.org/cli/transfer/prepare'
-    id = (-1) * uuid4().int
     md_dict: Dict[str, Any] = {}
     md_dict['software'] = software
     md_dict['version'] = version
     md_dict['packing_timestamp'] = date_time
-    mmap = []
-    for _key, _value in md_dict.items():
-        if _value:
-            mmap.append(M(k=_key, value=str(_value)))
-        else:
-            mmap.append(M(k=_key, value=''))
-    kv, ref = create_kv_and_ref(id=id,
-                                namespace=ns,
-                                value=Map(ms=mmap))
-    return kv, ref
+    xml = create_metadata_xml(md_dict)
+    xml_ann, ref = create_xml_and_ref(id=ann_id,
+                                      namespace=ns,
+                                      value=xml)
+    return xml_ann, ref
+
+
+def create_metadata_xml(metadata):
+    base = ETree.Element("CLITransferMetadata", attrib={
+        "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+        "xsi:schemaLocation":
+        "https://raw.githubusercontent.com/ome/omero-cli-transfer/"
+        "main/schemas/preparemetadata.xsd"})
+    for _key, _value in metadata.items():
+        ETree.SubElement(base, _key).text = str(_value)
+    return ETree.tostring(base, encoding='unicode')
 
 
 def create_empty_pixels(image, id):
@@ -826,13 +856,10 @@ def populate_plate(obj: PlateI, ome: OME, conn: BlitzGateway,
         well_obj = conn.getObject('Well', well.getId())
         well_ref = populate_well(well_obj, ome, conn, hostname, metadata)
         pl.wells.append(well_ref)
+
+    # this will need some changing to tackle XMLs
     last_image_anns = ome.images[-1].annotation_refs
-    last_image_anns_ids = [i.id for i in last_image_anns]
-    for ann in ome.structured_annotations:
-        if (ann.id in last_image_anns_ids and
-                isinstance(ann, CommentAnnotation) and
-                int(ann.id.split(":")[-1]) < 0):
-            plate_path = ann.value
+    plate_path = get_server_path(last_image_anns, ome.structured_annotations)
     filepath_anns, refs = create_filepath_annotations(pl.id, conn,
                                                       simple=False,
                                                       plate_path=plate_path)
@@ -937,10 +964,15 @@ def add_annotation(obj: Union[Project, Dataset, Image, Plate, Screen,
 
 def list_file_ids(ome: OME) -> dict:
     id_list = {}
+    for img in ome.images:
+        path = get_server_path(img.annotation_refs, ome.structured_annotations)
+        id_list[img.id] = path
     for ann in ome.structured_annotations:
-        clean_id = int(ann.id.split(":")[-1])
-        if isinstance(ann, CommentAnnotation) and clean_id < 0:
-            id_list[ann.namespace] = ann.value
+        if isinstance(ann, FileAnnotation):
+            if ann.namespace != "omero.web.figure.json":
+                path = get_server_path(ann.annotation_refs,
+                                       ome.structured_annotations)
+            id_list[ann.id] = path
     return id_list
 
 
@@ -948,6 +980,8 @@ def populate_xml(datatype: str, id: int, filepath: str, conn: BlitzGateway,
                  hostname: str, barchive: bool, simple: bool, figure: bool,
                  metadata: List[str]) -> Tuple[OME, dict]:
     ome = OME()
+    global ann_count
+    ann_count = uuid4().int >> 64
     obj = conn.getObject(datatype, id)
     if datatype == 'Project':
         populate_project(obj, ome, conn, hostname, metadata, simple)

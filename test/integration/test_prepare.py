@@ -15,6 +15,8 @@ from ome_types.model import TagAnnotation, MapAnnotation
 from ome_types.model import AnnotationRef, ROI, ROIRef, Rectangle
 from ome_types.model.screen import PlateRef
 from ome_types.model.map import M, Map
+from uuid import uuid4
+
 
 import ezomero
 import pytest
@@ -168,6 +170,7 @@ class TestPrepare(CLITest):
             elif img_name == "edited image name":
                 kvs = ezomero.get_map_annotation_ids(self.gw, "Image",
                                                      img.getId())
+                kvs = sorted(kvs)
                 assert len(kvs) == 2
                 kv = ezomero.get_map_annotation(self.gw, kvs[-1])
                 assert len(kv) == 2
@@ -196,10 +199,15 @@ class TestPrepare(CLITest):
 
     def edit_xml(self, filename):
         ome = from_xml(filename)
+        ann_count = uuid4().int >> 64
         new_proj = Project(id="Project:1", name="edited project")
         new_ds = Dataset(id="Dataset:1", name="edited dataset")
-        newtag1 = TagAnnotation(id="Annotation:1", value="tag for proj")
-        newtag2 = TagAnnotation(id="Annotation:2", value="tag for img")
+        newtag1 = TagAnnotation(id=f"Annotation:{ann_count}",
+                                value="tag for proj")
+        ann_count += 1
+        newtag2 = TagAnnotation(id=f"Annotation:{ann_count}",
+                                value="tag for img")
+        ann_count += 1
         new_proj.annotation_refs.append(AnnotationRef(id=newtag1.id))
         md_dict = {"key1": "value1", "key2": 2}
         mmap = []
@@ -208,7 +216,8 @@ class TestPrepare(CLITest):
                 mmap.append(M(k=_key, value=str(_value)))
             else:
                 mmap.append(M(k=_key, value=''))
-        mapann = MapAnnotation(id="Annotation:3", value=Map(ms=mmap))
+        mapann = MapAnnotation(id=f"Annotation:{ann_count}",
+                               value=Map(ms=mmap))
         rect = Rectangle(id="Shape:1", x=1, y=2, width=3, height=4)
         roi = ROI(id="ROI:1", union=[rect])
         ome.rois.append(roi)

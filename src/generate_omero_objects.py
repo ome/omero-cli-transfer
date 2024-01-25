@@ -4,14 +4,15 @@
 # Use is subject to license terms supplied in LICENSE.
 
 import ezomero
-from typing import List, Tuple
+from ome_types import to_xml
+from typing import List, Tuple, Union
 from omero.model import DatasetI, IObject, PlateI, WellI, WellSampleI, ImageI
 from omero.gateway import DatasetWrapper
 from ome_types.model import TagAnnotation, MapAnnotation, FileAnnotation, ROI
 from ome_types.model import CommentAnnotation, LongAnnotation, Annotation
 from ome_types.model import Line, Point, Rectangle, Ellipse, Polygon, Shape
 from ome_types.model import Polyline, Label, Project, Screen, Dataset, OME
-from ome_types.model import Image, Plate
+from ome_types.model import Image, Plate, XMLAnnotation, AnnotationRef
 from ome_types.model.simple_types import Marker
 from omero.gateway import TagAnnotationWrapper, MapAnnotationWrapper
 from omero.gateway import CommentAnnotationWrapper, LongAnnotationWrapper
@@ -21,6 +22,7 @@ from omero.gateway import BlitzGateway
 from omero.rtypes import rstring, RStringI, rint
 from ezomero import rois
 from pathlib import Path
+import xml.etree.cElementTree as ETree
 import os
 import copy
 
@@ -165,32 +167,7 @@ def create_annotations(ans: List[Annotation], conn: BlitzGateway, hash: str,
             map_ann.setNs(namespace)
             key_value_data = []
             for v in an.value.ms:
-                if int(an.id.split(":")[-1]) < 0:
-                    if not metadata:
-                        key_value_data.append(['empty_metadata', "True"])
-                        break
-                    if v.k == "md5" and "md5" in metadata:
-                        key_value_data.append(['zip_file_md5', hash])
-                    if v.k == "origin_image_id" and "img_id" in metadata:
-                        key_value_data.append([v.k, v.value])
-                    if v.k == "origin_plate_id" and "plate_id" in metadata:
-                        key_value_data.append([v.k, v.value])
-                    if v.k == "packing_timestamp" and "timestamp" in metadata:
-                        key_value_data.append([v.k, v.value])
-                    if v.k == "software" and "software" in metadata:
-                        key_value_data.append([v.k, v.value])
-                    if v.k == "version" and "version" in metadata:
-                        key_value_data.append([v.k, v.value])
-                    if v.k == "origin_hostname" and "hostname" in metadata:
-                        key_value_data.append([v.k, v.value])
-                    if v.k == "original_user" and "orig_user" in metadata:
-                        key_value_data.append([v.k, v.value])
-                    if v.k == "original_group" and "orig_group" in metadata:
-                        key_value_data.append([v.k, v.value])
-                    if v.k == "database_id" and "db_id" in metadata:
-                        key_value_data.append([v.k, v.value])
-                else:
-                    key_value_data.append([v.k, v.value])
+                key_value_data.append([v.k, v.value])
             map_ann.setValue(key_value_data)
             map_ann.save()
             ann_map[an.id] = map_ann.getId()
@@ -220,30 +197,101 @@ def create_annotations(ans: List[Annotation], conn: BlitzGateway, hash: str,
             file_ann.setFile(original_file)
             file_ann.save()
             ann_map[an.id] = file_ann.getId()
+        elif isinstance(an, XMLAnnotation):
+            # pass if path, use if provenance metadata
+            tree = ETree.fromstring(to_xml(an.value,
+                                           canonicalize=True))
+            is_metadata = False
+            for el in tree:
+                if el.tag.rpartition('}')[2] == "CLITransferMetadata":
+                    is_metadata = True
+            if is_metadata:
+                map_ann = MapAnnotationWrapper(conn)
+                namespace = an.namespace
+                map_ann.setNs(namespace)
+                key_value_data = []
+                if not metadata:
+                    key_value_data.append(['empty_metadata', "True"])
+                else:
+                    key_value_data = parse_xml_metadata(an, metadata, hash)
+                map_ann.setValue(key_value_data)
+                map_ann.save()
+                ann_map[an.id] = map_ann.getId()
     return ann_map
+
+
+def parse_xml_metadata(ann: XMLAnnotation,
+                       metadata: List[str],
+                       hash: str) -> List[List[str]]:
+    kv_data = []
+    tree = ETree.fromstring(to_xml(ann.value, canonicalize=True))
+    for el in tree:
+        if el.tag.rpartition('}')[2] == "CLITransferMetadata":
+            for el2 in el:
+                item = el2.tag.rpartition('}')[2]
+                val = el2.text
+                if item == "md5" and "md5" in metadata:
+                    kv_data.append(['md5', hash])
+                if item == "origin_image_id" and "img_id" in metadata:
+                    kv_data.append([item, val])
+                if item == "origin_plate_id" and "plate_id" in metadata:
+                    kv_data.append([item, val])
+                if item == "packing_timestamp" and "timestamp" in metadata:
+                    kv_data.append([item, val])
+                if item == "software" and "software" in metadata:
+                    kv_data.append([item, val])
+                if item == "version" and "version" in metadata:
+                    kv_data.append([item, val])
+                if item == "origin_hostname" and "hostname" in metadata:
+                    kv_data.append([item, val])
+                if item == "original_user" and "orig_user" in metadata:
+                    kv_data.append([item, val])
+                if item == "original_group" and "orig_group" in metadata:
+                    kv_data.append([item, val])
+                if item == "database_id" and "db_id" in metadata:
+                    kv_data.append([item, val])
+    return kv_data
+
+
+def get_server_path(anrefs: List[AnnotationRef],
+                    ans: List[Annotation]) -> Union[str, None]:
+    fpath = None
+    xml_ids = []
+    for an in anrefs:
+        for an_loop in ans:
+            if an.id == an_loop.id:
+                if isinstance(an_loop, XMLAnnotation):
+                    xml_ids.append(an_loop.id)
+                else:
+                    continue
+    for an_loop in ans:
+        if an_loop.id in xml_ids:
+            if not fpath:
+                tree = ETree.fromstring(to_xml(an_loop.value,
+                                               canonicalize=True))
+                for el in tree:
+                    if el.tag.rpartition('}')[2] == "CLITransferServerPath":
+                        for el2 in el:
+                            if el2.tag.rpartition('}')[2] == "Path":
+                                fpath = el2.text
+    return fpath
 
 
 def update_figure_refs(ann: FileAnnotation, ans: List[Annotation],
                        img_map: dict, folder: str):
     curr_folder = str(Path('.').resolve())
-    for an in ann.annotation_refs:
-        clean_id = int(an.id.split(":")[-1])
-        if clean_id < 0:
-            cmnt_id = an.id
-    for an_loop in ans:
-        if an_loop.id == cmnt_id and isinstance(an_loop, CommentAnnotation):
-            fpath = str(an_loop.value)
-    dest_path = str(os.path.join(curr_folder, folder,  '.', fpath))
-    with open(dest_path, 'r') as file:
-        filedata = file.read()
-    for src_id, dest_id in img_map.items():
-        clean_id = int(src_id.split(":")[-1])
-        src_str = f"\"imageId\": {clean_id}"
-        dest_str = f"\"imageId\": {dest_id}"
-        print(src_str, dest_str)
-        filedata = filedata.replace(src_str, dest_str)
-    with open(dest_path, 'w') as file:
-        file.write(filedata)
+    fpath = get_server_path(ann.annotation_refs, ans)
+    if fpath:
+        dest_path = str(os.path.join(curr_folder, folder,  '.', fpath))
+        with open(dest_path, 'r') as file:
+            filedata = file.read()
+        for src_id, dest_id in img_map.items():
+            clean_id = int(src_id.split(":")[-1])
+            src_str = f"\"imageId\": {clean_id}"
+            dest_str = f"\"imageId\": {dest_id}"
+            filedata = filedata.replace(src_str, dest_str)
+        with open(dest_path, 'w') as file:
+            file.write(filedata)
     return
 
 
@@ -251,13 +299,7 @@ def create_original_file(ann: FileAnnotation, ans: List[Annotation],
                          conn: BlitzGateway, folder: str
                          ) -> OriginalFileWrapper:
     curr_folder = str(Path('.').resolve())
-    for an in ann.annotation_refs:
-        clean_id = int(an.id.split(":")[-1])
-        if clean_id < 0:
-            cmnt_id = an.id
-    for an_loop in ans:
-        if an_loop.id == cmnt_id and isinstance(an_loop, CommentAnnotation):
-            fpath = str(an_loop.value)
+    fpath = get_server_path(ann.annotation_refs, ans)
     dest_path = str(os.path.join(curr_folder, folder,  '.', fpath))
     ofile = conn.createOriginalFileFromLocalFile(dest_path)
     return ofile
@@ -270,19 +312,30 @@ def create_plate_map(ome: OME, img_map: dict, conn: BlitzGateway
     map_ref_ids = []
     for plate in ome.plates:
         ann_ids = [i.id for i in plate.annotation_refs]
-        file_path = ""
         for ann in ome.structured_annotations:
             if (ann.id in ann_ids and
-                    isinstance(ann, CommentAnnotation) and
-                    int(ann.id.split(":")[-1]) < 0):
-                newome.structured_annotations.remove(ann)
-                map_ref_ids.append(ann.id)
-                file_path = ann.value
+                    isinstance(ann, XMLAnnotation)):
+                tree = ETree.fromstring(to_xml(ann.value,
+                                               canonicalize=True))
+                is_metadata = False
+                for el in tree:
+                    if el.tag.rpartition('}')[2] == "CLITransferMetadata":
+                        is_metadata = True
+                if not is_metadata:
+                    newome.structured_annotations.remove(ann)
+                    map_ref_ids.append(ann.id)
+                    file_path = get_server_path(plate.annotation_refs,
+                                                ome.structured_annotations)
+                    annref = next(filter(lambda x: x.id == ann.id,
+                                         plate.annotation_refs))
+                    newplate = next(filter(lambda x: x.id == plate.id,
+                                           newome.plates))
+                    newplate.annotation_refs.remove(annref)
         q = conn.getQueryService()
         params = Parameters()
         if not file_path:
             raise ValueError(f"Plate ID {plate.id} does not have a \
-                             CommentAnnotation with a file path!")
+                             XMLAnnotation with a file path!")
         path_query = str(file_path).strip('/')
         if path_query.endswith('mock_folder'):
             path_query = path_query.rstrip("mock_folder")
@@ -584,6 +637,8 @@ def link_one_annotation(obj: IObject, ann: Annotation, ann_map: dict,
         ann_obj = conn.getObject("LongAnnotation", ann_id)
     elif isinstance(ann, FileAnnotation):
         ann_obj = conn.getObject("FileAnnotation", ann_id)
+    elif isinstance(ann, XMLAnnotation):
+        ann_obj = conn.getObject("MapAnnotation", ann_id)
     else:
         ann_obj = None
     if ann_obj:
