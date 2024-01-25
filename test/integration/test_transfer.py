@@ -188,6 +188,26 @@ class TestTransfer(CLITest):
                 assert len(f.getmembers()) == 6
         self.delete_all()
 
+    @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
+    def test_pack_metadata_only(self, target_name, tmpdir):
+        if target_name == "datasetid" or target_name == "projectid" or\
+           target_name == "idonly" or target_name == "imageid":
+            self.create_image(target_name=target_name)
+        elif target_name == "plateid" or target_name == "screenid":
+            self.create_plate(target_name=target_name)
+        target = getattr(self, target_name)
+        args = self.args + ["pack", target, "--binaries", "none",
+                            str(tmpdir)]
+        self.cli.invoke(args, strict=True)
+        assert os.path.exists(str(tmpdir / 'transfer.xml'))
+        assert os.path.getsize(str(tmpdir / 'transfer.xml')) > 0
+
+        args = self.args + ["pack", target, "--binaries", "none", "--simple",
+                            str(tmpdir)]
+        with pytest.raises(ValueError):
+            self.cli.invoke(args, strict=True)
+        self.delete_all()
+
     @pytest.mark.parametrize('folder_name', TEST_FOLDERS)
     def test_unpack_folder(self, folder_name):
         self.args += ["unpack", "--folder", folder_name]
@@ -398,32 +418,24 @@ class TestTransfer(CLITest):
         assert len(pl_ids) == 4
         self.delete_all()
 
+    @pytest.mark.parametrize('packing', ["tar", "zip"])
     @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
-    def test_pack_unpack(self, target_name, tmpdir):
+    def test_pack_unpack(self, target_name, packing, tmpdir):
         if target_name == "datasetid" or target_name == "projectid" or\
            target_name == "idonly" or target_name == "imageid":
             self.create_image(target_name=target_name)
         elif target_name == "plateid" or target_name == "screenid":
             self.create_plate(plates=1, target_name=target_name)
         target = getattr(self, target_name)
-        args = self.args + ["pack", target, str(tmpdir / 'test.tar')]
+        if packing == "tar":
+            name = 'test.tar'
+            args = self.args + ["pack", target, str(tmpdir / name)]
+        else:
+            name = 'test.zip'
+            args = self.args + ["pack", target, "--zip", str(tmpdir / name)]
         self.cli.invoke(args, strict=True)
         self.delete_all()
-        args = self.args + ["unpack", str(tmpdir / 'test.tar')]
-        self.cli.invoke(args, strict=True)
-        self.run_asserts(target_name)
-        self.delete_all()
-
-        if target_name == "datasetid" or target_name == "projectid" or\
-           target_name == "idonly" or target_name == "imageid":
-            self.create_image(target_name=target_name)
-        elif target_name == "plateid" or target_name == "screenid":
-            self.create_plate(plates=1, target_name=target_name)
-        target = getattr(self, target_name)
-        args = self.args + ["pack", target, "--zip", str(tmpdir / 'test.zip')]
-        self.cli.invoke(args, strict=True)
-        self.delete_all()
-        args = self.args + ["unpack", str(tmpdir / 'test.zip')]
+        args = self.args + ["unpack", str(tmpdir / name)]
         self.cli.invoke(args, strict=True)
         self.run_asserts(target_name)
         self.delete_all()
