@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# !/usr/bin/env python
 # -*- coding: utf-8 -*-
 # Copyright (C) 2022 The Jackson Laboratory
 # All rights reserved.
@@ -85,12 +85,21 @@ guaranteed to work with unpack.
 orig_group`), other options are `none`, `img_id`, `timestamp`, `software`,
 `version`, `md5`, `hostname`, `db_id`, `orig_user`, `orig_group`.
 
+--binaries allows to specify whether to archive binary data
+(e.g images, ROIs, FileAnnotations) or only create the transfer.xml.
+Default is `all` and will create the archive.
+With `none`, only the `transfer.xml` file is created, in which case
+the last cli argument is the path where the `transfer.xml` file
+will be written.
+
 Examples:
 omero transfer pack Image:123 transfer_pack.tar
 omero transfer pack --zip Image:123 transfer_pack.zip
 omero transfer pack Dataset:1111 /home/user/new_folder/new_pack.tar
 omero transfer pack 999 tarfile.tar  # equivalent to Project:999
 omero transfer pack 1 transfer_pack.tar --metadata img_id version db_id
+omero transfer pack --binaries none Dataset:1111 /home/user/new_folder/
+omero transfer pack --binaries all Dataset:1111 /home/user/new_folder/pack.tar
 """)
 
 UNPACK_HELP = ("""Unpacks a transfer packet into an OMERO hierarchy.
@@ -224,6 +233,14 @@ class TransferControl(GraphControl):
                 "--plugin", help="Use external plugin for packing.",
                 type=str)
         pack.add_argument("filepath", type=str, help=file_help)
+        pack.add_argument(
+            "--binaries",
+            choices=["all", "none"],
+            default="all",
+            help="With `--binaries none`, only generate the metadata file "
+                 "(transfer.xml or ro-crate-metadata.json). "
+                 "With `--binaries all` (the default), both pixel data "
+                 "and annotation are saved.")
 
         file_help = ("Path to where the zip file is saved")
         unpack.add_argument("filepath", type=str, help=file_help)
@@ -396,6 +413,11 @@ class TransferControl(GraphControl):
             if args.simple:
                 raise ValueError("Single plate or screen cannot be "
                                  "packaged in human-readable format")
+
+        if (args.binaries == "none") and args.simple:
+            raise ValueError("The `--binaries none` and `--simple` options "
+                             "are  incompatible")
+
         if isinstance(args.object, Image):
             src_datatype, src_dataid = "Image", args.object.id
         elif isinstance(args.object, Dataset):
@@ -422,7 +444,12 @@ class TransferControl(GraphControl):
                              " permissions for current user.")
         print("Populating xml...")
         tar_path = Path(args.filepath)
-        folder = str(tar_path) + "_folder"
+        if args.binaries == "all":
+            folder = str(tar_path) + "_folder"
+        else:
+            folder = os.path.splitext(tar_path)[0]
+            print(f"Output will be written to {folder}")
+
         os.makedirs(folder, mode=DIR_PERM, exist_ok=True)
         if args.barchive:
             md_fp = str(Path(folder) / "submission.tsv")
@@ -436,8 +463,11 @@ class TransferControl(GraphControl):
                                          args.barchive, args.simple,
                                          args.figure,
                                          self.metadata)
-        print("Starting file copy...")
-        self._copy_files(path_id_dict, folder, self.gateway)
+
+        if args.binaries == "all":
+            print("Starting file copy...")
+            self._copy_files(path_id_dict, folder, self.gateway)
+
         if args.simple:
             self._fix_pixels_image_simple(ome, folder, md_fp)
         if args.barchive:
@@ -477,11 +507,11 @@ class TransferControl(GraphControl):
                     tmp_path=Path(folder),
                     image_filenames_mapping=path_id_dict,
                     conn=self.gateway)
-        else:
+        elif args.binaries == "all":
             self._package_files(os.path.splitext(tar_path)[0], args.zip,
                                 folder)
-        print("Cleaning up...")
-        shutil.rmtree(folder)
+            print("Cleaning up...")
+            shutil.rmtree(folder)
         return
 
     def __unpack(self, args):

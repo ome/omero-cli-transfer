@@ -63,6 +63,12 @@ about the files (name, mimetype).
 
 `--plugin` allows you to export omero data to a desired format by using an external plugin. See for example the [arc plugin](https://github.com/cmohl2013/omero-arc), which exports omero
 projects to ARC repositories.
+`--binaries` allows to specify whether to archive binary data
+(e.g images, ROIs, FileAnnotations) or only create the transfer.xml.
+Default is `all` and will create the archive. With `none`, only the `transfer.xml`
+file is created, in which case the last cli argument is the path where
+the `transfer.xml` file will be written.
+
 
 Examples:
 ```
@@ -71,6 +77,8 @@ omero transfer pack --zip Image:123 transfer_pack.zip
 omero transfer pack Dataset:1111 /home/user/new_folder/new_pack.tar
 omero transfer pack 999 tarfile.tar  # equivalent to Project:999
 omero transfer pack --plugin arc Project:999 path/to/my/arc/repo
+omero transfer pack --binaries none Dataset:1111 /home/user/new_folder/
+omero transfer pack --binaries all Dataset:1111 /home/user/new_folder/new_pack.tar
 ```
 
 ## `omero transfer unpack`
