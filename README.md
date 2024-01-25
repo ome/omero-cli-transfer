@@ -63,6 +63,7 @@ about the files (name, mimetype).
 
 `--plugin` allows you to export omero data to a desired format by using an external plugin. See for example the [arc plugin](https://github.com/cmohl2013/omero-arc), which exports omero
 projects to ARC repositories.
+
 `--binaries` allows to specify whether to archive binary data
 (e.g images, ROIs, FileAnnotations) or only create the transfer.xml.
 Default is `all` and will create the archive. With `none`, only the `transfer.xml`
