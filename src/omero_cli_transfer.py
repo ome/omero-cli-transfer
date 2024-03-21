@@ -336,7 +336,15 @@ class TransferControl(GraphControl):
                     if rel_path == "pixel_images" or fileset is None:
                         filepath = str(Path(subfolder) /
                                        (str(clean_id) + ".tiff"))
-                        cli.invoke(['export', '--file', filepath, id])
+                        try:
+                            cli.invoke(['export', '--file', filepath, id],
+                                       strict=True)
+                        except NonZeroReturnCode:
+                            print("A file could not be exported - this is "
+                                  "generally due to a server not allowing"
+                                  " binary downloads.")
+                            shutil.rmtree(folder)
+                            raise NonZeroReturnCode(1, "Download not allowed")
                         downloaded_ids.append(id)
                     else:
                         try:
@@ -345,7 +353,7 @@ class TransferControl(GraphControl):
                         except NonZeroReturnCode:
                             print("A file could not be downloaded - this is "
                                   "generally due to a server not allowing"
-                                  " plate downloads.")
+                                  " binary downloads.")
                             shutil.rmtree(folder)
                             raise NonZeroReturnCode(1, "Download not allowed")
                         for fs_image in fileset.copyImages():
@@ -357,7 +365,14 @@ class TransferControl(GraphControl):
                 ann_folder = str(Path(subfolder).parent)
                 os.makedirs(ann_folder, mode=DIR_PERM, exist_ok=True)
                 id = "File" + id
-                cli.invoke(['download', id, subfolder])
+                try:
+                    cli.invoke(['download', id, subfolder], strict=True)
+                except NonZeroReturnCode:
+                    print("A file could not be downloaded - this is "
+                          "generally due to a server not allowing"
+                          " binary downloads.")
+                    shutil.rmtree(folder)
+                    raise NonZeroReturnCode(1, "Download not allowed")
 
     def _package_files(self, tar_path: str, zip: bool, folder: str):
         if zip:
