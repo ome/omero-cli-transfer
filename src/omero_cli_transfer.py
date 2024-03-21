@@ -32,7 +32,7 @@ from ome_types import from_xml, to_xml
 from omero.sys import Parameters
 from omero.rtypes import rstring
 from omero.cli import CLI, GraphControl
-from omero.cli import ProxyStringType
+from omero.cli import ProxyStringType, NonZeroReturnCode
 from omero.gateway import BlitzGateway
 from omero.model import Image, Dataset, Project, Plate, Screen
 from omero.grid import ManagedRepositoryPrx as MRepo
@@ -339,7 +339,15 @@ class TransferControl(GraphControl):
                         cli.invoke(['export', '--file', filepath, id])
                         downloaded_ids.append(id)
                     else:
-                        cli.invoke(['download', id, subfolder])
+                        try:
+                            cli.invoke(['download', id, subfolder],
+                                       strict=True)
+                        except NonZeroReturnCode:
+                            print("A file could not be downloaded - this is "
+                                  "generally due to a server not allowing"
+                                  " plate downloads.")
+                            shutil.rmtree(folder)
+                            raise NonZeroReturnCode(1, "Download not allowed")
                         for fs_image in fileset.copyImages():
                             downloaded_ids.append(fs_image.getId())
             else:
