@@ -504,7 +504,6 @@ class TransferControl(GraphControl):
                                          args.barchive, args.simple,
                                          args.figure,
                                          self.metadata)
-
         if args.binaries == "all":
             print("Starting file copy...")
             self._copy_files(path_id_dict, folder, args.ignore_errors,

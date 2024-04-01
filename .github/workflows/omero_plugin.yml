@@ -36,5 +36,7 @@ jobs:
           repository: ome/omero-test-infra
           path: .omero
           ref: ${{ secrets.OMERO_TEST_INFRA_REF }}
-      - name: Build and run OMERO tests
+      - name: Build and run standard tests
         run: POLICY_BINARY_ACCESS=+read,+write,+image,+plate .omero/docker $STAGE
+      - name: Build and run no-plate tests
+        run: .omero/docker $STAGE
