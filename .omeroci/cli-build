@@ -8,6 +8,8 @@ set -x
 TARGET=${TARGET:-..}
 cd $TARGET
 
+BIN_ACCESS=$(/opt/omero/server/venv3/bin/omero config get omero.policy.binary_access)
+
 GUESS=${PWD#*omero-cli-*}
 PLUGIN=${PLUGIN:-$GUESS}
 
@@ -22,5 +24,8 @@ conda activate omero
 
 export OMERO_DIST=${OMERO_DIST:-/opt/omero/server/OMERO.server}
 omero $PLUGIN -h
-
-python setup.py test -t test -i ${OMERO_DIST}/etc/ice.config -vs
+if [[ $BIN_ACCESS =~ "+plate" ]]; then
+    python setup.py test -t test -i ${OMERO_DIST}/etc/ice.config -vs -m "not limit_plate"
+else
+    python setup.py test -t test -i ${OMERO_DIST}/etc/ice.config -vs -m limit_plate
+fi

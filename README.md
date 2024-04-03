@@ -70,6 +70,10 @@ Default is `all` and will create the archive. With `none`, only the `transfer.xm
 file is created, in which case the last cli argument is the path where
 the `transfer.xml` file will be written.
 
+`--ignore_errors` gnores any download/export errors during the pack process,
+often the result of servers which do not allow Plate downloads (but will
+ignore any non-zero return code from `omero download` or `omero export`).
+
 
 Examples:
 ```

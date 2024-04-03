@@ -8,6 +8,7 @@ from __future__ import division
 from omero_cli_transfer import TransferControl
 from cli import CLITest
 from omero.gateway import BlitzGateway
+from omero.cli import NonZeroReturnCode
 
 import ezomero
 import pytest
@@ -16,6 +17,9 @@ import tarfile
 
 SUPPORTED = [
     "idonly", "imageid", "datasetid", "projectid", "plateid", "screenid"]
+
+PLATESONLY = [
+    "plateid", "screenid"]
 
 TEST_FILES = [
         "test/data/valid_single_image.tar",
@@ -147,6 +151,28 @@ class TestTransfer(CLITest):
         else:
             with pytest.raises(ValueError):
                 self.cli.invoke(args, strict=True)
+        self.delete_all()
+
+    @pytest.mark.parametrize('target_name', sorted(PLATESONLY))
+    @pytest.mark.limit_plate
+    def test_pack_noplate(self, target_name, tmpdir):
+        self.create_plate(target_name=target_name)
+        target = getattr(self, target_name)
+        args = self.args + ["pack", target, str(tmpdir / 'test.tar')]
+        with pytest.raises(NonZeroReturnCode):
+            self.cli.invoke(args, strict=True)
+        assert not (os.path.exists(str(tmpdir / 'test.tar')))
+        assert not (os.path.exists(str(tmpdir / 'test.tar_folder')))
+        args = self.args + ["pack", "--binaries", "none", target,
+                            str(tmpdir / 'test.tar')]
+        self.cli.invoke(args, strict=True)
+        assert os.path.exists(str(tmpdir / "test" / "transfer.xml"))
+        assert os.path.getsize(str(tmpdir / "test" / "transfer.xml")) > 0
+        args = self.args + ["pack", "--ignore_errors", target,
+                            str(tmpdir / 'test_ignore.tar')]
+        self.cli.invoke(args, strict=True)
+        assert os.path.exists(str(tmpdir / 'test_ignore.tar'))
+        assert os.path.getsize(str(tmpdir / 'test_ignore.tar')) > 0
         self.delete_all()
 
     @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
