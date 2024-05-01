@@ -292,8 +292,8 @@ def update_figure_refs(ann: FileAnnotation, ans: List[Annotation],
             dest_str = f"\"imageId\": {dest_id},"
             filedata = filedata.replace(src_str, dest_str)
         for fig in re.finditer("\"imageId\": ([0-9]+),", filedata):
-            if fig.group(1) not in img_map.values():
-                src_str = f"\"imageId\": {clean_id},"
+            if int(fig.group(1)) not in img_map.values():
+                src_str = f"\"imageId\": {fig.group(1)},"
                 dest_str = f"\"imageId\": {str(-1)},"
                 filedata = filedata.replace(src_str, dest_str)
         with open(dest_path, 'w') as file:
