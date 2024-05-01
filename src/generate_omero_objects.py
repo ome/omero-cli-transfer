@@ -25,6 +25,7 @@ from pathlib import Path
 import xml.etree.cElementTree as ETree
 import os
 import copy
+import re
 
 
 def create_or_set_projects(pjs: List[Project], conn: BlitzGateway,
@@ -287,9 +288,14 @@ def update_figure_refs(ann: FileAnnotation, ans: List[Annotation],
             filedata = file.read()
         for src_id, dest_id in img_map.items():
             clean_id = int(src_id.split(":")[-1])
-            src_str = f"\"imageId\": {clean_id}"
-            dest_str = f"\"imageId\": {dest_id}"
+            src_str = f"\"imageId\": {clean_id},"
+            dest_str = f"\"imageId\": {dest_id},"
             filedata = filedata.replace(src_str, dest_str)
+        for fig in re.finditer("\"imageId\": ([0-9]+),", filedata):
+            if fig.group(1) not in img_map.values():
+                src_str = f"\"imageId\": {clean_id},"
+                dest_str = f"\"imageId\": {str(-1)},"
+                filedata = filedata.replace(src_str, dest_str)
         with open(dest_path, 'w') as file:
             file.write(filedata)
     return
