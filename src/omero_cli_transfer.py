@@ -31,11 +31,12 @@ from ome_types.model import XMLAnnotation, OME
 from ome_types import from_xml, to_xml
 from omero.sys import Parameters
 from omero.rtypes import rstring
-from omero.cli import CLI, GraphControl
+from omero.cli import CLI, GraphControl, GraphArg
 from omero.cli import ProxyStringType, NonZeroReturnCode
 from omero.gateway import BlitzGateway
 from omero.model import Image, Dataset, Project, Plate, Screen
 from omero.grid import ManagedRepositoryPrx as MRepo
+
 
 DIR_PERM = 0o755
 MD5_BUF_SIZE = 65536
@@ -192,7 +193,22 @@ def gateway_required(func: Callable) -> Callable:
     return _wrapper
 
 
+def cmd_type():
+    import omero
+    import omero.all
+    return omero.cmd.GraphModify2
+
+
+def defaultProjectGraphArg(input):
+    if len(input.split(":")) == 1:
+        input = "Project:" + input
+    g = GraphArg(cmd_type())
+    ret = g.__call__(input)
+    return ret
+
+
 class TransferControl(GraphControl):
+
 
     def _configure(self, parser):
         parser.add_login_arguments()
@@ -203,7 +219,7 @@ class TransferControl(GraphControl):
 
         render_type = ProxyStringType("Project")
         obj_help = ("Object to be packed for transfer")
-        pack.add_argument("object", type=render_type, help=obj_help)
+        pack.add_argument("object", type=defaultProjectGraphArg, help=obj_help)
         file_help = ("Path to where the packed file will be saved")
         pack.add_argument(
                 "--zip", help="Pack into a zip file rather than a tarball",
