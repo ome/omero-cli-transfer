@@ -32,7 +32,7 @@ from ome_types import from_xml, to_xml
 from omero.sys import Parameters
 from omero.rtypes import rstring
 from omero.cli import CLI, GraphControl, GraphArg
-from omero.cli import ProxyStringType, NonZeroReturnCode
+from omero.cli import NonZeroReturnCode
 from omero.gateway import BlitzGateway
 from omero.model import Image, Dataset, Project, Plate, Screen
 from omero.grid import ManagedRepositoryPrx as MRepo
@@ -209,7 +209,6 @@ def defaultProjectGraphArg(input):
 
 class TransferControl(GraphControl):
 
-
     def _configure(self, parser):
         parser.add_login_arguments()
         sub = parser.sub()
@@ -217,8 +216,7 @@ class TransferControl(GraphControl):
         unpack = parser.add(sub, self.unpack, UNPACK_HELP)
         prepare = parser.add(sub, self.prepare, PREPARE_HELP)
 
-        render_type = ProxyStringType("Project")
-        obj_help = ("Object to be packed for transfer")
+        obj_help = ("Object(s) to be packed for transfer")
         pack.add_argument("object", type=defaultProjectGraphArg, help=obj_help)
         file_help = ("Path to where the packed file will be saved")
         pack.add_argument(
@@ -456,14 +454,24 @@ class TransferControl(GraphControl):
             print(to_xml(newome), file=fp)
             fp.close()
         return newome
+    
+    def __parse_objects(self, args):
+        assert len(args.object[0].targetObjects.keys()) == 1
+        self.object_type = list(args.object[0].targetObjects.keys())[0]
+        self.object_ids = list(args.object[0].targetObjects.values())[0]
+        print(self.object_type)
+        print(self.object_ids)
 
     def __pack(self, args):
-        if isinstance(args.object, Image) or isinstance(args.object, Plate) \
-           or isinstance(args.object, Screen):
+        self.__parse_objects(args)
+        src_datatype = self.object_type
+        src_dataids = self.object_ids
+        if src_datatype == "Image" or src_datatype == "Plate" \
+           or src_datatype == "Screen":
             if args.barchive:
                 raise ValueError("Single image, plate or screen cannot be "
                                  "packaged for Bioimage Archive")
-        if isinstance(args.object, Plate) or isinstance(args.object, Screen):
+        if src_datatype == "Plate" or src_datatype == "Screen":
             if args.rocrate:
                 raise ValueError("Single image, plate or screen cannot be "
                                  "packaged in a RO-Crate")
@@ -474,18 +482,8 @@ class TransferControl(GraphControl):
         if (args.binaries == "none") and args.simple:
             raise ValueError("The `--binaries none` and `--simple` options "
                              "are  incompatible")
-
-        if isinstance(args.object, Image):
-            src_datatype, src_dataid = "Image", args.object.id
-        elif isinstance(args.object, Dataset):
-            src_datatype, src_dataid = "Dataset", args.object.id
-        elif isinstance(args.object, Project):
-            src_datatype, src_dataid = "Project", args.object.id
-        elif isinstance(args.object, Plate):
-            src_datatype, src_dataid = "Plate", args.object.id
-        elif isinstance(args.object, Screen):
-            src_datatype, src_dataid = "Screen", args.object.id
-        else:
+        if src_datatype not in ["Image", "Dataset", "Project",
+                                "Plate", "Screen"]:
             print("Object is not a project, dataset, screen, plate or image")
             return
         export_types = (args.rocrate, args.barchive, args.simple)
@@ -495,31 +493,33 @@ class TransferControl(GraphControl):
                              "once")
         self.metadata = []
         self._process_metadata(args.metadata)
-        obj = self.gateway.getObject(src_datatype, src_dataid)
-        if obj is None:
-            raise ValueError("Object not found or outside current"
-                             " permissions for current user.")
-        print("Populating xml...")
-        tar_path = Path(args.filepath)
-        if args.binaries == "all":
-            folder = str(tar_path) + "_folder"
-        else:
-            folder = os.path.splitext(tar_path)[0]
-            print(f"Output will be written to {folder}")
+        for dataid in src_dataids:
+            obj = self.gateway.getObject(src_datatype, dataid)
+            if obj is None:
+                raise ValueError("At least one object not found or outside"
+                                 " current permissions for current user.")
+            print("Populating xml...")
+            tar_path = Path(args.filepath)
+            if args.binaries == "all":
+                folder = str(tar_path) + "_folder"
+            else:
+                folder = os.path.splitext(tar_path)[0]
+                print(f"Output will be written to {folder}")
 
-        os.makedirs(folder, mode=DIR_PERM, exist_ok=True)
-        if args.barchive:
-            md_fp = str(Path(folder) / "submission.tsv")
-        elif args.rocrate:
-            md_fp = str(Path(folder) / "ro-crate-metadata.json")
-        else:
-            md_fp = str(Path(folder) / "transfer.xml")
-            print(f"Saving metadata at {md_fp}.")
-        ome, path_id_dict = populate_xml(src_datatype, src_dataid, md_fp,
-                                         self.gateway, self.hostname,
-                                         args.barchive, args.simple,
-                                         args.figure,
-                                         self.metadata)
+            os.makedirs(folder, mode=DIR_PERM, exist_ok=True)
+            if args.barchive:
+                md_fp = str(Path(folder) / "submission.tsv")
+            elif args.rocrate:
+                md_fp = str(Path(folder) / "ro-crate-metadata.json")
+            else:
+                md_fp = str(Path(folder) / "transfer.xml")
+                print(f"Saving metadata at {md_fp}.")
+            ome, path_id_dict = populate_xml(src_datatype, dataid, md_fp,
+                                             self.gateway, self.hostname,
+                                             args.barchive, args.simple,
+                                             args.figure,
+                                             self.metadata)
+            ## need to somehow merge omes/path_id_dicts
         if args.binaries == "all":
             print("Starting file copy...")
             self._copy_files(path_id_dict, folder, args.ignore_errors,
