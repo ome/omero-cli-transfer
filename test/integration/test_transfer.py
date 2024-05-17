@@ -42,15 +42,16 @@ class TestTransfer(CLITest):
         super(TestTransfer, self).setup_method(method)
         self.cli.register("transfer", TransferControl, "TEST")
         self.args += ["transfer"]
-        self.idonly = "-1"
-        self.imageid = "Image:-1"
-        self.datasetid = "Dataset:-1"
-        self.projectid = "Project:-1"
-        self.plateid = "Project:-1"
-        self.screenid = "Project:-1"
+        self.idonly = "9999999"
+        self.imageid = "Image:9999999"
+        self.datasetid = "Dataset:9999999"
+        self.projectid = "Project:9999999"
+        self.plateid = "Project:9999999"
+        self.screenid = "Project:9999999"
         self.gw = BlitzGateway(client_obj=self.client)
 
-    def create_image(self, sizec=4, sizez=1, sizet=1, target_name=None):
+    def create_image(self, sizec=4, sizez=1, sizet=1, target_name=None,
+                     multiple=False):
         images = self.import_fake_file(
                 images_count=2, sizeZ=sizez, sizeT=sizet, sizeC=sizec,
                 client=self.client)
@@ -466,7 +467,47 @@ class TestTransfer(CLITest):
         self.run_asserts(target_name)
         self.delete_all()
 
-    def run_asserts(self, target_name):
+    @pytest.mark.parametrize('packing', ["tar", "zip"])
+    def test_pack_unpack_multiple_projs(self, target_name, packing, tmpdir):
+        if target_name == "projectid" or target_name == "idonly":
+            projects = []
+            for i in range(3):
+                self.create_image(target_name=target_name)
+                projects.append(self.project.id)
+            target = f"Project:{projects[0]}-{projects[-1]}"
+            span = True
+            multiple = True
+            if packing == "tar":
+                name = 'test.tar'
+                args = self.args + ["pack", target, str(tmpdir / name)]
+            else:
+                name = 'test.zip'
+                args = self.args + ["pack", target, "--zip",
+                                    str(tmpdir / name)]
+            self.cli.invoke(args, strict=True)
+            self.delete_all()
+            args = self.args + ["unpack", str(tmpdir / name)]
+            self.cli.invoke(args, strict=True)
+            self.run_asserts(target_name, multiple, span)
+            self.delete_all()
+            span = False
+            target = f"Project:{projects[0]},{projects[-1]}"
+            if packing == "tar":
+                name = 'test.tar'
+                args = self.args + ["pack", target, str(tmpdir / name)]
+            else:
+                name = 'test.zip'
+                args = self.args + ["pack", target, "--zip",
+                                    str(tmpdir / name)]
+            self.cli.invoke(args, strict=True)
+            self.delete_all()
+            args = self.args + ["unpack", str(tmpdir / name)]
+            self.cli.invoke(args, strict=True)
+            self.run_asserts(target_name, multiple, span)
+            self.delete_all()
+        assert True
+
+    def run_asserts(self, target_name, multiple=False, span=False):
         if target_name == "imageid":
             img_ids = ezomero.get_image_ids(self.gw)
             assert len(img_ids) == 2
@@ -476,7 +517,12 @@ class TestTransfer(CLITest):
             for p in pjs:
                 pj_id = p.getId()
                 count += 1
-            assert count == 1
+            if multiple and span:
+                assert count == 3
+            elif multiple:
+                assert count == 2
+            else:
+                assert count == 1
             count = 0
             proj = self.gw.getObject("Project", pj_id)
             for d in proj.listChildren():

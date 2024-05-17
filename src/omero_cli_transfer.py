@@ -34,7 +34,6 @@ from omero.rtypes import rstring
 from omero.cli import CLI, GraphControl, GraphArg
 from omero.cli import NonZeroReturnCode
 from omero.gateway import BlitzGateway
-from omero.model import Image, Dataset, Project, Plate, Screen
 from omero.grid import ManagedRepositoryPrx as MRepo
 
 
@@ -199,7 +198,7 @@ def cmd_type():
     return omero.cmd.GraphModify2
 
 
-def defaultProjectGraphArg(input):
+def default_project_graph_arg(input):
     if len(input.split(":")) == 1:
         input = "Project:" + input
     g = GraphArg(cmd_type())
@@ -217,7 +216,8 @@ class TransferControl(GraphControl):
         prepare = parser.add(sub, self.prepare, PREPARE_HELP)
 
         obj_help = ("Object(s) to be packed for transfer")
-        pack.add_argument("object", type=defaultProjectGraphArg, help=obj_help)
+        pack.add_argument("object", type=default_project_graph_arg,
+                          help=obj_help)
         file_help = ("Path to where the packed file will be saved")
         pack.add_argument(
                 "--zip", help="Pack into a zip file rather than a tarball",
@@ -454,13 +454,21 @@ class TransferControl(GraphControl):
             print(to_xml(newome), file=fp)
             fp.close()
         return newome
-    
+
     def __parse_objects(self, args):
         assert len(args.object[0].targetObjects.keys()) == 1
         self.object_type = list(args.object[0].targetObjects.keys())[0]
         self.object_ids = list(args.object[0].targetObjects.values())[0]
-        print(self.object_type)
-        print(self.object_ids)
+
+    def __append_to_ome(self, ome, newome):
+        ome.images.extend(newome.images)
+        ome.plates.extend(newome.plates)
+        ome.screens.extend(newome.screens)
+        ome.datasets.extend(newome.datasets)
+        ome.projects.extend(newome.projects)
+        ome.structured_annotations.extend(newome.structured_annotations)
+        ome.rois.extend(newome.rois)
+        return ome
 
     def __pack(self, args):
         self.__parse_objects(args)
@@ -493,6 +501,8 @@ class TransferControl(GraphControl):
                              "once")
         self.metadata = []
         self._process_metadata(args.metadata)
+        path_id_dict = {}
+        ome = OME()
         for dataid in src_dataids:
             obj = self.gateway.getObject(src_datatype, dataid)
             if obj is None:
@@ -514,12 +524,18 @@ class TransferControl(GraphControl):
             else:
                 md_fp = str(Path(folder) / "transfer.xml")
                 print(f"Saving metadata at {md_fp}.")
-            ome, path_id_dict = populate_xml(src_datatype, dataid, md_fp,
-                                             self.gateway, self.hostname,
-                                             args.barchive, args.simple,
-                                             args.figure,
-                                             self.metadata)
-            ## need to somehow merge omes/path_id_dicts
+            this_ome, this_id_dict = populate_xml(src_datatype, dataid, md_fp,
+                                                  self.gateway, self.hostname,
+                                                  args.barchive, args.simple,
+                                                  args.figure,
+                                                  self.metadata)
+            ome = self.__append_to_ome(ome, this_ome)
+            path_id_dict.update(this_id_dict)
+            # need to somehow merge omes/path_id_dicts
+        if not args.barchive:
+            with open(md_fp, 'w') as fp:
+                print(to_xml(ome), file=fp)
+                fp.close()
         if args.binaries == "all":
             print("Starting file copy...")
             self._copy_files(path_id_dict, folder, args.ignore_errors,
