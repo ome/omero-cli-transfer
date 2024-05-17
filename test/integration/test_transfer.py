@@ -468,6 +468,7 @@ class TestTransfer(CLITest):
         self.delete_all()
 
     @pytest.mark.parametrize('packing', ["tar", "zip"])
+    @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
     def test_pack_unpack_multiple_projs(self, target_name, packing, tmpdir):
         if target_name == "projectid" or target_name == "idonly":
             projects = []
@@ -491,6 +492,10 @@ class TestTransfer(CLITest):
             self.run_asserts(target_name, multiple, span)
             self.delete_all()
             span = False
+            projects = []
+            for i in range(3):
+                self.create_image(target_name=target_name)
+                projects.append(self.project.id)
             target = f"Project:{projects[0]},{projects[-1]}"
             if packing == "tar":
                 name = 'test.tar'
