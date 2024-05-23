@@ -50,8 +50,7 @@ class TestTransfer(CLITest):
         self.screenid = "Project:9999999"
         self.gw = BlitzGateway(client_obj=self.client)
 
-    def create_image(self, sizec=4, sizez=1, sizet=1, target_name=None,
-                     multiple=False):
+    def create_image(self, sizec=4, sizez=1, sizet=1, target_name=None):
         images = self.import_fake_file(
                 images_count=2, sizeZ=sizez, sizeT=sizet, sizeC=sizec,
                 client=self.client)
@@ -512,10 +511,103 @@ class TestTransfer(CLITest):
             self.delete_all()
         assert True
 
+    @pytest.mark.parametrize('packing', ["tar", "zip"])
+    def test_pack_unpack_multiple_datasets(self, packing, tmpdir):
+        target_name = "datasetid"
+        datasets = []
+        for i in range(3):
+            self.create_image(target_name=target_name)
+            datasets.append(self.dataset.id)
+        target = f"Dataset:{datasets[0]}-{datasets[-1]}"
+        span = True
+        multiple = True
+        if packing == "tar":
+            name = 'test.tar'
+            args = self.args + ["pack", target, str(tmpdir / name)]
+        else:
+            name = 'test.zip'
+            args = self.args + ["pack", target, "--zip",
+                                str(tmpdir / name)]
+        self.cli.invoke(args, strict=True)
+        self.delete_all()
+        args = self.args + ["unpack", str(tmpdir / name)]
+        self.cli.invoke(args, strict=True)
+        self.run_asserts(target_name, multiple, span)
+        self.delete_all()
+        span = False
+        datasets = []
+        for i in range(3):
+            self.create_image(target_name=target_name)
+            datasets.append(self.dataset.id)
+        target = f"Dataset:{datasets[0]},{datasets[-1]}"
+        if packing == "tar":
+            name = 'test.tar'
+            args = self.args + ["pack", target, str(tmpdir / name)]
+        else:
+            name = 'test.zip'
+            args = self.args + ["pack", target, "--zip",
+                                str(tmpdir / name)]
+        self.cli.invoke(args, strict=True)
+        self.delete_all()
+        args = self.args + ["unpack", str(tmpdir / name)]
+        self.cli.invoke(args, strict=True)
+        self.run_asserts(target_name, multiple, span)
+        self.delete_all()
+
+    @pytest.mark.parametrize('packing', ["tar", "zip"])
+    def test_pack_unpack_multiple_images(self, packing, tmpdir):
+        target_name = "imageid"
+        images = []
+        for i in range(3):
+            img = self.create_test_image(100, 100, 1, 1, 1,
+                                         self.client.getSession())
+            images.append(img.id.val)
+        target = f"Image:{images[0]}-{images[-1]}"
+        span = True
+        multiple = True
+        if packing == "tar":
+            name = 'test.tar'
+            args = self.args + ["pack", target, str(tmpdir / name)]
+        else:
+            name = 'test.zip'
+            args = self.args + ["pack", target, "--zip",
+                                str(tmpdir / name)]
+        self.cli.invoke(args, strict=True)
+        self.delete_all()
+        args = self.args + ["unpack", str(tmpdir / name)]
+        self.cli.invoke(args, strict=True)
+        self.run_asserts(target_name, multiple, span)
+        self.delete_all()
+        span = False
+        images = []
+        for i in range(3):
+            img = self.create_test_image(100, 100, 1, 1, 1,
+                                         self.client.getSession())
+            images.append(img.id.val)
+        target = f"Image:{images[0]},{images[-1]}"
+        if packing == "tar":
+            name = 'test.tar'
+            args = self.args + ["pack", target, str(tmpdir / name)]
+        else:
+            name = 'test.zip'
+            args = self.args + ["pack", target, "--zip",
+                                str(tmpdir / name)]
+        self.cli.invoke(args, strict=True)
+        self.delete_all()
+        args = self.args + ["unpack", str(tmpdir / name)]
+        self.cli.invoke(args, strict=True)
+        self.run_asserts(target_name, multiple, span)
+        self.delete_all()
+
     def run_asserts(self, target_name, multiple=False, span=False):
         if target_name == "imageid":
             img_ids = ezomero.get_image_ids(self.gw)
-            assert len(img_ids) == 2
+            if multiple and span:
+                assert len(img_ids) == 3
+            elif multiple:
+                assert len(img_ids) == 2
+            else:
+                assert len(img_ids) == 2
         if target_name == "projectid" or target_name == "idonly":
             pjs = self.gw.getObjects("Project")
             count = 0
@@ -542,7 +634,12 @@ class TestTransfer(CLITest):
             for d in ds:
                 ds_id = d.getId()
                 count += 1
-            assert count == 1
+            if multiple and span:
+                assert count == 3
+            elif multiple:
+                assert count == 2
+            else:
+                assert count == 1
             im_ids = ezomero.get_image_ids(self.gw, dataset=ds_id)
             assert len(im_ids) == 3
         if target_name == "screenid":
