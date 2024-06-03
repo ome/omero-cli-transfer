@@ -42,12 +42,12 @@ class TestTransfer(CLITest):
         super(TestTransfer, self).setup_method(method)
         self.cli.register("transfer", TransferControl, "TEST")
         self.args += ["transfer"]
-        self.idonly = "-1"
-        self.imageid = "Image:-1"
-        self.datasetid = "Dataset:-1"
-        self.projectid = "Project:-1"
-        self.plateid = "Project:-1"
-        self.screenid = "Project:-1"
+        self.idonly = "9999999"
+        self.imageid = "Image:9999999"
+        self.datasetid = "Dataset:9999999"
+        self.projectid = "Project:9999999"
+        self.plateid = "Project:9999999"
+        self.screenid = "Project:9999999"
         self.gw = BlitzGateway(client_obj=self.client)
 
     def create_image(self, sizec=4, sizez=1, sizet=1, target_name=None):
@@ -112,6 +112,7 @@ class TestTransfer(CLITest):
     def create_plate(self, plates=2, target_name=None):
         plates = self.import_plates(plates=plates, client=self.client)
         self.plateid = "Plate:%s" % plates[0].id.val
+        self.plate = self.gw.getObject("Plate", plates[0].id.val)
         screen = ezomero.post_screen(self.gw, "test_screen")
         self.screen = self.gw.getObject("Screen", screen)
         self.screenid = "Screen:%s" % self.screen.id
@@ -466,17 +467,246 @@ class TestTransfer(CLITest):
         self.run_asserts(target_name)
         self.delete_all()
 
-    def run_asserts(self, target_name):
+    @pytest.mark.parametrize('packing', ["tar", "zip"])
+    @pytest.mark.parametrize('target_name', sorted(SUPPORTED))
+    def test_pack_unpack_multiple_projs(self, target_name, packing, tmpdir):
+        if target_name == "projectid" or target_name == "idonly":
+            projects = []
+            for i in range(3):
+                self.create_image(target_name=target_name)
+                projects.append(self.project.id)
+            target = f"Project:{projects[0]}-{projects[-1]}"
+            span = True
+            multiple = True
+            if packing == "tar":
+                name = 'test.tar'
+                args = self.args + ["pack", target, str(tmpdir / name)]
+            else:
+                name = 'test.zip'
+                args = self.args + ["pack", target, "--zip",
+                                    str(tmpdir / name)]
+            self.cli.invoke(args, strict=True)
+            self.delete_all()
+            args = self.args + ["unpack", str(tmpdir / name)]
+            self.cli.invoke(args, strict=True)
+            self.run_asserts(target_name, multiple, span)
+            self.delete_all()
+            span = False
+            projects = []
+            for i in range(3):
+                self.create_image(target_name=target_name)
+                projects.append(self.project.id)
+            target = f"Project:{projects[0]},{projects[-1]}"
+            if packing == "tar":
+                name = 'test.tar'
+                args = self.args + ["pack", target, str(tmpdir / name)]
+            else:
+                name = 'test.zip'
+                args = self.args + ["pack", target, "--zip",
+                                    str(tmpdir / name)]
+            self.cli.invoke(args, strict=True)
+            self.delete_all()
+            args = self.args + ["unpack", str(tmpdir / name)]
+            self.cli.invoke(args, strict=True)
+            self.run_asserts(target_name, multiple, span)
+            self.delete_all()
+        assert True
+
+    @pytest.mark.parametrize('packing', ["tar", "zip"])
+    def test_pack_unpack_multiple_datasets(self, packing, tmpdir):
+        target_name = "datasetid"
+        datasets = []
+        for i in range(3):
+            self.create_image(target_name=target_name)
+            datasets.append(self.dataset.id)
+        target = f"Dataset:{datasets[0]}-{datasets[-1]}"
+        span = True
+        multiple = True
+        if packing == "tar":
+            name = 'test.tar'
+            args = self.args + ["pack", target, str(tmpdir / name)]
+        else:
+            name = 'test.zip'
+            args = self.args + ["pack", target, "--zip",
+                                str(tmpdir / name)]
+        self.cli.invoke(args, strict=True)
+        self.delete_all()
+        args = self.args + ["unpack", str(tmpdir / name)]
+        self.cli.invoke(args, strict=True)
+        self.run_asserts(target_name, multiple, span)
+        self.delete_all()
+        span = False
+        datasets = []
+        for i in range(3):
+            self.create_image(target_name=target_name)
+            datasets.append(self.dataset.id)
+        target = f"Dataset:{datasets[0]},{datasets[-1]}"
+        if packing == "tar":
+            name = 'test.tar'
+            args = self.args + ["pack", target, str(tmpdir / name)]
+        else:
+            name = 'test.zip'
+            args = self.args + ["pack", target, "--zip",
+                                str(tmpdir / name)]
+        self.cli.invoke(args, strict=True)
+        self.delete_all()
+        args = self.args + ["unpack", str(tmpdir / name)]
+        self.cli.invoke(args, strict=True)
+        self.run_asserts(target_name, multiple, span)
+        self.delete_all()
+
+    @pytest.mark.parametrize('packing', ["tar", "zip"])
+    def test_pack_unpack_multiple_images(self, packing, tmpdir):
+        target_name = "imageid"
+        images = []
+        for i in range(3):
+            img = self.create_test_image(100, 100, 1, 1, 1,
+                                         self.client.getSession())
+            images.append(img.id.val)
+        target = f"Image:{images[0]}-{images[-1]}"
+        span = True
+        multiple = True
+        if packing == "tar":
+            name = 'test.tar'
+            args = self.args + ["pack", target, str(tmpdir / name)]
+        else:
+            name = 'test.zip'
+            args = self.args + ["pack", target, "--zip",
+                                str(tmpdir / name)]
+        self.cli.invoke(args, strict=True)
+        self.delete_all()
+        args = self.args + ["unpack", str(tmpdir / name)]
+        self.cli.invoke(args, strict=True)
+        self.run_asserts(target_name, multiple, span)
+        self.delete_all()
+        span = False
+        images = []
+        for i in range(3):
+            img = self.create_test_image(100, 100, 1, 1, 1,
+                                         self.client.getSession())
+            images.append(img.id.val)
+        target = f"Image:{images[0]},{images[-1]}"
+        if packing == "tar":
+            name = 'test.tar'
+            args = self.args + ["pack", target, str(tmpdir / name)]
+        else:
+            name = 'test.zip'
+            args = self.args + ["pack", target, "--zip",
+                                str(tmpdir / name)]
+        self.cli.invoke(args, strict=True)
+        self.delete_all()
+        args = self.args + ["unpack", str(tmpdir / name)]
+        self.cli.invoke(args, strict=True)
+        self.run_asserts(target_name, multiple, span)
+        self.delete_all()
+
+    @pytest.mark.parametrize('packing', ["tar", "zip"])
+    def test_pack_unpack_multiple_screens(self, packing, tmpdir):
+        target_name = "screenid"
+        screens = []
+        for i in range(3):
+            self.create_plate(plates=1, target_name=target_name)
+            screens.append(self.screen.id)
+        target = f"Screen:{screens[0]}-{screens[-1]}"
+        span = True
+        multiple = True
+        if packing == "tar":
+            name = 'test.tar'
+            args = self.args + ["pack", target, str(tmpdir / name)]
+        else:
+            name = 'test.zip'
+            args = self.args + ["pack", target, "--zip",
+                                str(tmpdir / name)]
+        self.cli.invoke(args, strict=True)
+        self.delete_all()
+        args = self.args + ["unpack", str(tmpdir / name)]
+        self.cli.invoke(args, strict=True)
+        self.run_asserts(target_name, multiple, span)
+        self.delete_all()
+        span = False
+        screens = []
+        for i in range(3):
+            self.create_plate(plates=1, target_name=target_name)
+            screens.append(self.screen.id)
+        target = f"Screen:{screens[0]},{screens[-1]}"
+        if packing == "tar":
+            name = 'test.tar'
+            args = self.args + ["pack", target, str(tmpdir / name)]
+        else:
+            name = 'test.zip'
+            args = self.args + ["pack", target, "--zip",
+                                str(tmpdir / name)]
+        self.cli.invoke(args, strict=True)
+        self.delete_all()
+        args = self.args + ["unpack", str(tmpdir / name)]
+        self.cli.invoke(args, strict=True)
+        self.run_asserts(target_name, multiple, span)
+        self.delete_all()
+
+    @pytest.mark.parametrize('packing', ["tar", "zip"])
+    def test_pack_unpack_multiple_plates(self, packing, tmpdir):
+        target_name = "plateid"
+        plates = []
+        for i in range(3):
+            self.create_plate(plates=1, target_name=target_name)
+            plates.append(self.plate.id)
+        target = f"Plate:{plates[0]}-{plates[-1]}"
+        span = True
+        multiple = True
+        if packing == "tar":
+            name = 'test.tar'
+            args = self.args + ["pack", target, str(tmpdir / name)]
+        else:
+            name = 'test.zip'
+            args = self.args + ["pack", target, "--zip",
+                                str(tmpdir / name)]
+        self.cli.invoke(args, strict=True)
+        self.delete_all()
+        args = self.args + ["unpack", str(tmpdir / name)]
+        self.cli.invoke(args, strict=True)
+        self.run_asserts(target_name, multiple, span)
+        self.delete_all()
+        span = False
+        plates = []
+        for i in range(3):
+            self.create_plate(plates=1, target_name=target_name)
+            plates.append(self.plate.id)
+        target = f"Plate:{plates[0]},{plates[-1]}"
+        if packing == "tar":
+            name = 'test.tar'
+            args = self.args + ["pack", target, str(tmpdir / name)]
+        else:
+            name = 'test.zip'
+            args = self.args + ["pack", target, "--zip",
+                                str(tmpdir / name)]
+        self.cli.invoke(args, strict=True)
+        self.delete_all()
+        args = self.args + ["unpack", str(tmpdir / name)]
+        self.cli.invoke(args, strict=True)
+        self.run_asserts(target_name, multiple, span)
+        self.delete_all()
+
+    def run_asserts(self, target_name, multiple=False, span=False):
         if target_name == "imageid":
             img_ids = ezomero.get_image_ids(self.gw)
-            assert len(img_ids) == 2
+            if multiple and span:
+                assert len(img_ids) == 3
+            elif multiple:
+                assert len(img_ids) == 2
+            else:
+                assert len(img_ids) == 2
         if target_name == "projectid" or target_name == "idonly":
             pjs = self.gw.getObjects("Project")
             count = 0
             for p in pjs:
                 pj_id = p.getId()
                 count += 1
-            assert count == 1
+            if multiple and span:
+                assert count == 3
+            elif multiple:
+                assert count == 2
+            else:
+                assert count == 1
             count = 0
             proj = self.gw.getObject("Project", pj_id)
             for d in proj.listChildren():
@@ -491,7 +721,12 @@ class TestTransfer(CLITest):
             for d in ds:
                 ds_id = d.getId()
                 count += 1
-            assert count == 1
+            if multiple and span:
+                assert count == 3
+            elif multiple:
+                assert count == 2
+            else:
+                assert count == 1
             im_ids = ezomero.get_image_ids(self.gw, dataset=ds_id)
             assert len(im_ids) == 3
         if target_name == "screenid":
@@ -500,7 +735,12 @@ class TestTransfer(CLITest):
             for s in scs:
                 sc_id = s.getId()
                 count += 1
-            assert count == 1
+            if multiple and span:
+                assert count == 3
+            elif multiple:
+                assert count == 2
+            else:
+                assert count == 1
             count = 0
             scr = self.gw.getObject("Screen", sc_id)
             for p in scr.listChildren():
@@ -523,7 +763,12 @@ class TestTransfer(CLITest):
             for p in pls:
                 pl_id = p.getId()
                 count += 1
-            assert count == 1
+            if multiple and span:
+                assert count == 3
+            elif multiple:
+                assert count == 2
+            else:
+                assert count == 1
             pl = self.gw.getObject("Plate", pl_id)
             wells = pl.listChildren()
             count = 0
