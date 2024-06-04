@@ -6,7 +6,7 @@
 
 An OMERO CLI plugin for creating and using transfer packets between OMERO servers.
 
-Transfer packets contain objects and annotations. This project creates a zip file from an object
+Transfer packets contain objects and annotations. This project creates a single (zip, tar) file from an object
 (Project, Dataset, Image, Screen, Plate) containing all original files necessary to create the images
 in that object, plus an XML file detailing the links between entities, annotations and ROIs thereof.
 
@@ -18,8 +18,6 @@ tl;dr: if you have `python>=3.8`, a simple `pip install omero-cli-transfer` _mig
 `omero-cli-transfer` requires at least Python 3.8. This is due to `ome-types` requiring that as well;
 this package relies heavily on it, and it is not feasible without it.
 
-Of course, this CAN be an issue, especially given `omero-py` _officially_ only supports Python 3.6. However,
-it is possible to run `omero-py` in Python 3.8 or newer as well. Our recommended way to do so it using `conda`.
 With conda installed, you can do
 ```
 conda create -n myenv -c conda-forge python=3.8 zeroc-ice=3.6.5
@@ -27,7 +25,7 @@ conda activate myenv
 pip install omero-cli-transfer
 ```
 It is possible to do the same thing without `conda` as long as your python/pip version is at least 3.8,
-but that will require locally building a wheel for `zeroc-ice` (which pip does automatically) - it is a
+but that will require either installing a prebuilt wheel for `zeroc-ice` (Glencoe Software provides them [here](https://github.com/glencoesoftware/zeroc-ice-py-linux-x86_64/releases) or locally building a wheel for `zeroc-ice` (which pip does automatically) - the latter is a
 process that can be anything from "completely seamless and without issues" to "I need to install every
 dependency ever imagined". Try at your own risk.
 
@@ -45,9 +43,11 @@ Creates a transfer packet for moving objects between OMERO server instances.
 
 The syntax for specifying objects is: `<object>:<id>` where `<object>` can be `Image`, `Project`, `Dataset`, `Plate` or `Screen`. `Project` is assumed if `<object>:` is omitted. A file path needs to be provided; a tar file with the contents of the packet will be created at the specified path.
 
-Currently, only MapAnnotations, Tags, FileAnnotations and CommentAnnotations are packaged into the transfer pack. All kinds of ROI (except Masks) should work.
+If you would like to specify multiple objects, you can use the `<object>:<id1>-<id2>` for packing every object between `id1` and `id2`, or `<object>:<id1>,<id2>,<id3>` to pack only objects with ids `id1`, `id2` and `id3`.
 
-Note that, if you are packing a `Plate` or `Screen`, default OMERO settings prevent you from downloading Plates and you will generate an empty pack file if you do so. If you want to generate a pack file from these entities, you will need to set `omero.policy.binary_access` appropriately.
+Currently, only MapAnnotations, Tags, FileAnnotations, LongAnnotations (i.e. ratings) and CommentAnnotations are packaged into the transfer pack. All kinds of ROI (except Masks) should work.
+
+Note that, if you are packing a `Plate` or `Screen`, default OMERO settings prevent you from downloading Plates and you will get errors if you do so. If you want to generate a pack file from these entities, you will need to set `omero.policy.binary_access` appropriately.
 
 `--zip` packs the object into a compressed zip file rather than a tarball.
 
@@ -70,7 +70,7 @@ Default is `all` and will create the archive. With `none`, only the `transfer.xm
 file is created, in which case the last cli argument is the path where
 the `transfer.xml` file will be written.
 
-`--ignore_errors` gnores any download/export errors during the pack process,
+`--ignore_errors` ignores any download/export errors during the pack process,
 often the result of servers which do not allow Plate downloads (but will
 ignore any non-zero return code from `omero download` or `omero export`).
 
@@ -78,8 +78,8 @@ ignore any non-zero return code from `omero download` or `omero export`).
 Examples:
 ```
 omero transfer pack Image:123 transfer_pack.tar
-omero transfer pack --zip Image:123 transfer_pack.zip
-omero transfer pack Dataset:1111 /home/user/new_folder/new_pack.tar
+omero transfer pack --zip Image:123-126 transfer_pack.zip
+omero transfer pack Dataset:1111,1115 /home/user/new_folder/new_pack.tar
 omero transfer pack 999 tarfile.tar  # equivalent to Project:999
 omero transfer pack --plugin arc Project:999 path/to/my/arc/repo
 omero transfer pack --binaries none Dataset:1111 /home/user/new_folder/
