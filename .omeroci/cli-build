@@ -23,9 +23,10 @@ conda init
 conda activate omero
 
 export OMERO_DIST=${OMERO_DIST:-/opt/omero/server/OMERO.server}
+export ICE_CONFIG=${OMERO_DIST}/etc/ice.config
 omero $PLUGIN -h
 if [[ $BIN_ACCESS =~ "+plate" ]]; then
-    python setup.py test -t test -i ${OMERO_DIST}/etc/ice.config -vs -m "not limit_plate"
+    pytest -v -m "not limit_plate"
 else
-    python setup.py test -t test -i ${OMERO_DIST}/etc/ice.config -vs -m limit_plate
+    pytest -v -m limit_plate
 fi
