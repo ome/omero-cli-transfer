@@ -34,11 +34,11 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/TheJacksonLaboratory/omero-cli-transfer",
     install_requires=[
-        'ezomero>=2.1.0, <3.0.0',
+        'ezomero>=3.0.0, <4.0.0',
         'ome-types==0.5.1.post1'
     ],
     extras_require={
-        "rocrate": ["rocrate==0.7.0"],
+        "rocrate": ["rocrate>=0.7.0, <1.0.0"],
     },
     python_requires='>=3.8',
 
