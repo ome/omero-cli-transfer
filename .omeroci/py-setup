@@ -19,7 +19,8 @@ conda init
 conda create -n omero python=3.9
 conda activate omero
 pip install https://github.com/glencoesoftware/zeroc-ice-py-linux-x86_64/releases/download/20231130/zeroc_ice-3.6.5-cp39-cp39-manylinux_2_28_x86_64.whl
-conda install -c bioconda bftools
+conda install -c bioconda bftools 
+pip install pytest restview mox3
 
 cd $TARGET
 cd $(setup_dir)
