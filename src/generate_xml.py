@@ -613,7 +613,7 @@ def parse_showinf(text, counter_imgs, counter_plates, counter_ann,
         img_ref[image.id] = img_id_str
         pix = create_empty_pixels(image, img_id)
         if len(ome.images) > 1:  # differentiating names
-            if image.name == "":
+            if not (image.name and image.name.isspace()):
                 image_name = "0"
             else:
                 image_name = image.name
@@ -621,7 +621,11 @@ def parse_showinf(text, counter_imgs, counter_plates, counter_ann,
             img = Image(id=img_id_str, name=filename + " [" + image_name + "]",
                         pixels=pix)
         else:
-            img = Image(id=img_id_str, name=image.name, pixels=pix)
+            if not (image.name and image.name.isspace()):
+                image_name = os.path.split(target)[1]
+            else:
+                image_name = image.name
+            img = Image(id=img_id_str, name=image_name, pixels=pix)
         img_id += 1
         xml = create_path_xml(target)
         ns = 'openmicroscopy.org/cli/transfer'
