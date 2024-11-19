@@ -42,8 +42,6 @@ from pathlib import Path
 import shutil
 import copy
 
-ann_count = 0
-
 
 def create_proj_and_ref(**kwargs) -> Tuple[Project, ProjectRef]:
     proj = Project(**kwargs)
@@ -365,7 +363,6 @@ def create_filepath_annotations(id: str, conn: BlitzGateway,
                                 proj: Optional[str] = None,
                                 ) -> Tuple[List[XMLAnnotation],
                                            List[AnnotationRef]]:
-    global ann_count
     ns = 'openmicroscopy.org/cli/transfer'
     anns = []
     anrefs = []
@@ -389,12 +386,8 @@ def create_filepath_annotations(id: str, conn: BlitzGateway,
                 common_root = Path(common_root) / proj / ds
             path = os.path.join(common_root, 'mock_folder')
             xml = create_path_xml(path)
-            an, anref = create_xml_and_ref(id=ann_count,
-                                           namespace=ns,
-                                           value=xml)
+            an, anref = create_xml_and_ref(namespace=ns, value=xml)
             anns.append(an)
-            ann_count += 1
-            anref = AnnotationRef(id=an.id)
             anrefs.append(anref)
         else:
             if simple:
@@ -405,12 +398,8 @@ def create_filepath_annotations(id: str, conn: BlitzGateway,
                     filename = Path(f).name
                     f = Path(common_root) / proj / ds / filename
                 xml = create_path_xml(str(f))
-                an, anref = create_xml_and_ref(id=ann_count,
-                                               namespace=ns,
-                                               value=xml)
+                an, anref = create_xml_and_ref(namespace=ns, value=xml)
                 anns.append(an)
-                ann_count += 1
-                anref = AnnotationRef(id=an.id)
                 anrefs.append(anref)
             else:
                 f = f'pixel_images/{clean_id}.tiff'
@@ -418,41 +407,25 @@ def create_filepath_annotations(id: str, conn: BlitzGateway,
                     f = f'{clean_id}.tiff'
                     f = Path(common_root) / proj / ds / f
                     xml = create_path_xml(str(f))
-                    an, anref = create_xml_and_ref(id=ann_count,
-                                                   namespace=ns,
-                                                   value=xml)
+                    an, anref = create_xml_and_ref(namespace=ns, value=xml)
                     anns.append(an)
-                    ann_count += 1
-                    anref = AnnotationRef(id=an.id)
                     anrefs.append(anref)
                 xml = create_path_xml(str(f))
-                an, anref = create_xml_and_ref(id=ann_count,
-                                               namespace=ns,
-                                               value=xml)
+                an, anref = create_xml_and_ref(namespace=ns, value=xml)
                 anns.append(an)
-                ann_count += 1
-                anref = AnnotationRef(id=an.id)
                 anrefs.append(anref)
 
     elif fp_type == "Annotation":
         filename = str(Path(filename).name)
         f = f'file_annotations/{clean_id}/{filename}'
         xml = create_path_xml(str(f))
-        an, anref = create_xml_and_ref(id=ann_count,
-                                       namespace=ns,
-                                       value=xml)
+        an, anref = create_xml_and_ref(namespace=ns, value=xml)
         anns.append(an)
-        ann_count += 1
-        anref = AnnotationRef(id=an.id)
         anrefs.append(anref)
     elif fp_type == "Plate":
         xml = create_path_xml(plate_path)
-        an, anref = create_xml_and_ref(id=ann_count,
-                                       namespace=ns,
-                                       value=xml)
+        an, anref = create_xml_and_ref(namespace=ns, value=xml)
         anns.append(an)
-        ann_count += 1
-        anref = AnnotationRef(id=an.id)
         anrefs.append(anref)
     return anns, anrefs
 
@@ -460,15 +433,11 @@ def create_filepath_annotations(id: str, conn: BlitzGateway,
 def create_figure_annotations(id: str) -> Tuple[XMLAnnotation,
                                                 AnnotationRef]:
     ns = id
-    global ann_count
     clean_id = int(ns.split(":")[-1])
     f = f'figures/Figure_{clean_id}.json'
     xml = create_path_xml(str(f))
-    an, anref = create_xml_and_ref(id=ann_count,
-                                   namespace=ns,
-                                   value=xml)
-    ann_count += 1
-    return (an, anref)
+    an, anref = create_xml_and_ref(namespace=ns, value=xml)
+    return an, anref
 
 
 def create_provenance_metadata(conn: BlitzGateway, img_id: int,
@@ -476,7 +445,6 @@ def create_provenance_metadata(conn: BlitzGateway, img_id: int,
                                metadata: Union[List[str], None], plate: bool
                                ) -> Union[Tuple[MapAnnotation, AnnotationRef],
                                           Tuple[None, None]]:
-    global ann_count
     if not metadata:
         return None, None
     software = "omero-cli-transfer"
@@ -511,10 +479,7 @@ def create_provenance_metadata(conn: BlitzGateway, img_id: int,
     if "db_id" in metadata:
         md_dict['database_id'] = db_id
     xml = create_metadata_xml(md_dict)
-    an, anref = create_xml_and_ref(id=ann_count,
-                                   namespace=ns,
-                                   value=xml)
-    ann_count += 1
+    an, anref = create_xml_and_ref(namespace=ns, value=xml)
     return an, anref
 
 
@@ -984,8 +949,9 @@ def populate_xml(datatype: str, id: int, filepath: str, conn: BlitzGateway,
                  hostname: str, barchive: bool, simple: bool, figure: bool,
                  metadata: List[str]) -> Tuple[OME, dict]:
     ome = OME()
-    global ann_count
-    ann_count = uuid4().int >> 64
+    # Create a throw-away annotation so we can reset the auto-id-numbering to a
+    # very high random value.
+    CommentAnnotation(id=uuid4().int >> 64, value="")
     obj = conn.getObject(datatype, id)
     if datatype == 'Project':
         populate_project(obj, ome, conn, hostname, metadata, simple)
