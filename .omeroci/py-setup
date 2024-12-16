@@ -25,5 +25,3 @@ pip install pytest restview mox3
 cd $TARGET
 cd $(setup_dir)
 pip install .
-python setup.py clean
-rm -rf dist *egg-info src/*egg-info
