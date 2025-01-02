@@ -15,6 +15,7 @@ from ome_types.model import TagAnnotation, MapAnnotation, ROI, XMLAnnotation
 from ome_types.model import FileAnnotation, BinaryFile, BinData
 from ome_types.model import AnnotationRef, ROIRef, Map
 from ome_types.model import CommentAnnotation, LongAnnotation
+from ome_types.model import TimestampAnnotation
 from ome_types.model import Point, Line, Rectangle, Ellipse, Polygon
 from ome_types.model import Polyline, Label, Shape
 from ome_types.model.map import M
@@ -22,6 +23,7 @@ from omero.sys import Parameters
 from omero.gateway import BlitzGateway
 from omero.model import TagAnnotationI, MapAnnotationI, FileAnnotationI
 from omero.model import CommentAnnotationI, LongAnnotationI, Fileset
+from omero.model import TimestampAnnotationI
 from omero.model import PointI, LineI, RectangleI, EllipseI, PolygonI
 from omero.model import PolylineI, LabelI, ImageI, RoiI, IObject
 from omero.model import DatasetI, ProjectI, ScreenI, PlateI, WellI, Annotation
@@ -100,6 +102,12 @@ def create_comm_and_ref(**kwargs) -> Tuple[CommentAnnotation, AnnotationRef]:
     tag = CommentAnnotation(**kwargs)
     tagref = AnnotationRef(id=tag.id)
     return tag, tagref
+
+
+def create_ts_and_ref(**kwargs) -> Tuple[TimestampAnnotation, AnnotationRef]:
+    ts = TimestampAnnotation(**kwargs)
+    tagref = AnnotationRef(id=ts.id)
+    return ts, tagref
 
 
 def create_kv_and_ref(**kwargs) -> Tuple[MapAnnotation, AnnotationRef]:
@@ -928,6 +936,13 @@ def add_annotation(obj: Union[Project, Dataset, Image, Plate, Screen,
                                         value=ann.getTextValue())
         if comm.id not in [i.id for i in ome.structured_annotations]:
             ome.structured_annotations.append(comm)
+        obj.annotation_ref.append(ref)
+
+    elif ann.OMERO_TYPE == TimestampAnnotationI:
+        ts, ref = create_ts_and_ref(id=ann.getId(),
+                                    value=ann.getValue().isoformat())
+        if ts.id not in [i.id for i in ome.structured_annotations]:
+            ome.structured_annotations.append(ts)
         obj.annotation_ref.append(ref)
 
     elif ann.OMERO_TYPE == LongAnnotationI:
