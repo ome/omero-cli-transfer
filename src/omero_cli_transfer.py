@@ -308,7 +308,6 @@ class TransferControl(GraphControl):
         """ Implements the 'unpack' command """
         self.__unpack(args)
 
-    @gateway_required
     def prepare(self, args):
         """ Implements the 'prepare' command """
         self.__prepare(args)
@@ -795,8 +794,7 @@ class TransferControl(GraphControl):
         return imgmap
 
     def __prepare(self, args):
-        populate_xml_folder(args.folder, args.filelist, self.gateway,
-                            self.session)
+        populate_xml_folder(args.folder, args.filelist)
         return
 
 

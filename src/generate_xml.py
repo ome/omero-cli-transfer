@@ -533,6 +533,7 @@ def create_objects(folder, filelist):
             if img not in (targets):
                 continue
             img_path = os.path.join(os.getcwd(), folder, img)
+            print(f"checking {img_path} for OMERO targets...")
             cmd = ["omero", 'import', '-f', img_path, "\n"]
             res = cli.popen(cmd, stdout=PIPE, stderr=DEVNULL)
             std = res.communicate()
@@ -1007,8 +1008,7 @@ def populate_xml(datatype: str, id: int, filepath: str, conn: BlitzGateway,
     return ome, path_id_dict
 
 
-def populate_xml_folder(folder: str, filelist: bool, conn: BlitzGateway,
-                        session: str) -> Tuple[OME, dict]:
+def populate_xml_folder(folder: str, filelist: bool) -> Tuple[OME, dict]:
     ome = OME()
     images, plates, annotations = create_objects(folder, filelist)
     ome.images = images
