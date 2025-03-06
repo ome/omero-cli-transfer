@@ -10,6 +10,7 @@
     <AnnotationRef ID="Annotation:51"/>
     <AnnotationRef ID="Annotation:52"/>
     <AnnotationRef ID="Annotation:53"/>
+    <AnnotationRef ID="Annotation:54"/>
     <AnnotationRef ID="Annotation:5706132577051166458"/>
     <AnnotationRef ID="Annotation:5706132577051166459"/>
   </Image>
@@ -33,6 +34,9 @@
         <M K="surname"/>
       </Value>
     </MapAnnotation>
+    <TimestampAnnotation ID="Annotation:54" Namespace="jax.org/jax/example/namespace">
+        <Value>2025-03-06T13:18:57.847775</Value>
+    </TimestampAnnotation>
     <XMLAnnotation ID="Annotation:5706132577051166458" Namespace="openmicroscopy.org/cli/transfer">
       <Value>
         <CLITransferMetadata xsi:schemaLocation="https://raw.githubusercontent.com/ome/omero-cli-transfer/main/schemas/preparemetadata.xsd">
