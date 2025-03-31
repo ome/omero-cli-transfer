@@ -12,14 +12,14 @@ export JAVA_HOME=$(readlink -f /usr/bin/java | sed "s:/bin/java::")
 export JAVA_LD_LIBRARY_PATH="$JAVA_HOME/lib/:$JAVA_HOME/lib/server"
 export CONDA_BACKUP_JAVA_HOME=$JAVA_HOME
 export CONDA_BACKUP_JAVA_LD_LIBRARY_PATH=$JAVA_LD_LIBRARY_PATH
-wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-sh Miniconda3-latest-Linux-x86_64.sh -b -p /tmp/miniconda
-source /tmp/miniconda/bin/activate
+wget --quiet https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
+sh Miniforge3-Linux-x86_64.sh -b -p /tmp/miniforge
+source /tmp/miniforge/bin/activate
 conda init
 conda create -n omero python=3.9
 conda activate omero
 pip install https://github.com/glencoesoftware/zeroc-ice-py-linux-x86_64/releases/download/20231130/zeroc_ice-3.6.5-cp39-cp39-manylinux_2_28_x86_64.whl
-conda install -y -c bioconda bftools 
+conda install -y -c ome bftools 
 pip install pytest restview mox3
 
 cd $TARGET

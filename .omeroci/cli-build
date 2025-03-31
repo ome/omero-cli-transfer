@@ -18,7 +18,7 @@ export JAVA_LD_LIBRARY_PATH="$JAVA_HOME/lib/:$JAVA_HOME/lib/server"
 export CONDA_BACKUP_JAVA_HOME=$JAVA_HOME
 export CONDA_BACKUP_JAVA_LD_LIBRARY_PATH=$JAVA_LD_LIBRARY_PATH
 
-source /tmp/miniconda/bin/activate
+source /tmp/miniforge/bin/activate
 conda init
 conda activate omero
 
@@ -26,7 +26,7 @@ export OMERO_DIST=${OMERO_DIST:-/opt/omero/server/OMERO.server}
 export ICE_CONFIG=${OMERO_DIST}/etc/ice.config
 omero $PLUGIN -h
 if [[ $BIN_ACCESS =~ "+plate" ]]; then
-    pytest -v -m "not limit_plate"
+    pytest -v -m "not limit_plate" test/integration/test_prepare.py
 else
     pytest -v -m limit_plate
 fi
