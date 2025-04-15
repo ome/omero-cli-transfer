@@ -976,7 +976,7 @@ def list_file_ids(ome: OME) -> dict:
             if ann.namespace != "omero.web.figure.json":
                 path = get_server_path(ann.annotation_refs,
                                        ome.structured_annotations)
-            id_list[ann.id] = path
+                id_list[ann.id] = path
     return id_list
 
 
