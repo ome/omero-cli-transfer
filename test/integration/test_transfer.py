@@ -255,6 +255,11 @@ class TestTransfer(CLITest):
                     assert len(ann) == 8
             assert len(ezomero.get_tag_ids(
                             self.gw, "Image", im_ids[-1])) == 1
+            anns = list(img.listAnnotations())
+            for atype in ("Timestamp",):
+                cname = f"{atype}AnnotationWrapper"
+                matching_anns = (type(a).__name__ == cname for a in anns)
+                assert sum(matching_anns) == 1, f"Wrong number of {cname}"
         self.delete_all()
 
         temp_args = self.args
