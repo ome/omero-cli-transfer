@@ -316,9 +316,9 @@ def create_plate_map(ome: OME, img_map: dict, conn: BlitzGateway
     newome = copy.deepcopy(ome)
     plate_map = {}
     map_ref_ids = []
-    for plate in ome.plates:
+    for plate in newome.plates:
         ann_ids = [i.id for i in plate.annotation_refs]
-        for ann in ome.structured_annotations:
+        for ann in newome.structured_annotations:
             if (ann.id in ann_ids and
                     isinstance(ann, XMLAnnotation)):
                 tree = ETree.fromstring(to_xml(ann.value,

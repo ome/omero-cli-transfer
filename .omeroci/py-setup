@@ -16,9 +16,9 @@ wget --quiet https://github.com/conda-forge/miniforge/releases/latest/download/M
 sh Miniforge3-Linux-x86_64.sh -b -p /tmp/miniforge
 source /tmp/miniforge/bin/activate
 conda init
-conda create -n omero python=3.9
+conda create -n omero python=3.11
 conda activate omero
-pip install https://github.com/glencoesoftware/zeroc-ice-py-linux-x86_64/releases/download/20231130/zeroc_ice-3.6.5-cp39-cp39-manylinux_2_28_x86_64.whl
+pip install https://github.com/glencoesoftware/zeroc-ice-py-linux-x86_64/releases/download/20240202/zeroc_ice-3.6.5-cp311-cp311-manylinux_2_28_x86_64.whl
 conda install -y -c ome bftools 
 pip install pytest restview mox3
 
