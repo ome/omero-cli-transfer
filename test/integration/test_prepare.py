@@ -17,7 +17,6 @@ from ome_types.model.screen import PlateRef
 from ome_types.model.map import M, Map
 from uuid import uuid4
 
-
 import ezomero
 import pytest
 import os
@@ -39,6 +38,7 @@ class TestPrepare(CLITest):
         self.args += ["transfer"]
         self.gw = BlitzGateway(client_obj=self.client)
         self.session = self.client.getSessionId()
+        self.cli.loadplugins()
 
     def delete_all(self):
         pjs = self.gw.getObjects("Project")
@@ -78,6 +78,22 @@ class TestPrepare(CLITest):
         self.args += ["prepare", "./fakefoldername/"]
         with pytest.raises(ValueError):
             self.cli.invoke(self.args, strict=True)
+
+    def test_dummy_prepare(self):
+        folder = Path(TEST_FOLDERS[0])
+        if Path(folder / 'transfer.xml').exists():
+            print('transfer.xml exists! deleting.')
+            os.remove(str(folder / 'transfer.xml'))
+        args = self.args + ["prepare", str(folder)]
+        self.cli.invoke(args, strict=True)
+        assert Path(folder / 'transfer.xml').exists()
+        assert os.path.getsize(str(folder / 'transfer.xml')) > 0
+        args = self.args + ["unpack", "--folder", str(folder)]
+        with pytest.raises(KeyError):
+            self.cli.invoke(args, strict=True)
+        self.delete_all()
+        if Path(folder / 'transfer.xml').exists():
+            os.remove(str(folder / 'transfer.xml'))
 
     @pytest.mark.parametrize('folder', sorted(TEST_FOLDERS))
     def test_prepare_clean(self, folder):

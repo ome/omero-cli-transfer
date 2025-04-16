@@ -563,16 +563,16 @@ class TransferControl(GraphControl):
                 are located
               image_filenames_mapping: dict that maps image ids to filenames
             """
-            from pkg_resources import iter_entry_points
-            entry_points = []
-            for p in iter_entry_points(group="omero_cli_transfer.pack.plugin"):
+            from importlib.metadata import entry_points
+            entrypoints = []
+            for p in entry_points(group="omero_cli_transfer.pack.plugin"):
                 if p.name == args.plugin:
-                    entry_points.append(p.load())
-            if len(entry_points) == 0:
+                    entrypoints.append(p.load())
+            if len(entrypoints) == 0:
                 raise ValueError(f"Pack plugin {args.plugin} not found")
             else:
-                assert len(entry_points) == 1
-                pack_plugin_func = entry_points[0]
+                assert len(entrypoints) == 1
+                pack_plugin_func = entrypoints[0]
                 pack_plugin_func(
                     ome_object=obj,
                     destination_path=Path(tar_path),
