@@ -9,7 +9,8 @@ from typing import List, Tuple, Union
 from omero.model import DatasetI, IObject, PlateI, WellI, WellSampleI, ImageI
 from omero.gateway import DatasetWrapper
 from ome_types.model import TagAnnotation, MapAnnotation, FileAnnotation, ROI
-from ome_types.model import CommentAnnotation, LongAnnotation, Annotation
+from ome_types.model import CommentAnnotation, LongAnnotation
+from ome_types.model import TimestampAnnotation, Annotation
 from ome_types.model import Line, Point, Rectangle, Ellipse, Polygon, Shape
 from ome_types.model import Polyline, Label, Project, Screen, Dataset, OME
 from ome_types.model import Image, Plate, XMLAnnotation, AnnotationRef
@@ -17,6 +18,7 @@ from ome_types.model.simple_types import Marker
 from omero.gateway import TagAnnotationWrapper, MapAnnotationWrapper
 from omero.gateway import CommentAnnotationWrapper, LongAnnotationWrapper
 from omero.gateway import FileAnnotationWrapper, OriginalFileWrapper
+from omero.gateway import TimestampAnnotationWrapper
 from omero.sys import Parameters
 from omero.gateway import BlitzGateway
 from omero.rtypes import rstring, RStringI, rint
@@ -178,6 +180,13 @@ def create_annotations(ans: List[Annotation], conn: BlitzGateway, hash: str,
             comm_ann.setDescription(an.description)
             comm_ann.save()
             ann_map[an.id] = comm_ann.getId()
+        elif isinstance(an, TimestampAnnotation):
+            ts_ann = TimestampAnnotationWrapper(conn)
+            ts_ann.setValue(an.value)
+            ts_ann.setDescription(an.description)
+            ts_ann.setNs(an.namespace)
+            ts_ann.save()
+            ann_map[an.id] = ts_ann.getId()
         elif isinstance(an, LongAnnotation):
             comm_ann = LongAnnotationWrapper(conn)
             comm_ann.setValue(an.value)
@@ -639,6 +648,8 @@ def link_one_annotation(obj: IObject, ann: Annotation, ann_map: dict,
         ann_obj = conn.getObject("MapAnnotation", ann_id)
     elif isinstance(ann, CommentAnnotation):
         ann_obj = conn.getObject("CommentAnnotation", ann_id)
+    elif isinstance(ann, TimestampAnnotation):
+        ann_obj = conn.getObject("TimestampAnnotation", ann_id)
     elif isinstance(ann, LongAnnotation):
         ann_obj = conn.getObject("LongAnnotation", ann_id)
     elif isinstance(ann, FileAnnotation):
