@@ -23,7 +23,7 @@ setup(
     packages=['', 'omero.plugins'],
     package_dir={"": "src"},
     name="omero-cli-transfer",
-    version='1.1.0',
+    version='1.1.1',
     maintainer="Erick Ratamero",
     maintainer_email="erick.ratamero@jax.org",
     description=("A set of utilities for exporting a transfer"
@@ -34,12 +34,12 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/TheJacksonLaboratory/omero-cli-transfer",
     install_requires=[
-        'ezomero>=3.0.0, <4.0.0',
-        'ome-types==0.5.1.post1'
+        'ezomero>=3.1.0, <4.0.0',
+        'ome-types>=0.6.1, <0.7.0'
     ],
     extras_require={
         "rocrate": ["rocrate>=0.7.0, <1.0.0"],
     },
-    python_requires='>=3.8',
+    python_requires='>=3.9',
 
 )

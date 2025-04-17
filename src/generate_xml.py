@@ -33,7 +33,7 @@ from subprocess import PIPE, DEVNULL
 from generate_omero_objects import get_server_path
 import xml.etree.cElementTree as ETree
 from os import PathLike
-import pkg_resources
+import importlib
 import ezomero
 import os
 import csv
@@ -456,7 +456,7 @@ def create_provenance_metadata(conn: BlitzGateway, img_id: int,
     if not metadata:
         return None, None
     software = "omero-cli-transfer"
-    version = pkg_resources.get_distribution(software).version
+    version = importlib.metadata.version(software)
     date_time = datetime.now().strftime("%d/%m/%Y, %H:%M:%S")
     ns = 'openmicroscopy.org/cli/transfer'
     curr_user = conn.getUser().getName()
@@ -506,6 +506,7 @@ def create_objects(folder, filelist):
             if img not in (targets):
                 continue
             img_path = os.path.join(os.getcwd(), folder, img)
+            print(f"checking {img_path} for OMERO targets...")
             cmd = ["omero", 'import', '-f', img_path, "\n"]
             res = cli.popen(cmd, stdout=PIPE, stderr=DEVNULL)
             std = res.communicate()
@@ -644,7 +645,7 @@ def create_path_xml(target):
 
 def create_prepare_metadata(ann_id):
     software = "omero-cli-transfer"
-    version = pkg_resources.get_distribution(software).version
+    version = importlib.metadata.version(software)
     date_time = datetime.now().strftime("%d/%m/%Y, %H:%M:%S")
     ns = 'openmicroscopy.org/cli/transfer/prepare'
     md_dict: Dict[str, Any] = {}
@@ -988,8 +989,7 @@ def populate_xml(datatype: str, id: int, filepath: str, conn: BlitzGateway,
     return ome, path_id_dict
 
 
-def populate_xml_folder(folder: str, filelist: bool, conn: BlitzGateway,
-                        session: str) -> Tuple[OME, dict]:
+def populate_xml_folder(folder: str, filelist: bool) -> Tuple[OME, dict]:
     ome = OME()
     images, plates, annotations = create_objects(folder, filelist)
     ome.images = images
@@ -1096,7 +1096,7 @@ def populate_figures(ome: OME, conn: BlitzGateway, filepath: str):
                                            binary_file=binaryfile)
             filepath_ann, ref = create_figure_annotations(f.id)
             ome.structured_annotations.append(filepath_ann)
-            f.annotation_ref.append(ref)
+            f.annotation_refs.append(ref)
             ome.structured_annotations.append(f)
         else:
             os.remove(filepath)
