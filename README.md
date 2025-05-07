@@ -13,18 +13,18 @@ in that object, plus an XML file detailing the links between entities, annotatio
 The CLI plugin add the subcommand `transfer`, which in its turn has two further subcommands `omero transfer pack` and `omero transfer unpack`. Both subcommands (pack and unpack) will use an existing OMERO session created via CLI or prompt the user for parameters to create one.
 
 # Installation
-tl;dr: if you have `python>=3.8`, a simple `pip install omero-cli-transfer` _might_ do. We recommend conda, though.
+tl;dr: if you have `python>=3.9`, a simple `pip install omero-cli-transfer` _might_ do. We recommend conda, though.
 
-`omero-cli-transfer` requires at least Python 3.8. This is due to `ome-types` requiring that as well;
+`omero-cli-transfer` requires at least Python 3.9. This is due to `ome-types` requiring that as well;
 this package relies heavily on it, and it is not feasible without it.
 
 With conda installed, you can do
 ```
-conda create -n myenv -c conda-forge python=3.8 zeroc-ice=3.6.5
+conda create -n myenv -c conda-forge python=3.9 zeroc-ice=3.6.5
 conda activate myenv
 pip install omero-cli-transfer
 ```
-It is possible to do the same thing without `conda` as long as your python/pip version is at least 3.8,
+It is possible to do the same thing without `conda` as long as your python/pip version is at least 3.9,
 but that will require either installing a prebuilt wheel for `zeroc-ice` (Glencoe Software provides them [here](https://github.com/glencoesoftware/zeroc-ice-py-linux-x86_64/releases) or locally building a wheel for `zeroc-ice` (which pip does automatically) - the latter is a
 process that can be anything from "completely seamless and without issues" to "I need to install every
 dependency ever imagined". Try at your own risk.
