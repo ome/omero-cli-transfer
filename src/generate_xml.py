@@ -989,7 +989,7 @@ def populate_xml(datatype: str, id: int, filepath: str, conn: BlitzGateway,
         populate_figures(ome, conn, filepath)
     if not barchive:
         with open(filepath, 'w') as fp:
-            logger.info(to_xml(ome), file=fp)
+            print(to_xml(ome), file=fp)
             fp.close()
     path_id_dict = list_file_ids(ome)
     return ome, path_id_dict
@@ -1009,7 +1009,7 @@ def populate_xml_folder(folder: str, filelist: bool) -> Tuple[OME, dict]:
         else:
             raise ValueError("Folder cannot be found!")
     with open(filepath, 'w') as fp:
-        logger.info(to_xml(ome), file=fp)
+        print(to_xml(ome), file=fp)
         fp.close()
     path_id_dict = list_file_ids(ome)
     return ome, path_id_dict

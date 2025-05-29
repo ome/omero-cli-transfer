@@ -457,7 +457,7 @@ class TransferControl(GraphControl):
         if os.path.exists(os.path.join(str(Path(folder)), "pixel_images")):
             shutil.rmtree(os.path.join(str(Path(folder)), "pixel_images"))
         with open(filepath, 'w') as fp:
-            logger.info(to_xml(newome), file=fp)
+            print(to_xml(newome), file=fp)
             fp.close()
         return newome
 
@@ -541,7 +541,7 @@ class TransferControl(GraphControl):
             # need to somehow merge omes/path_id_dicts
         if not args.barchive:
             with open(md_fp, 'w') as fp:
-                logger.info(to_xml(ome), file=fp)
+                print(to_xml(ome), file=fp)
                 fp.close()
         if args.binaries == "all":
             logger.info("Starting file copy...")
