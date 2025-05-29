@@ -14,6 +14,12 @@ import pytest
 import json
 from pathlib import Path
 
+import logging
+
+# logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 SUPPORTED = [
     "idonly", "imageid", "datasetid", "projectid"]
 
@@ -61,32 +67,32 @@ class TestFigure(CLITest):
         pjs = self.gw.getObjects("Project")
         for p in pjs:
             pj_id = p.id
-            print(f"deleting project {pj_id}")
+            logger.info(f"deleting project {pj_id}")
             self.gw.deleteObjects("Project", [pj_id], deleteAnns=True,
                                   deleteChildren=True, wait=True)
         ds = self.gw.getObjects("Dataset")
         for d in ds:
             ds_id = d.id
-            print(f"deleting dataset {ds_id}")
+            logger.info(f"deleting dataset {ds_id}")
             self.gw.deleteObjects("Dataset", [ds_id], deleteAnns=True,
                                   deleteChildren=True, wait=True)
         scs = self.gw.getObjects("Screen")
         for sc in scs:
             sc_id = sc.id
-            print(f"deleting screen {sc_id}")
+            logger.info(f"deleting screen {sc_id}")
             self.gw.deleteObjects("Screen", [sc_id], deleteAnns=True,
                                   deleteChildren=True, wait=True)
         pls = self.gw.getObjects("Plate")
         for pl in pls:
             pl_id = pl.id
-            print(f"deleting plate {pl_id}")
+            logger.info(f"deleting plate {pl_id}")
             self.gw.deleteObjects("Plate", [pl_id], deleteAnns=True,
                                   deleteChildren=True, wait=True)
         ims = self.gw.getObjects("Image")
         im_ids = []
         for im in ims:
             im_ids.append(im.id)
-            print(f"deleting image {im.id}")
+            logger.info(f"deleting image {im.id}")
         if im_ids:
             self.gw.deleteObjects("Image", im_ids, deleteAnns=True,
                                   deleteChildren=True, wait=True)
@@ -94,7 +100,7 @@ class TestFigure(CLITest):
         fa_ids = []
         for fa in fas:
             fa_ids.append(fa.id)
-            print(f"deleting file annotation {fa.id}")
+            logger.info(f"deleting file annotation {fa.id}")
         if fa_ids:
             self.gw.deleteObjects("FileAnnotation", fa_ids,
                                   deleteChildren=True, wait=True)
@@ -193,7 +199,6 @@ class TestFigure(CLITest):
         self.create_image(target_name=target_name)
         clear_img_id = int(self.imageid.split(":")[-1])
         jsonstr = self.create_figure([clear_img_id])
-        print(jsonstr)
         with open(Path(tmpdir)/"figure.json", 'w') as f:
             f.write(jsonstr)
         # ezomero cannot create orphaned FileAnnotations...
@@ -222,9 +227,7 @@ class TestFigure(CLITest):
         clear_img_id = int(self.imageid.split(":")[-1])
         other_img = int(self.create_test_image(100, 100, 1, 1, 1,
                         self.client.getSession()).id.val)
-        print(clear_img_id, other_img)
         jsonstr = self.create_figure([clear_img_id, other_img])
-        print(jsonstr)
         with open(Path(tmpdir)/"figure.json", 'w') as f:
             f.write(jsonstr)
         # ezomero cannot create orphaned FileAnnotations...
@@ -254,9 +257,7 @@ class TestFigure(CLITest):
         clear_src_id = int(self.source.split(":")[-1])
         other_img = int(self.create_test_image(100, 100, 1, 1, 1,
                         self.client.getSession()).id.val)
-        print(clear_img_id, other_img)
         jsonstr = self.create_figure([clear_img_id, other_img, clear_src_id])
-        print(jsonstr)
         with open(Path(tmpdir)/"figure.json", 'w') as f:
             f.write(jsonstr)
         namespace = "omero.web.figure.json"
@@ -266,7 +267,6 @@ class TestFigure(CLITest):
             ns=namespace, desc=None)
         # create another figure with source only
         jsonstr = self.create_figure([other_img, clear_src_id])
-        print(jsonstr)
         with open(Path(tmpdir)/"figure.json", 'w') as f:
             f.write(jsonstr)
         # ezomero cannot create orphaned FileAnnotations...
@@ -299,9 +299,7 @@ class TestFigure(CLITest):
                          self.client.getSession()).id.val)
         other_img2 = int(self.create_test_image(100, 100, 1, 1, 1,
                          self.client.getSession()).id.val)
-        print(clear_img_id, other_img)
         jsonstr = self.create_figure([other_img1, other_img2])
-        print(jsonstr)
         with open(Path(tmpdir)/"figure.json", 'w') as f:
             f.write(jsonstr)
         namespace = "omero.web.figure.json"
