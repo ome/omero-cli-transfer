@@ -31,9 +31,10 @@ import re
 
 import logging
 
-#logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
 
 def create_or_set_projects(pjs: List[Project], conn: BlitzGateway,
                            merge: bool) -> dict:
@@ -675,7 +676,8 @@ def rename_images(imgs: List[Image], img_map: dict, conn: BlitzGateway):
             im_obj.setName(img.name)
             im_obj.save()
         except KeyError:
-            logger.info(f"Image corresponding to {img.id} not found. Skipping.")
+            logger.info(f"Image corresponding to {img.id} not"
+                        " found. Skipping.")
     return
 
 

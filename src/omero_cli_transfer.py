@@ -38,7 +38,7 @@ from omero.grid import ManagedRepositoryPrx as MRepo
 
 import logging
 
-#logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -363,9 +363,10 @@ class TransferControl(GraphControl):
                                 cli.invoke(['export', '--file', filepath, id],
                                            strict=True)
                             except NonZeroReturnCode:
-                                logger.info("A file could not be exported - this is "
-                                      "generally due to a server not allowing"
-                                      " binary downloads.")
+                                logger.info("A file could not be exported -"
+                                            " this is generally due"
+                                            " to a server not allowing"
+                                            " binary downloads.")
                                 shutil.rmtree(folder)
                                 raise NonZeroReturnCode(1, "Download not \
                                                         allowed")
@@ -378,9 +379,10 @@ class TransferControl(GraphControl):
                                 cli.invoke(['download', id, subfolder],
                                            strict=True)
                             except NonZeroReturnCode:
-                                logger.info("A file could not be downloaded - this "
-                                      "is generally due to a server not "
-                                      "allowing binary downloads.")
+                                logger.info("A file could not be downloaded"
+                                            " - this is generally"
+                                            " due to a server not "
+                                            "allowing binary downloads.")
                                 shutil.rmtree(folder)
                                 raise NonZeroReturnCode(1, "Download not \
                                                         allowed")
@@ -400,8 +402,8 @@ class TransferControl(GraphControl):
                         cli.invoke(['download', id, subfolder], strict=True)
                     except NonZeroReturnCode:
                         logger.info("A file could not be downloaded - this is "
-                              "generally due to a server not allowing"
-                              " binary downloads.")
+                                    "generally due to a server not allowing"
+                                    " binary downloads.")
                         shutil.rmtree(folder)
                         raise NonZeroReturnCode(1, "Download not allowed")
                 else:
@@ -496,7 +498,8 @@ class TransferControl(GraphControl):
                              "are  incompatible")
         if src_datatype not in ["Image", "Dataset", "Project",
                                 "Plate", "Screen"]:
-            logger.info("Object is not a project, dataset, screen, plate or image")
+            logger.info("Object is not a project, dataset, screen,"
+                        " plate or image")
             return
         export_types = (args.rocrate, args.barchive, args.simple)
         if sum(1 for ct in export_types if ct) > 1:

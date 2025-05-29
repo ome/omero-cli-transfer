@@ -46,9 +46,10 @@ import copy
 
 import logging
 
-#logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
 
 def create_proj_and_ref(**kwargs) -> Tuple[Project, ProjectRef]:
     proj = Project(**kwargs)
@@ -1017,7 +1018,8 @@ def populate_xml_folder(folder: str, filelist: bool) -> Tuple[OME, dict]:
 def populate_tsv(datatype: str, ome: OME, filepath: str,
                  path_id_dict: dict, folder: str):
     if datatype == "Plate" or datatype == "Screen":
-        logger.info("Bioimage Archive export of Plate/Screen currently unsupported")
+        logger.info("Bioimage Archive export of Plate/Screen"
+                    " currently unsupported")
         return
     with open(filepath, 'w') as fp:
         write_lines(datatype, ome, fp, path_id_dict, folder)
