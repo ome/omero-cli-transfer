@@ -199,7 +199,6 @@ class TestFigure(CLITest):
         self.create_image(target_name=target_name)
         clear_img_id = int(self.imageid.split(":")[-1])
         jsonstr = self.create_figure([clear_img_id])
-        logger.info(jsonstr)
         with open(Path(tmpdir)/"figure.json", 'w') as f:
             f.write(jsonstr)
         # ezomero cannot create orphaned FileAnnotations...
@@ -228,9 +227,7 @@ class TestFigure(CLITest):
         clear_img_id = int(self.imageid.split(":")[-1])
         other_img = int(self.create_test_image(100, 100, 1, 1, 1,
                         self.client.getSession()).id.val)
-        logger.info(clear_img_id, other_img)
         jsonstr = self.create_figure([clear_img_id, other_img])
-        logger.info(jsonstr)
         with open(Path(tmpdir)/"figure.json", 'w') as f:
             f.write(jsonstr)
         # ezomero cannot create orphaned FileAnnotations...
@@ -260,9 +257,7 @@ class TestFigure(CLITest):
         clear_src_id = int(self.source.split(":")[-1])
         other_img = int(self.create_test_image(100, 100, 1, 1, 1,
                         self.client.getSession()).id.val)
-        logger.info(clear_img_id, other_img)
         jsonstr = self.create_figure([clear_img_id, other_img, clear_src_id])
-        logger.info(jsonstr)
         with open(Path(tmpdir)/"figure.json", 'w') as f:
             f.write(jsonstr)
         namespace = "omero.web.figure.json"
@@ -272,7 +267,6 @@ class TestFigure(CLITest):
             ns=namespace, desc=None)
         # create another figure with source only
         jsonstr = self.create_figure([other_img, clear_src_id])
-        logger.info(jsonstr)
         with open(Path(tmpdir)/"figure.json", 'w') as f:
             f.write(jsonstr)
         # ezomero cannot create orphaned FileAnnotations...
@@ -305,9 +299,7 @@ class TestFigure(CLITest):
                          self.client.getSession()).id.val)
         other_img2 = int(self.create_test_image(100, 100, 1, 1, 1,
                          self.client.getSession()).id.val)
-        logger.info(clear_img_id, other_img)
         jsonstr = self.create_figure([other_img1, other_img2])
-        logger.info(jsonstr)
         with open(Path(tmpdir)/"figure.json", 'w') as f:
             f.write(jsonstr)
         namespace = "omero.web.figure.json"

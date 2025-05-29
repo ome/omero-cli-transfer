@@ -266,5 +266,5 @@ class TestPrepare(CLITest):
         new_scr.plate_refs.append(PlateRef(id=ome.plates[0].id))
         ome.screens.append(new_scr)
         with open(filename, 'w') as fp:
-            logger.info(to_xml(ome), file=fp)
+            print(to_xml(ome), file=fp)
             fp.close()

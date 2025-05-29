@@ -431,7 +431,6 @@ class TestTransfer(CLITest):
         ds_ids = ezomero.get_dataset_ids(self.gw, pj_ids[0])
         assert len(ds_ids) == 2
         ds_args = self.args + ['unpack', "test/data/valid_single_dataset.zip"]
-        logger.info(ds_args)
         self.cli.invoke(ds_args, strict=True)
         orphan = ezomero.get_dataset_ids(self.gw)
         assert len(orphan) == 1
@@ -445,8 +444,6 @@ class TestTransfer(CLITest):
         for screen in self.gw.getObjects("Screen"):
             scr_ids.append(screen.getId())
         screen = self.gw.getObject("Screen", scr_ids[0])
-        for plate in screen.listChildren():
-            logger.info(plate.getId())
         scr_args += ['--merge']
         self.cli.invoke(scr_args, strict=True)
         assert len(scr_ids) == 1
