@@ -364,7 +364,7 @@ def create_shapes(roi: RoiI) -> List[Shape]:
             lab = create_label(s)
             shapes.append(lab)
         else:
-            logger.info("not a supported ROI type")
+            logger.warning("not a supported ROI type")
             continue
     return shapes
 
@@ -1018,8 +1018,8 @@ def populate_xml_folder(folder: str, filelist: bool) -> Tuple[OME, dict]:
 def populate_tsv(datatype: str, ome: OME, filepath: str,
                  path_id_dict: dict, folder: str):
     if datatype == "Plate" or datatype == "Screen":
-        logger.info("Bioimage Archive export of Plate/Screen"
-                    " currently unsupported")
+        logger.warning("Bioimage Archive export of Plate/Screen"
+                       " currently unsupported")
         return
     with open(filepath, 'w') as fp:
         write_lines(datatype, ome, fp, path_id_dict, folder)
@@ -1038,7 +1038,8 @@ def populate_rocrate(datatype: str, ome: OME, filepath: str,
                           "install omero-cli-transfer with the optional "
                           "[rocrate] addition")
     if datatype == "Plate" or datatype == "Screen":
-        logger.info("RO-Crate export of Plate/Screen currently unsupported")
+        logger.warning("RO-Crate export of Plate/Screen currently "
+                       "unsupported")
         return
     rc = ROCrate()
     files = path_id_dict.items()

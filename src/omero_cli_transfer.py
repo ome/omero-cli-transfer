@@ -363,10 +363,10 @@ class TransferControl(GraphControl):
                                 cli.invoke(['export', '--file', filepath, id],
                                            strict=True)
                             except NonZeroReturnCode:
-                                logger.info("A file could not be exported -"
-                                            " this is generally due"
-                                            " to a server not allowing"
-                                            " binary downloads.")
+                                logger.warning("A file could not be exported -"
+                                               " this is generally due"
+                                               " to a server not allowing"
+                                               " binary downloads.")
                                 shutil.rmtree(folder)
                                 raise NonZeroReturnCode(1, "Download not \
                                                         allowed")
@@ -379,10 +379,10 @@ class TransferControl(GraphControl):
                                 cli.invoke(['download', id, subfolder],
                                            strict=True)
                             except NonZeroReturnCode:
-                                logger.info("A file could not be downloaded"
-                                            " - this is generally"
-                                            " due to a server not "
-                                            "allowing binary downloads.")
+                                logger.warning("A file could not be downloaded"
+                                               " - this is generally"
+                                               " due to a server not"
+                                               " allowing binary downloads.")
                                 shutil.rmtree(folder)
                                 raise NonZeroReturnCode(1, "Download not \
                                                         allowed")
@@ -401,9 +401,9 @@ class TransferControl(GraphControl):
                     try:
                         cli.invoke(['download', id, subfolder], strict=True)
                     except NonZeroReturnCode:
-                        logger.info("A file could not be downloaded - this is "
-                                    "generally due to a server not allowing"
-                                    " binary downloads.")
+                        logger.warning("A file could not be downloaded - this "
+                                       "is generally due to a server not "
+                                       "allowing binary downloads.")
                         shutil.rmtree(folder)
                         raise NonZeroReturnCode(1, "Download not allowed")
                 else:

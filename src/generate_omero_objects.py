@@ -689,7 +689,8 @@ def rename_plates(pls: List[Plate], pl_map: dict, conn: BlitzGateway):
             pl_obj.setName(pl.name)
             pl_obj.save()
         except KeyError:
-            logger.info(f"Plate corresponding to {pl.id} not found. Skipping.")
+            logger.warning(f"Plate corresponding to {pl.id} not found. "
+                           "Skipping.")
     return
 
 
