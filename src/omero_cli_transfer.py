@@ -36,6 +36,11 @@ from omero.cli import NonZeroReturnCode
 from omero.gateway import BlitzGateway
 from omero.grid import ManagedRepositoryPrx as MRepo
 
+import logging
+
+# logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 DIR_PERM = 0o755
 MD5_BUF_SIZE = 65536
@@ -358,9 +363,10 @@ class TransferControl(GraphControl):
                                 cli.invoke(['export', '--file', filepath, id],
                                            strict=True)
                             except NonZeroReturnCode:
-                                print("A file could not be exported - this is "
-                                      "generally due to a server not allowing"
-                                      " binary downloads.")
+                                logger.warning("A file could not be exported -"
+                                               " this is generally due"
+                                               " to a server not allowing"
+                                               " binary downloads.")
                                 shutil.rmtree(folder)
                                 raise NonZeroReturnCode(1, "Download not \
                                                         allowed")
@@ -373,9 +379,10 @@ class TransferControl(GraphControl):
                                 cli.invoke(['download', id, subfolder],
                                            strict=True)
                             except NonZeroReturnCode:
-                                print("A file could not be downloaded - this "
-                                      "is generally due to a server not "
-                                      "allowing binary downloads.")
+                                logger.warning("A file could not be downloaded"
+                                               " - this is generally"
+                                               " due to a server not"
+                                               " allowing binary downloads.")
                                 shutil.rmtree(folder)
                                 raise NonZeroReturnCode(1, "Download not \
                                                         allowed")
@@ -394,9 +401,9 @@ class TransferControl(GraphControl):
                     try:
                         cli.invoke(['download', id, subfolder], strict=True)
                     except NonZeroReturnCode:
-                        print("A file could not be downloaded - this is "
-                              "generally due to a server not allowing"
-                              " binary downloads.")
+                        logger.warning("A file could not be downloaded - this "
+                                       "is generally due to a server not "
+                                       "allowing binary downloads.")
                         shutil.rmtree(folder)
                         raise NonZeroReturnCode(1, "Download not allowed")
                 else:
@@ -404,10 +411,10 @@ class TransferControl(GraphControl):
 
     def _package_files(self, tar_path: str, zip: bool, folder: str):
         if zip:
-            print("Creating zip file...")
+            logger.info("Creating zip file...")
             shutil.make_archive(tar_path, 'zip', folder)
         else:
-            print("Creating tar file...")
+            logger.info("Creating tar file...")
             shutil.make_archive(tar_path, 'tar', folder)
 
     def _process_metadata(self, metadata: Union[List[str], None]):
@@ -491,7 +498,8 @@ class TransferControl(GraphControl):
                              "are  incompatible")
         if src_datatype not in ["Image", "Dataset", "Project",
                                 "Plate", "Screen"]:
-            print("Object is not a project, dataset, screen, plate or image")
+            logger.info("Object is not a project, dataset, screen,"
+                        " plate or image")
             return
         export_types = (args.rocrate, args.barchive, args.simple)
         if sum(1 for ct in export_types if ct) > 1:
@@ -507,13 +515,13 @@ class TransferControl(GraphControl):
             if obj is None:
                 raise ValueError("At least one object not found or outside"
                                  " current permissions for current user.")
-            print("Populating xml...")
+            logger.info("Populating xml...")
             tar_path = Path(args.filepath)
             if args.binaries == "all":
                 folder = str(tar_path) + "_folder"
             else:
                 folder = os.path.splitext(tar_path)[0]
-                print(f"Output will be written to {folder}")
+                logger.info(f"Output will be written to {folder}")
 
             os.makedirs(folder, mode=DIR_PERM, exist_ok=True)
             if args.barchive:
@@ -522,7 +530,7 @@ class TransferControl(GraphControl):
                 md_fp = str(Path(folder) / "ro-crate-metadata.json")
             else:
                 md_fp = str(Path(folder) / "transfer.xml")
-                print(f"Saving metadata at {md_fp}.")
+                logger.info(f"Saving metadata at {md_fp}.")
             this_ome, this_id_dict = populate_xml(src_datatype, dataid, md_fp,
                                                   self.gateway, self.hostname,
                                                   args.barchive, args.simple,
@@ -536,18 +544,18 @@ class TransferControl(GraphControl):
                 print(to_xml(ome), file=fp)
                 fp.close()
         if args.binaries == "all":
-            print("Starting file copy...")
+            logger.info("Starting file copy...")
             self._copy_files(path_id_dict, folder, args.ignore_errors,
                              self.gateway)
 
         if args.simple:
             self._fix_pixels_image_simple(ome, folder, md_fp)
         if args.barchive:
-            print(f"Creating Bioimage Archive TSV at {md_fp}.")
+            logger.info(f"Creating Bioimage Archive TSV at {md_fp}.")
             populate_tsv(src_datatype, ome, md_fp,
                          path_id_dict, folder)
         if args.rocrate:
-            print(f"Creating RO-Crate metadata at {md_fp}.")
+            logger.info(f"Creating RO-Crate metadata at {md_fp}.")
             populate_rocrate(src_datatype, ome, os.path.splitext(tar_path)[0],
                              path_id_dict, folder)
         if args.plugin:
@@ -582,7 +590,7 @@ class TransferControl(GraphControl):
         elif args.binaries == "all":
             self._package_files(os.path.splitext(tar_path)[0], args.zip,
                                 folder)
-            print("Cleaning up...")
+            logger.info("Cleaning up...")
             shutil.rmtree(folder)
         return
 
@@ -590,16 +598,16 @@ class TransferControl(GraphControl):
         self.metadata = []
         self._process_metadata(args.metadata)
         if not args.folder:
-            print(f"Unzipping {args.filepath}...")
+            logger.info(f"Unzipping {args.filepath}...")
             hash, ome, folder = self._load_from_pack(args.filepath,
                                                      args.output)
         else:
             folder = Path(args.filepath)
             ome = from_xml(folder / "transfer.xml")
             hash = "imported from folder"
-        print("Generating Image mapping and import filelist...")
+        logger.info("Generating Image mapping and import filelist...")
         ome, src_img_map, filelist = self._create_image_map(ome)
-        print("Importing data as orphans...")
+        logger.info("Importing data as orphans...")
         if args.ln_s_import:
             ln_s = True
         else:
@@ -607,9 +615,9 @@ class TransferControl(GraphControl):
         dest_img_map = self._import_files(folder, filelist,
                                           ln_s, args.skip, self.gateway)
         self._delete_all_rois(dest_img_map, self.gateway)
-        print("Matching source and destination images...")
+        logger.info("Matching source and destination images...")
         img_map = self._make_image_map(src_img_map, dest_img_map, self.gateway)
-        print("Creating and linking OMERO objects...")
+        logger.info("Creating and linking OMERO objects...")
         populate_omero(ome, img_map, self.gateway,
                        hash, folder, self.metadata, args.merge, args.figure)
         return

@@ -44,6 +44,12 @@ from pathlib import Path
 import shutil
 import copy
 
+import logging
+
+# logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 
 def create_proj_and_ref(**kwargs) -> Tuple[Project, ProjectRef]:
     proj = Project(**kwargs)
@@ -358,7 +364,7 @@ def create_shapes(roi: RoiI) -> List[Shape]:
             lab = create_label(s)
             shapes.append(lab)
         else:
-            print("not a supported ROI type")
+            logger.warning("not a supported ROI type")
             continue
     return shapes
 
@@ -506,7 +512,7 @@ def create_objects(folder, filelist):
             if img not in (targets):
                 continue
             img_path = os.path.join(os.getcwd(), folder, img)
-            print(f"checking {img_path} for OMERO targets...")
+            logger.info(f"checking {img_path} for OMERO targets...")
             cmd = ["omero", 'import', '-f', img_path, "\n"]
             res = cli.popen(cmd, stdout=PIPE, stderr=DEVNULL)
             std = res.communicate()
@@ -538,7 +544,7 @@ def create_objects(folder, filelist):
         if filelist:
             folder = par_folder
         target_full = os.path.join(os.getcwd(), folder, target)
-        print(f"Processing file {Path(target_full).resolve()}")
+        logger.info(f"Processing file {Path(target_full).resolve()}")
         res = run_showinf(target_full, cli)
         if filelist:
             folder = par_folder
@@ -819,7 +825,7 @@ def populate_plate(obj: PlateI, ome: OME, conn: BlitzGateway,
     id = obj.getId()
     name = obj.getName()
     desc = obj.getDescription()
-    print(f"populating plate {id}")
+    logger.info(f"populating plate {id}")
     pl, pl_ref = create_plate_and_ref(id=id, name=name, description=desc)
     for ann in obj.listAnnotations():
         add_annotation(pl, ann, ome, conn)
@@ -855,7 +861,7 @@ def populate_well(obj: WellI, ome: OME, conn: BlitzGateway,
     id = obj.getId()
     column = obj.getColumn()
     row = obj.getRow()
-    print(f"populating well {id}")
+    logger.info(f"populating well {id}")
     samples = []
     for index in range(obj.countWellSample()):
         ws_obj = obj.getWellSample(index)
@@ -1012,7 +1018,8 @@ def populate_xml_folder(folder: str, filelist: bool) -> Tuple[OME, dict]:
 def populate_tsv(datatype: str, ome: OME, filepath: str,
                  path_id_dict: dict, folder: str):
     if datatype == "Plate" or datatype == "Screen":
-        print("Bioimage Archive export of Plate/Screen currently unsupported")
+        logger.warning("Bioimage Archive export of Plate/Screen"
+                       " currently unsupported")
         return
     with open(filepath, 'w') as fp:
         write_lines(datatype, ome, fp, path_id_dict, folder)
@@ -1031,7 +1038,8 @@ def populate_rocrate(datatype: str, ome: OME, filepath: str,
                           "install omero-cli-transfer with the optional "
                           "[rocrate] addition")
     if datatype == "Plate" or datatype == "Screen":
-        print("RO-Crate export of Plate/Screen currently unsupported")
+        logger.warning("RO-Crate export of Plate/Screen currently "
+                       "unsupported")
         return
     rc = ROCrate()
     files = path_id_dict.items()

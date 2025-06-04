@@ -21,6 +21,12 @@ import ezomero
 import pytest
 import os
 
+import logging
+
+# logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 TEST_FOLDERS = [
         "test/data/prepare/",
 ]
@@ -44,32 +50,32 @@ class TestPrepare(CLITest):
         pjs = self.gw.getObjects("Project")
         for p in pjs:
             pj_id = p.id
-            print(f"deleting project {pj_id}")
+            logger.info(f"deleting project {pj_id}")
             self.gw.deleteObjects("Project", [pj_id], deleteAnns=True,
                                   deleteChildren=True, wait=True)
         ds = self.gw.getObjects("Dataset")
         for d in ds:
             ds_id = d.id
-            print(f"deleting dataset {ds_id}")
+            logger.info(f"deleting dataset {ds_id}")
             self.gw.deleteObjects("Dataset", [ds_id], deleteAnns=True,
                                   deleteChildren=True, wait=True)
         scs = self.gw.getObjects("Screen")
         for sc in scs:
             sc_id = sc.id
-            print(f"deleting screen {sc_id}")
+            logger.info(f"deleting screen {sc_id}")
             self.gw.deleteObjects("Screen", [sc_id], deleteAnns=True,
                                   deleteChildren=True, wait=True)
         pls = self.gw.getObjects("Plate")
         for pl in pls:
             pl_id = pl.id
-            print(f"deleting plate {pl_id}")
+            logger.info(f"deleting plate {pl_id}")
             self.gw.deleteObjects("Plate", [pl_id], deleteAnns=True,
                                   deleteChildren=True, wait=True)
         ims = self.gw.getObjects("Image")
         im_ids = []
         for im in ims:
             im_ids.append(im.id)
-            print(f"deleting image {im.id}")
+            logger.info(f"deleting image {im.id}")
         if im_ids:
             self.gw.deleteObjects("Image", im_ids, deleteAnns=True,
                                   deleteChildren=True, wait=True)
@@ -82,7 +88,7 @@ class TestPrepare(CLITest):
     def test_dummy_prepare(self):
         folder = Path(TEST_FOLDERS[0])
         if Path(folder / 'transfer.xml').exists():
-            print('transfer.xml exists! deleting.')
+            logger.info('transfer.xml exists! deleting.')
             os.remove(str(folder / 'transfer.xml'))
         args = self.args + ["prepare", str(folder)]
         self.cli.invoke(args, strict=True)
@@ -99,7 +105,7 @@ class TestPrepare(CLITest):
     def test_prepare_clean(self, folder):
         folder = Path(folder)
         if Path(folder / 'transfer.xml').exists():
-            print('transfer.xml exists! deleting.')
+            logger.info('transfer.xml exists! deleting.')
             os.remove(str(folder / 'transfer.xml'))
         args = self.args + ["prepare", str(folder)]
         self.cli.invoke(args, strict=True)
@@ -133,7 +139,7 @@ class TestPrepare(CLITest):
     def test_prepare_filelist(self, filelist):
         folder = Path(filelist).parent
         if Path(folder / 'transfer.xml').exists():
-            print('transfer.xml exists! deleting.')
+            logger.info('transfer.xml exists! deleting.')
             os.remove(str(folder / 'transfer.xml'))
         args = self.args + ["prepare", "--filelist", str(filelist)]
         self.cli.invoke(args, strict=True)
