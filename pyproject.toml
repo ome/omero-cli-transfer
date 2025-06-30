@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+
+name = "omero-cli-transfer"
+dynamic = ["version"]
+maintainers = [
+    {name = "Erick Ratamero", email = "erick.ratamero@jax.org"}
+    ]
+description = "A set of utilities for exporting a transfer packet from an OMERO server and importing it in a different server. Developed by the Research IT team at The Jackson Laboratory."
+readme = "README.md"
+license = "GPL-2.0"
+dependencies = [
+    "ezomero>=3.1.0, <4.0.0",
+    "ome-types>=0.6.1, <0.7.0"
+    ]
+requires-python = ">=3.9"
+
+[tool.setuptools]
+packages = ["", "omero.plugins"]
+
+[project.optional-dependencies]
+rocrate = ["rocrate>=0.7.0, <1.0.0"]
+
+[project.urls]
+Repository = "https://github.com/TheJacksonLaboratory/omero-cli-transfer"

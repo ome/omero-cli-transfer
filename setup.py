@@ -4,19 +4,13 @@
 #
 # Use is subject to license terms supplied in LICENSE.
 
+import setuptools
 import os
-from setuptools import setup
 
-with open("README.md", "r") as fh:
-    long_description = fh.read()
+setuptools.setup(
+    version=os.environ.get('VERSION', '0.0.0'),
+)
 
-
-def read(fname):
-    """
-    Utility function to read the README file.
-    :rtype : String
-    """
-    return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 
 setup(
