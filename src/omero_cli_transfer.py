@@ -790,7 +790,7 @@ class TransferControl(GraphControl):
                         anns = 0
                         for j in img_obj.listAnnotations():
                             ns = j.getNs()
-                            if ns.startswith(
+                            if ns is not None and ns.startswith(
                                     "openmicroscopy.org/cli/transfer"):
                                 anns += 1
                         if not anns:
