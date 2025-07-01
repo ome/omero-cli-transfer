@@ -18,9 +18,6 @@ dependencies = [
     ]
 requires-python = ">=3.9"
 
-[tool.setuptools]
-packages = ["", "omero.plugins"]
-
 [project.optional-dependencies]
 rocrate = ["rocrate>=0.7.0, <1.0.0"]
 
