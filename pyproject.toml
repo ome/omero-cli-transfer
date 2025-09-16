@@ -7,9 +7,9 @@ build-backend = "setuptools.build_meta"
 name = "omero-cli-transfer"
 dynamic = ["version"]
 maintainers = [
-    {name = "Erick Ratamero", email = "erick.ratamero@jax.org"}
+    {name = "Erick Ratamero", email = "erick.ratamero@embl.de"}
     ]
-description = "A set of utilities for exporting a transfer packet from an OMERO server and importing it in a different server. Developed by the Research IT team at The Jackson Laboratory."
+description = "A set of utilities for exporting a transfer packet from an OMERO server and importing it in a different server."
 readme = "README.md"
 license = "GPL-2.0"
 dependencies = [
