@@ -414,9 +414,13 @@ class TransferControl(GraphControl):
         if ext == ".tar":
             logger.info("Creating tar file...")
             shutil.make_archive(basepath, 'tar', folder)
+            logger.info("Cleaning up...")
+            shutil.rmtree(folder)
         elif ext == ".zip":
             logger.info("Creating zip file...")
             shutil.make_archive(basepath, 'zip', folder)
+            logger.info("Cleaning up...")
+            shutil.rmtree(folder)
         else:
             logger.info("Moving to destination folder...")
             shutil.move(folder, dest_path)
@@ -593,8 +597,6 @@ class TransferControl(GraphControl):
                     conn=self.gateway)
         elif args.binaries == "all":
             self._package_files(tar_path, folder)
-            logger.info("Cleaning up...")
-            shutil.rmtree(folder)
         return
 
     def __unpack(self, args):
