@@ -67,7 +67,10 @@ Currently, only MapAnnotations, Tags, FileAnnotations and CommentAnnotations
 are packaged into the transfer pack, and only Point, Line, Ellipse, Rectangle
 and Polygon-type ROIs are packaged.
 
---zip packs the object into a compressed zip file rather than a tarball.
+The output format is defined by what path is passed by the user; a path ending
+in `.zip` will generate a (compressed) zip file, a path ending in `.tar` will
+generate a tarball, anything else will be interpreted as a desired output
+folder.
 
 --figure includes OMERO.Figures; note that this can lead to a performance
 hit and that Figures can reference images that are not included in your pack!
@@ -225,9 +228,6 @@ class TransferControl(GraphControl):
                           help=obj_help)
         file_help = ("Path to where the packed file will be saved")
         pack.add_argument(
-                "--zip", help="Pack into a zip file rather than a tarball",
-                action="store_true")
-        pack.add_argument(
                 "--figure", help="Include OMERO.Figures into the pack"
                                  " (caveats apply)",
                 action="store_true")
@@ -266,7 +266,7 @@ class TransferControl(GraphControl):
                  "With `--binaries all` (the default), both pixel data "
                  "and annotation are saved.")
 
-        file_help = ("Path to where the zip file is saved")
+        file_help = ("Path to where the zip/tar file (or folder) is saved")
         unpack.add_argument("filepath", type=str, help=file_help)
         unpack.add_argument(
                 "--ln_s_import", help="Use in-place import",
@@ -409,13 +409,17 @@ class TransferControl(GraphControl):
                 else:
                     cli.invoke(['download', id, subfolder])
 
-    def _package_files(self, tar_path: str, zip: bool, folder: str):
-        if zip:
-            logger.info("Creating zip file...")
-            shutil.make_archive(tar_path, 'zip', folder)
-        else:
+    def _package_files(self, dest_path: str, folder: str):
+        basepath, ext = os.path.splitext(dest_path)
+        if ext == ".tar":
             logger.info("Creating tar file...")
-            shutil.make_archive(tar_path, 'tar', folder)
+            shutil.make_archive(basepath, 'tar', folder)
+        elif ext == ".zip":
+            logger.info("Creating zip file...")
+            shutil.make_archive(basepath, 'zip', folder)
+        else:
+            logger.info("Moving to destination folder...")
+            shutil.move(folder, dest_path)
 
     def _process_metadata(self, metadata: Union[List[str], None]):
         if not metadata:
@@ -588,8 +592,7 @@ class TransferControl(GraphControl):
                     image_filenames_mapping=path_id_dict,
                     conn=self.gateway)
         elif args.binaries == "all":
-            self._package_files(os.path.splitext(tar_path)[0], args.zip,
-                                folder)
+            self._package_files(tar_path, folder)
             logger.info("Cleaning up...")
             shutil.rmtree(folder)
         return

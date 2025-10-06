@@ -144,7 +144,7 @@ class TestTransfer(CLITest):
         self.cli.invoke(args, strict=True)
         assert os.path.exists(str(tmpdir / 'test.tar'))
         assert os.path.getsize(str(tmpdir / 'test.tar')) > 0
-        args = self.args + ["pack", target, "--zip", str(tmpdir / 'test.zip')]
+        args = self.args + ["pack", target, str(tmpdir / 'test.zip')]
         self.cli.invoke(args, strict=True)
         assert os.path.exists(str(tmpdir / 'test.zip'))
         assert os.path.getsize(str(tmpdir / 'test.zip')) > 0
@@ -467,7 +467,7 @@ class TestTransfer(CLITest):
             args = self.args + ["pack", target, str(tmpdir / name)]
         else:
             name = 'test.zip'
-            args = self.args + ["pack", target, "--zip", str(tmpdir / name)]
+            args = self.args + ["pack", target, str(tmpdir / name)]
         self.cli.invoke(args, strict=True)
         self.delete_all()
         args = self.args + ["unpack", str(tmpdir / name)]
@@ -491,7 +491,7 @@ class TestTransfer(CLITest):
                 args = self.args + ["pack", target, str(tmpdir / name)]
             else:
                 name = 'test.zip'
-                args = self.args + ["pack", target, "--zip",
+                args = self.args + ["pack", target,
                                     str(tmpdir / name)]
             self.cli.invoke(args, strict=True)
             self.delete_all()
@@ -510,7 +510,7 @@ class TestTransfer(CLITest):
                 args = self.args + ["pack", target, str(tmpdir / name)]
             else:
                 name = 'test.zip'
-                args = self.args + ["pack", target, "--zip",
+                args = self.args + ["pack", target,
                                     str(tmpdir / name)]
             self.cli.invoke(args, strict=True)
             self.delete_all()
@@ -535,7 +535,7 @@ class TestTransfer(CLITest):
             args = self.args + ["pack", target, str(tmpdir / name)]
         else:
             name = 'test.zip'
-            args = self.args + ["pack", target, "--zip",
+            args = self.args + ["pack", target,
                                 str(tmpdir / name)]
         self.cli.invoke(args, strict=True)
         self.delete_all()
@@ -554,7 +554,7 @@ class TestTransfer(CLITest):
             args = self.args + ["pack", target, str(tmpdir / name)]
         else:
             name = 'test.zip'
-            args = self.args + ["pack", target, "--zip",
+            args = self.args + ["pack", target,
                                 str(tmpdir / name)]
         self.cli.invoke(args, strict=True)
         self.delete_all()
@@ -579,7 +579,7 @@ class TestTransfer(CLITest):
             args = self.args + ["pack", target, str(tmpdir / name)]
         else:
             name = 'test.zip'
-            args = self.args + ["pack", target, "--zip",
+            args = self.args + ["pack", target,
                                 str(tmpdir / name)]
         self.cli.invoke(args, strict=True)
         self.delete_all()
@@ -599,7 +599,7 @@ class TestTransfer(CLITest):
             args = self.args + ["pack", target, str(tmpdir / name)]
         else:
             name = 'test.zip'
-            args = self.args + ["pack", target, "--zip",
+            args = self.args + ["pack", target,
                                 str(tmpdir / name)]
         self.cli.invoke(args, strict=True)
         self.delete_all()
@@ -623,7 +623,7 @@ class TestTransfer(CLITest):
             args = self.args + ["pack", target, str(tmpdir / name)]
         else:
             name = 'test.zip'
-            args = self.args + ["pack", target, "--zip",
+            args = self.args + ["pack", target,
                                 str(tmpdir / name)]
         self.cli.invoke(args, strict=True)
         self.delete_all()
@@ -642,7 +642,7 @@ class TestTransfer(CLITest):
             args = self.args + ["pack", target, str(tmpdir / name)]
         else:
             name = 'test.zip'
-            args = self.args + ["pack", target, "--zip",
+            args = self.args + ["pack", target,
                                 str(tmpdir / name)]
         self.cli.invoke(args, strict=True)
         self.delete_all()
@@ -666,7 +666,7 @@ class TestTransfer(CLITest):
             args = self.args + ["pack", target, str(tmpdir / name)]
         else:
             name = 'test.zip'
-            args = self.args + ["pack", target, "--zip",
+            args = self.args + ["pack", target,
                                 str(tmpdir / name)]
         self.cli.invoke(args, strict=True)
         self.delete_all()
@@ -685,7 +685,7 @@ class TestTransfer(CLITest):
             args = self.args + ["pack", target, str(tmpdir / name)]
         else:
             name = 'test.zip'
-            args = self.args + ["pack", target, "--zip",
+            args = self.args + ["pack", target,
                                 str(tmpdir / name)]
         self.cli.invoke(args, strict=True)
         self.delete_all()
