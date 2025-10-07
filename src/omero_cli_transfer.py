@@ -242,8 +242,8 @@ class TransferControl(GraphControl):
                 action="store_true")
         pack.add_argument(
                 "--zip", help="Deprecated option to generate zip files. It "
-                                   "is ignored - just name your output "
-                                   "accordingly.",
+                              "is ignored - just name your output "
+                              "accordingly.",
                 action="store_true")
         pack.add_argument(
                 "--rocrate", help="Pack into a file compliant with "
