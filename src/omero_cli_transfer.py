@@ -72,6 +72,10 @@ in `.zip` will generate a (compressed) zip file, a path ending in `.tar` will
 generate a tarball, anything else will be interpreted as a desired output
 folder.
 
+--zip is deprecated and will be ignored - it is still allowed for backwards
+compatibility. If you want a zip file, simply make sure your output has that
+extension.
+
 --figure includes OMERO.Figures; note that this can lead to a performance
 hit and that Figures can reference images that are not included in your pack!
 
@@ -103,7 +107,8 @@ will be written.
 
 Examples:
 omero transfer pack Image:123 transfer_pack.tar
-omero transfer pack --zip Image:123 transfer_pack.zip
+omero transfer pack Image:123 transfer_pack.zip
+omero transfer pack Image:123 folder1/folder2/
 omero transfer pack Dataset:1111 /home/user/new_folder/new_pack.tar
 omero transfer pack 999 tarfile.tar  # equivalent to Project:999
 omero transfer pack 1 transfer_pack.tar --metadata img_id version db_id
@@ -234,6 +239,11 @@ class TransferControl(GraphControl):
         pack.add_argument(
                 "--barchive", help="Pack into a file compliant with Bioimage"
                                    " Archive submission standards",
+                action="store_true")
+        pack.add_argument(
+                "--zip", help="Deprecated option to generate zip files. It "
+                                   "is ignored - just name your output "
+                                   "accordingly.",
                 action="store_true")
         pack.add_argument(
                 "--rocrate", help="Pack into a file compliant with "
