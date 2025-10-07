@@ -4,9 +4,9 @@
 #
 # Use is subject to license terms supplied in LICENSE.
 
-import setuptools
-import os
+# import setuptools
+# import os
 
-setuptools.setup(
-    version=os.environ.get('VERSION', '0.0.0'),
-)
+# setuptools.setup(
+#     version=os.environ.get('VERSION', '0.0.0'),
+# )
