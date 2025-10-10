@@ -29,7 +29,10 @@ jobs:
     env:
       STAGE: cli
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout main repo with deep checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Checkout omero-test-infra
         uses: actions/checkout@master
         with:
