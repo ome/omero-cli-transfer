@@ -711,9 +711,9 @@ class TransferControl(GraphControl):
         cli = CLI()
         cli.loadplugins()
         dest_map = {}
-        curr_folder = str(Path('.').resolve())
+        curr_folder = str(Path('.').resolve().as_posix())
         for filepath in filelist:
-            dest_path = str(os.path.join(curr_folder, folder,  '.', filepath))
+            dest_path = "/".join([curr_folder, str(folder), '.', filepath])
             command = ['import', dest_path]
             if ln_s:
                 command.append('--transfer=ln_s')
@@ -746,6 +746,8 @@ class TransferControl(GraphControl):
         q = conn.getQueryService()
         params = Parameters()
         path_query = str(file_path).strip('/')
+        if os.path.splitdrive(path_query)[0]: # originally a Windows path
+            path_query = path_query.replace(":", ";", 1) # the dreaded semicolon
         params.map = {"cpath": rstring('%s%%' % path_query)}
         results = q.projection(
             "SELECT i.id FROM Image i"
