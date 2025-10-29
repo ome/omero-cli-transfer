@@ -746,8 +746,9 @@ class TransferControl(GraphControl):
         q = conn.getQueryService()
         params = Parameters()
         path_query = str(file_path).strip('/')
-        if os.path.splitdrive(path_query)[0]: # originally a Windows path
-            path_query = path_query.replace(":", ";", 1) # the dreaded semicolon
+        if os.path.splitdrive(path_query)[0]:  # originally a Windows path
+            # the dreaded semicolon of death
+            path_query = path_query.replace(":", ";", 1)
         params.map = {"cpath": rstring('%s%%' % path_query)}
         results = q.projection(
             "SELECT i.id FROM Image i"
