@@ -18,6 +18,7 @@ from functools import wraps
 import shutil
 from typing import DefaultDict
 import hashlib
+import posixpath
 from zipfile import ZipFile
 from typing import Callable, List, Any, Dict, Union, Optional, Tuple
 import xml.etree.cElementTree as ETree
@@ -666,7 +667,7 @@ class TransferControl(GraphControl):
             else:
                 raise ValueError("File is not a zip or tar file")
         else:
-            raise FileNotFoundError("filepath is not a zip file")
+            raise FileNotFoundError("filepath does not exist")
         ome = from_xml(folder / "transfer.xml")
         return hash, ome, folder
 
@@ -713,7 +714,8 @@ class TransferControl(GraphControl):
         dest_map = {}
         curr_folder = str(Path('.').resolve().as_posix())
         for filepath in filelist:
-            dest_path = "/".join([curr_folder, str(folder), '.', filepath])
+            dest_path = str(posixpath.join(curr_folder,
+                                           folder,  '.', filepath))
             command = ['import', dest_path]
             if ln_s:
                 command.append('--transfer=ln_s')

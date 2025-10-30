@@ -43,6 +43,7 @@ from datetime import datetime
 from pathlib import Path
 import shutil
 import copy
+import posixpath
 
 import logging
 
@@ -398,7 +399,7 @@ def create_filepath_annotations(id: str, conn: BlitzGateway,
             else:
                 common_root = "./"
                 common_root = Path(common_root).as_posix() / proj / ds
-            path = "/".join([common_root, 'mock_folder'])
+            path = posixpath.join(common_root, 'mock_folder')
             xml = create_path_xml(path)
             an, anref = create_xml_and_ref(namespace=ns, value=xml)
             anns.append(an)
