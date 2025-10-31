@@ -18,6 +18,7 @@ from functools import wraps
 import shutil
 from typing import DefaultDict
 import hashlib
+import posixpath
 from zipfile import ZipFile
 from typing import Callable, List, Any, Dict, Union, Optional, Tuple
 import xml.etree.cElementTree as ETree
@@ -617,8 +618,8 @@ class TransferControl(GraphControl):
             hash, ome, folder = self._load_from_pack(args.filepath,
                                                      args.output)
         else:
-            folder = Path(args.filepath)
-            ome = from_xml(folder / "transfer.xml")
+            folder = Path(args.filepath).resolve().as_posix()
+            ome = from_xml(posixpath.join(folder, "transfer.xml"))
             hash = "imported from folder"
         logger.info("Generating Image mapping and import filelist...")
         ome, src_img_map, filelist = self._create_image_map(ome)
@@ -643,12 +644,12 @@ class TransferControl(GraphControl):
             raise TypeError("filepath must be a string")
         if output and not isinstance(output, str):
             raise TypeError("output folder must be a string")
-        parent_folder = Path(filepath).parent
+        parent_folder = Path(filepath).parent.resolve().as_posix()
         filename = Path(filepath).resolve().stem
         if output:
-            folder = Path(output)
+            folder = Path(output).resolve().as_posix()
         else:
-            folder = parent_folder / filename
+            folder = posixpath.join(parent_folder, filename)
         if Path(filepath).exists():
             with open(filepath, 'rb') as file:
                 md5 = hashlib.md5()
@@ -666,9 +667,9 @@ class TransferControl(GraphControl):
             else:
                 raise ValueError("File is not a zip or tar file")
         else:
-            raise FileNotFoundError("filepath is not a zip file")
-        ome = from_xml(folder / "transfer.xml")
-        return hash, ome, folder
+            raise FileNotFoundError("filepath does not exist")
+        ome = from_xml(posixpath.join(folder, "transfer.xml"))
+        return hash, ome, Path(folder)
 
     def _create_image_map(self, ome: OME
                           ) -> Tuple[OME, DefaultDict, List[str]]:
@@ -711,9 +712,8 @@ class TransferControl(GraphControl):
         cli = CLI()
         cli.loadplugins()
         dest_map = {}
-        curr_folder = str(Path('.').resolve())
         for filepath in filelist:
-            dest_path = str(os.path.join(curr_folder, folder,  '.', filepath))
+            dest_path = str(posixpath.join(folder,  '.', filepath))
             command = ['import', dest_path]
             if ln_s:
                 command.append('--transfer=ln_s')
@@ -746,6 +746,9 @@ class TransferControl(GraphControl):
         q = conn.getQueryService()
         params = Parameters()
         path_query = str(file_path).strip('/')
+        if os.path.splitdrive(path_query)[0]:  # originally a Windows path
+            # the dreaded semicolon of death
+            path_query = path_query.replace(":", ";", 1)
         params.map = {"cpath": rstring('%s%%' % path_query)}
         results = q.projection(
             "SELECT i.id FROM Image i"
