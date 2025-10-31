@@ -714,7 +714,7 @@ class TransferControl(GraphControl):
         dest_map = {}
         curr_folder = str(Path('.').resolve().as_posix())
         for filepath in filelist:
-            if os.path.splitdrive(path_query)[0]:
+            if os.path.splitdrive(curr_folder)[0]:
                 dest_path = str(ntpath.join(curr_folder,
                                             folder,  '.', filepath))
                 dest_path = Path(dest_path).as_posix()
