@@ -618,7 +618,7 @@ class TransferControl(GraphControl):
             hash, ome, folder = self._load_from_pack(args.filepath,
                                                      args.output)
         else:
-            folder = Path(args.filepath)
+            folder = Path(args.filepath).resolve().as_posix()
             ome = from_xml(folder / "transfer.xml")
             hash = "imported from folder"
         logger.info("Generating Image mapping and import filelist...")
@@ -644,12 +644,12 @@ class TransferControl(GraphControl):
             raise TypeError("filepath must be a string")
         if output and not isinstance(output, str):
             raise TypeError("output folder must be a string")
-        parent_folder = Path(filepath).parent
+        parent_folder = Path(filepath).parent.resolve().as_posix()
         filename = Path(filepath).resolve().stem
         if output:
-            folder = Path(output)
+            folder = Path(output).resolve().as_posix()
         else:
-            folder = parent_folder / filename
+            folder = posixpath.join(parent_folder, filename)
         if Path(filepath).exists():
             with open(filepath, 'rb') as file:
                 md5 = hashlib.md5()
@@ -668,7 +668,7 @@ class TransferControl(GraphControl):
                 raise ValueError("File is not a zip or tar file")
         else:
             raise FileNotFoundError("filepath does not exist")
-        ome = from_xml(folder / "transfer.xml")
+        ome = from_xml(posixpath.join(folder, "transfer.xml"))
         return hash, ome, folder
 
     def _create_image_map(self, ome: OME
@@ -712,15 +712,8 @@ class TransferControl(GraphControl):
         cli = CLI()
         cli.loadplugins()
         dest_map = {}
-        curr_folder = str(Path('.').resolve().as_posix())
         for filepath in filelist:
-            if os.path.splitdrive(curr_folder)[0]:
-                dest_path = str(ntpath.join(curr_folder,
-                                            folder,  '.', filepath))
-                dest_path = Path(dest_path).as_posix()
-            else:
-                dest_path = str(posixpath.join(curr_folder,
-                                               folder,  '.', filepath))
+            dest_path = str(posixpath.join(folder,  '.', filepath))
             command = ['import', dest_path]
             if ln_s:
                 command.append('--transfer=ln_s')
