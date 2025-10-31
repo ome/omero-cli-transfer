@@ -18,7 +18,7 @@ from functools import wraps
 import shutil
 from typing import DefaultDict
 import hashlib
-import posixpath
+import posixpath, ntpath
 from zipfile import ZipFile
 from typing import Callable, List, Any, Dict, Union, Optional, Tuple
 import xml.etree.cElementTree as ETree
@@ -714,8 +714,13 @@ class TransferControl(GraphControl):
         dest_map = {}
         curr_folder = str(Path('.').resolve().as_posix())
         for filepath in filelist:
-            dest_path = str(posixpath.join(curr_folder,
-                                           folder,  '.', filepath))
+            if os.path.splitdrive(path_query)[0]:
+                dest_path = str(ntpath.join(curr_folder,
+                                            folder,  '.', filepath))
+                dest_path = Path(dest_path).as_posix()
+            else:
+                dest_path = str(posixpath.join(curr_folder,
+                                               folder,  '.', filepath))
             command = ['import', dest_path]
             if ln_s:
                 command.append('--transfer=ln_s')
