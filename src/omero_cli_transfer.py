@@ -18,7 +18,7 @@ from functools import wraps
 import shutil
 from typing import DefaultDict
 import hashlib
-import posixpath, ntpath
+import posixpath
 from zipfile import ZipFile
 from typing import Callable, List, Any, Dict, Union, Optional, Tuple
 import xml.etree.cElementTree as ETree
@@ -619,7 +619,7 @@ class TransferControl(GraphControl):
                                                      args.output)
         else:
             folder = Path(args.filepath).resolve().as_posix()
-            ome = from_xml(folder / "transfer.xml")
+            ome = from_xml(posixpath.join(folder, "transfer.xml"))
             hash = "imported from folder"
         logger.info("Generating Image mapping and import filelist...")
         ome, src_img_map, filelist = self._create_image_map(ome)
@@ -669,7 +669,7 @@ class TransferControl(GraphControl):
         else:
             raise FileNotFoundError("filepath does not exist")
         ome = from_xml(posixpath.join(folder, "transfer.xml"))
-        return hash, ome, folder
+        return hash, ome, Path(folder)
 
     def _create_image_map(self, ome: OME
                           ) -> Tuple[OME, DefaultDict, List[str]]:
