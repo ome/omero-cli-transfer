@@ -28,13 +28,7 @@ from generate_xml import populate_xml_folder
 from generate_omero_objects import populate_omero, get_server_path
 
 import ezomero
-from ome_types.model import (
-    XMLAnnotation,
-    FileAnnotation,
-    MapAnnotation,
-    ListAnnotation,
-    OME
-)
+from ome_types.model import XMLAnnotation, OME
 from ome_types import from_xml, to_xml
 from omero.sys import Parameters
 from omero.rtypes import rstring
@@ -460,8 +454,9 @@ class TransferControl(GraphControl):
                                  ) -> OME:
         newome = copy.deepcopy(ome)
         for ann in ome.structured_annotations:
-            if isinstance(ann, (FileAnnotation, XMLAnnotation,
-                                MapAnnotation, ListAnnotation)):
+            try:
+                isinstance(ann.value, str)
+            except AttributeError:
                 continue
             if isinstance(ann.value, str) and\
                ann.value.startswith("pixel_images"):
