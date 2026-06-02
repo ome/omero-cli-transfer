@@ -479,7 +479,7 @@ class TransferControl(GraphControl):
                             os.path.join(str(Path(folder)), path2))
         if os.path.exists(os.path.join(str(Path(folder)), "pixel_images")):
             shutil.rmtree(os.path.join(str(Path(folder)), "pixel_images"))
-        with open(filepath, 'w') as fp:
+        with open(filepath, 'w', encoding='utf-8') as fp:
             print(to_xml(newome), file=fp)
             fp.close()
         return newome
@@ -563,7 +563,7 @@ class TransferControl(GraphControl):
             path_id_dict.update(this_id_dict)
             # need to somehow merge omes/path_id_dicts
         if not args.barchive:
-            with open(md_fp, 'w') as fp:
+            with open(md_fp, 'w', encoding='utf-8') as fp:
                 print(to_xml(ome), file=fp)
                 fp.close()
         if args.binaries == "all":

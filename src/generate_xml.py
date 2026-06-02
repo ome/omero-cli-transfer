@@ -989,7 +989,7 @@ def populate_xml(datatype: str, id: int, filepath: str, conn: BlitzGateway,
     if (not (barchive or simple)) and figure:
         populate_figures(ome, conn, filepath)
     if not barchive:
-        with open(filepath, 'w') as fp:
+        with open(filepath, 'w', encoding='utf-8') as fp:
             print(to_xml(ome), file=fp)
             fp.close()
     path_id_dict = list_file_ids(ome)
@@ -1009,7 +1009,7 @@ def populate_xml_folder(folder: str, filelist: bool) -> Tuple[OME, dict]:
             filepath = str(Path(folder) / "transfer.xml")
         else:
             raise ValueError("Folder cannot be found!")
-    with open(filepath, 'w') as fp:
+    with open(filepath, 'w', encoding='utf-8') as fp:
         print(to_xml(ome), file=fp)
         fp.close()
     path_id_dict = list_file_ids(ome)
@@ -1022,7 +1022,7 @@ def populate_tsv(datatype: str, ome: OME, filepath: str,
         logger.warning("Bioimage Archive export of Plate/Screen"
                        " currently unsupported")
         return
-    with open(filepath, 'w') as fp:
+    with open(filepath, 'w', encoding='utf-8', newline='') as fp:
         write_lines(datatype, ome, fp, path_id_dict, folder)
         fp.close()
     return
