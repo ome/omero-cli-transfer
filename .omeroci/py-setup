@@ -7,11 +7,7 @@ set -x
 
 TARGET=${TARGET:-..}
 PLUGIN=${PLUGIN:-}
-
-export JAVA_HOME=$(readlink -f /usr/bin/java | sed "s:/bin/java::")
-export JAVA_LD_LIBRARY_PATH="$JAVA_HOME/lib/:$JAVA_HOME/lib/server"
-export CONDA_BACKUP_JAVA_HOME=$JAVA_HOME
-export CONDA_BACKUP_JAVA_LD_LIBRARY_PATH=$JAVA_LD_LIBRARY_PATH
+set +u
 wget --quiet https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
 sh Miniforge3-Linux-x86_64.sh -b -p /tmp/miniforge
 source /tmp/miniforge/bin/activate
@@ -21,6 +17,7 @@ conda activate omero
 pip install https://github.com/glencoesoftware/zeroc-ice-py-linux-x86_64/releases/download/20240202/zeroc_ice-3.6.5-cp311-cp311-manylinux_2_28_x86_64.whl
 conda install -y -c ome bftools 
 pip install pytest restview mox3
+set -u
 
 cd $TARGET
 cd $(setup_dir)
