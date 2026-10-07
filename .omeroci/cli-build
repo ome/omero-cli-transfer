@@ -13,10 +13,6 @@ BIN_ACCESS=$(/opt/omero/server/venv3/bin/omero config get omero.policy.binary_ac
 GUESS=${PWD#*omero-cli-*}
 PLUGIN=${PLUGIN:-$GUESS}
 set +u
-# export JAVA_HOME=$(readlink -f /usr/bin/java | sed "s:/bin/java::")
-# export JAVA_LD_LIBRARY_PATH="$JAVA_HOME/lib/:$JAVA_HOME/lib/server"
-# export CONDA_BACKUP_JAVA_HOME=$JAVA_HOME
-# export CONDA_BACKUP_JAVA_LD_LIBRARY_PATH=$JAVA_LD_LIBRARY_PATH
 
 source /tmp/miniforge/bin/activate
 conda init

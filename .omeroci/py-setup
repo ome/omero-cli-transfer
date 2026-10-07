@@ -8,10 +8,6 @@ set -x
 TARGET=${TARGET:-..}
 PLUGIN=${PLUGIN:-}
 set +u
-# export JAVA_HOME=$(readlink -f /usr/bin/java | sed "s:/bin/java::")
-# export JAVA_LD_LIBRARY_PATH="$JAVA_HOME/lib/:$JAVA_HOME/lib/server"
-# export CONDA_BACKUP_JAVA_HOME=$JAVA_HOME
-# export CONDA_BACKUP_JAVA_LD_LIBRARY_PATH=$JAVA_LD_LIBRARY_PATH
 wget --quiet https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
 sh Miniforge3-Linux-x86_64.sh -b -p /tmp/miniforge
 source /tmp/miniforge/bin/activate
