@@ -12,16 +12,16 @@ BIN_ACCESS=$(/opt/omero/server/venv3/bin/omero config get omero.policy.binary_ac
 
 GUESS=${PWD#*omero-cli-*}
 PLUGIN=${PLUGIN:-$GUESS}
-
-export JAVA_HOME=$(readlink -f /usr/bin/java | sed "s:/bin/java::")
-export JAVA_LD_LIBRARY_PATH="$JAVA_HOME/lib/:$JAVA_HOME/lib/server"
-export CONDA_BACKUP_JAVA_HOME=$JAVA_HOME
-export CONDA_BACKUP_JAVA_LD_LIBRARY_PATH=$JAVA_LD_LIBRARY_PATH
+set +u
+# export JAVA_HOME=$(readlink -f /usr/bin/java | sed "s:/bin/java::")
+# export JAVA_LD_LIBRARY_PATH="$JAVA_HOME/lib/:$JAVA_HOME/lib/server"
+# export CONDA_BACKUP_JAVA_HOME=$JAVA_HOME
+# export CONDA_BACKUP_JAVA_LD_LIBRARY_PATH=$JAVA_LD_LIBRARY_PATH
 
 source /tmp/miniforge/bin/activate
 conda init
 conda activate omero
-
+set -u
 export OMERO_DIST=${OMERO_DIST:-/opt/omero/server/OMERO.server}
 export ICE_CONFIG=${OMERO_DIST}/etc/ice.config
 omero $PLUGIN -h
