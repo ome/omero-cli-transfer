@@ -18,10 +18,10 @@ source /tmp/miniforge/bin/activate
 conda init
 conda create -n omero python=3.11
 conda activate omero
-set -u
 pip install https://github.com/glencoesoftware/zeroc-ice-py-linux-x86_64/releases/download/20240202/zeroc_ice-3.6.5-cp311-cp311-manylinux_2_28_x86_64.whl
 conda install -y -c ome bftools 
 pip install pytest restview mox3
+set -u
 
 cd $TARGET
 cd $(setup_dir)
