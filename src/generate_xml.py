@@ -206,6 +206,7 @@ def create_line(shape: LineI) -> Line:
             args['marker_end'] = value.strip()
     return Line(**args)
 
+
 def create_rectangle(shape: RectangleI) -> Rectangle:
     args = {'id': shape.getId().val, 'x': shape.getX().val,
             'y': shape.getY().val, 'height': shape.getHeight().val,
