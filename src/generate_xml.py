@@ -197,12 +197,14 @@ def create_line(shape: LineI) -> Line:
     if shape.getStrokeWidth() is not None:
         args['stroke_width'] = shape.getStrokeWidth().getValue()
     if shape.getMarkerStart() is not None:
-        args['marker_start'] = shape.getMarkerStart().val
+        value = shape.getMarkerStart().val
+        if len(value.strip()) > 0:
+            args['marker_start'] = value.strip()
     if shape.getMarkerEnd() is not None:
-        args['marker_end'] = shape.getMarkerEnd().val
-    ln = Line(**args)
-    return ln
-
+        value = shape.getMarkerEnd().val
+        if len(value.strip()) > 0:
+            args['marker_end'] = value.strip()
+    return Line(**args)
 
 def create_rectangle(shape: RectangleI) -> Rectangle:
     args = {'id': shape.getId().val, 'x': shape.getX().val,
